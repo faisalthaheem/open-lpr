@@ -1,0 +1,23 @@
+version: '3.1'
+services:
+  broker:
+    image: rabbitmq:3.7.14-management
+    restart: always
+    ports:
+      - 15672:15672
+      - 5672:5672
+  nodered:
+    image: openalpr/nodered:1.0
+    restart: always
+    environment:
+      - PORT=1890
+    ports:
+      - '1890:1890'
+  mongodb:
+    image: mongo:4.1.11-bionic
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: alpr
+      MONGO_INITDB_ROOT_PASSWORD: alpr
+    ports:
+      - 8081:8081
