@@ -104,3 +104,5 @@ venv.bak/
 .mypy_cache/
 
 settings.json
+
+ftp/*.jpg
