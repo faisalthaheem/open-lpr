@@ -5,7 +5,7 @@ if __name__ == "__main__" and __package__ is None:
     from os.path import dirname as dir
 
     path.append(dir(path[0]))
-    __package__ = "openalpr_ftp"
+    __package__ = "ftp"
     
 from shared.amqp import ThreadedAmqp
 
@@ -79,12 +79,17 @@ def dispatcher():
     db = None
 
     try:
-        if os.environ['PRODUCTION'] is not None: 
-            client = MongoClient(config['mongo']['host'], config['mongo']['port'])
+        if os.getenv('PRODUCTION') is not None: 
+            client = MongoClient(config['mongo']['prod'])
         else:
-            client = MongoClient(config['mongo']['host'], config['mongo']['port'])
+            client = MongoClient(config['mongo']['dev'])
 
-        db = client.openlpr
+        #open db
+        if not "openlpr" in client.database_names():
+            logger.info("database openlpr does not exist, will be created after first document insert")
+        
+        db = client["openlpr"]
+
     except:
         logger.error(sys.exc_info())
 
@@ -112,7 +117,8 @@ def dispatcher():
                     logger.error(sys.exc_info())
 
                 # save to db
-                db.lprevents.insert_one(msg)
+                dbcollection = db["lprevents"]
+                dbcollection.insert_one(msg)
 
             
                 #post to mqtt
