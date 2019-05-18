@@ -1,17 +1,4 @@
-kafka:
-  publish_to: 'pipeline.locator'
-dispatcher:
-  period: 0.1
-sensors:
-  default:
-  configured:
-    '0':
-      idle_time: 0.5
-      initial_locator: boot
-    '1':
-      idle_time: 0.5
-      initial_locator: ''
-    '2':
-      idle_time: 0.5
-      initial_locator: ''
-
+mongo:
+  prodhost: 'mongo'
+  devhost: 'localhost'
+  port: 27017

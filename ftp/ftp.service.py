@@ -26,6 +26,7 @@ import pickle
 import threading
 import yaml
 import shutil
+from pymongo import MongoClient
 
 #create logger
 logger = logging.getLogger('ftp.service')
@@ -74,6 +75,19 @@ def dispatcher():
     storagePath = args['storage.path']
     logger.info("Will be storing all files to [{}]".format(storagePath))
 
+    client = None
+    db = None
+
+    try:
+        if os.environ['PRODUCTION'] is not None: 
+            client = MongoClient(config['mongo']['host'], config['mongo']['port'])
+        else:
+            client = MongoClient(config['mongo']['host'], config['mongo']['port'])
+
+        db = client.openlpr
+    except:
+        logger.error(sys.exc_info())
+
     while True:
         try:
 
@@ -82,13 +96,13 @@ def dispatcher():
                 qItm = queuedImages.get()
 
                 msg = {}
-                msg['eventid'] = str(uuid.uuid4())
+                msg['_id'] = str(uuid.uuid4())
                 msg['filename'] = qItm["filename"]
                 msg['creationtime'] = qItm["creationtime"]
 
                 # save to disk
                 try:
-                    destPath = os.path.join(storagePath, "{}_{}".format(msg['eventid'], msg['filename']))
+                    destPath = os.path.join(storagePath, "{}_{}".format(msg['_id'], msg['filename']))
                     msg['diskpath'] = destPath
                     logger.info("Moving from [{}] to [{}]".format(qItm['diskpath'], destPath))
                     
@@ -98,10 +112,12 @@ def dispatcher():
                     logger.error(sys.exc_info())
 
                 # save to db
+                db.lprevents.insert_one(msg)
+
             
                 #post to mqtt
                 broker.publish_message(msg)                
-                logger.info("[{}] published".format(msg['eventid']))
+                logger.info("[{}] published".format(msg['_id']))
 
         except:
             logger.error(sys.exc_info())

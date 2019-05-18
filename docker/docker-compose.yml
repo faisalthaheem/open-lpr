@@ -20,4 +20,4 @@ services:
       MONGO_INITDB_ROOT_USERNAME: alpr
       MONGO_INITDB_ROOT_PASSWORD: alpr
     ports:
-      - 8081:8081
+      - 27017:27017
