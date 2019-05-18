@@ -7,7 +7,7 @@ services:
       - 15672:15672
       - 5672:5672
   nodered:
-    image: openalpr/nodered:1.0
+    image: openlpr/nodered:v10
     restart: always
     environment:
       - PORT=1890
@@ -17,7 +17,7 @@ services:
     image: mongo:4.1.11-bionic
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: alpr
-      MONGO_INITDB_ROOT_PASSWORD: alpr
+      MONGO_INITDB_ROOT_USERNAME: lpr
+      MONGO_INITDB_ROOT_PASSWORD: lpr
     ports:
       - 27017:27017

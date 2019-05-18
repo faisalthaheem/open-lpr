@@ -1,5 +1,5 @@
 mongo:
-  prod: 'mongodb://alpr:alpr@mongo:27017'
-  dev: 'mongodb://alpr:alpr@localhost:27017'
+  prod: 'mongodb://lpr:lpr@mongo:27017'
+  dev: 'mongodb://lpr:lpr@localhost:27017'
 dispatcher:
   period: 1
