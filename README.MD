@@ -1,3 +1,10 @@
+# Milestones
+
+## Work on classification module is in progress.
+
+![Milestones](https://rawcdn.githack.com/faisalthaheem/open-lpr/0bf07f8c06ce40fe42ff82e0e021d269225afde9/docs/Milestones.png)
+
+
 # Overview
 
 ![Overview](https://rawcdn.githack.com/faisalthaheem/open-lpr/0451b44de1a7c2893236b9bafef7dcbc0f3bc79f/docs/overview.png)
