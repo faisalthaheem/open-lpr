@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0111,C0103,R0205
 
+import sys
 import functools
 import logging
 import json
 import pika
 from threading import Thread
+from events import Events
 
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
@@ -26,10 +28,12 @@ class ThreadedAmqp(Thread):
 
     """
     EXCHANGE = 'ftp'
-    EXCHANGE_TYPE = 'direct'
+    EXCHANGE_TYPE = 'fanout'
     #PUBLISH_INTERVAL = 1
     QUEUE = 'from.ftp'
     ROUTING_KEY = 'new.request'
+
+    callbackEvents = Events(('on_message'))
 
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None):
@@ -71,10 +75,20 @@ class ThreadedAmqp(Thread):
 
         """
 
-        self.EXCHANGE = exchange
-        self.EXCHANGE_TYPE = exchangeType
-        self.QUEUE = queue
-        self.ROUTING_KEY = routingKey
+        if exchange is not None:
+            self.EXCHANGE = exchange
+        
+        if exchangeType is not None:
+            self.EXCHANGE_TYPE = exchangeType
+        
+        
+        if queue is not None:
+            self.QUEUE = queue
+        
+        
+        if routingKey is not None:
+            self.ROUTING_KEY = routingKey
+        
         self._consumerMode = consumerMode
 
         self._url = amqp_url
@@ -208,8 +222,17 @@ class ThreadedAmqp(Thread):
         :param str|unicode userdata: Extra user data (exchange name)
 
         """
+
         LOGGER.info('Exchange declared: %s', userdata)
-        self.setup_queue(self.QUEUE)
+
+        if self._consumerMode is False:
+            self.prep_publishing()
+            LOGGER.info("consumer mode is false, working in publishing mode.")
+        else:
+            LOGGER.info("consumer mode is true, working in consumer mode, setting up queue.")
+            self.setup_queue(self.QUEUE)
+            pass
+
 
     def setup_queue(self, queue_name):
         """Setup the queue on RabbitMQ by invoking the Queue.Declare RPC
@@ -249,13 +272,7 @@ class ThreadedAmqp(Thread):
         time to start publishing."""
         LOGGER.info('Queue bound')
 
-        if self._consumerMode is False:
-            self.prep_publishing()
-            LOGGER.info("consumer mode is false, working in publishing mode.")
-        else:
-            LOGGER.info("consumer mode is false, working in consumer mode.")
-            self.set_qos()
-            pass
+        self.set_qos()
 
     def set_qos(self):
         """This method sets up the consumer prefetch to only be delivered
@@ -332,8 +349,16 @@ class ThreadedAmqp(Thread):
         """
         LOGGER.info('Received message # %s from %s: %s',
                     basic_deliver.delivery_tag, properties.app_id, body)
-        self.acknowledge_message(basic_deliver.delivery_tag)
 
+        try:
+            # raise event to let subscribers consume
+            self.callbackEvents.on_message(body)
+
+            self.acknowledge_message(basic_deliver.delivery_tag)
+
+        except:
+            LOGGER.error(sys.exc_info())
+            
     def acknowledge_message(self, delivery_tag):
         """Acknowledge the message delivery from RabbitMQ by sending a
         Basic.Ack RPC method for the delivery tag.
@@ -446,7 +471,7 @@ class ThreadedAmqp(Thread):
             return
         
         if self._consumerMode is True:
-            logger.error("Trying to publish message when consumerMode is true, illegal operation.")
+            LOGGER.error("Trying to publish message when consumerMode is true, illegal operation.")
             return
 
         properties = pika.BasicProperties(

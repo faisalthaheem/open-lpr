@@ -1,3 +1,19 @@
+"""
+   Copyright 2019 Faisal Thaheem
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""
+
 # Ugly hack to allow absolute import from the root folder
 # whatever its name is. Please forgive the heresy.
 if __name__ == "__main__" and __package__ is None:
@@ -121,7 +137,7 @@ def dispatcher():
                 dbcollection.insert_one(msg)
 
             
-                #post to mqtt
+                #post to mq
                 broker.publish_message(msg)                
                 logger.info("[{}] published".format(msg['_id']))
 
@@ -204,12 +220,22 @@ def main():
 
         logger.info("Connecting to broker")
         broker = ThreadedAmqp()
+        brokerUrl = None
+
+        if os.getenv('PRODUCTION') is not None: 
+            brokerUrl = config['broker']['produrl']
+        else:
+            brokerUrl = config['broker']['devurl']
+        
+        logger.info("Using broker url [{}]".format(brokerUrl))
+
         broker.init(
-            'amqp://guest:guest@localhost:5672/%2F?connection_attempts=3&heartbeat=3600'
+            brokerUrl
         )
         broker.start()
 
-        dispatcherThread = threading.Thread(None, dispatcher).start()
+        dispatcherThread = threading.Thread(None, dispatcher)
+        dispatcherThread.start()
         
         handler = MyHandler
         handler.authorizer = authorizer
