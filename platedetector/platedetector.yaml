@@ -1,14 +1,26 @@
-broker:
-  produrl: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'
-  devurl: 'amqp://guest:guest@localhost:5672/%2F?connection_attempts=3&heartbeat=3600'
-  publishTo:
-    exchange: 'platedetector'
-    exchangeType: 'fanout'
-    routingKey: 'platedetection'
-mongo:
-  prod: 'mongodb://lpr:lpr@mongo:27017'
-  dev: 'mongodb://lpr:lpr@localhost:27017'
-detection:
-  loadHeight: 288
-  loadWidth: 384
-  grayScale: False
+dev:
+  broker:
+    uri: 'amqp://guest:guest@localhost:5672/%2F?connection_attempts=3&heartbeat=3600'
+    publishTo:
+      exchange: 'platedetector'
+      exchangeType: 'fanout'
+      routingKey: 'platedetection'
+  mongo:
+    uri: 'mongodb://lpr:lpr@localhost:27017'
+  detection:
+    loadHeight: 288
+    loadWidth: 384
+    grayScale: False
+prod:
+  broker:
+    uri: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'
+    publishTo:
+      exchange: 'platedetector'
+      exchangeType: 'fanout'
+      routingKey: 'platedetection'
+  mongo:
+    uri: 'mongodb://lpr:lpr@mongo:27017'
+  detection:
+    loadHeight: 288
+    loadWidth: 384
+    grayScale: False
