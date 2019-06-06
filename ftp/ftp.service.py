@@ -79,12 +79,7 @@ queuedImages = queue.Queue(0)
 server = None
 dispatcherThread = None
 
-with open(args["config.file"]) as stream:
-    try:
-        config = yaml.load(stream)
-        pprint.pprint(config)
-    except yaml.YAMLError as err:
-        logger.error(err)
+config = None
 
 
 def dispatcher():
@@ -95,10 +90,7 @@ def dispatcher():
     db = None
 
     try:
-        if os.getenv('PRODUCTION') is not None: 
-            client = MongoClient(config['mongo']['prod'])
-        else:
-            client = MongoClient(config['mongo']['dev'])
+        client = MongoClient(config['mongo']['uri'])
 
         #open db
         if not "openlpr" in client.database_names():
@@ -209,11 +201,25 @@ class MyHandler(FTPHandler):
 
 def main():
 
+    global config
     global server
     global broker
     global dispatcherThread
 
     try:
+
+        with open(args["config.file"]) as stream:
+            try:
+                if os.getenv('PRODUCTION') is not None: 
+                        config = yaml.load(stream)['prod']
+                else:
+                        config = yaml.load(stream)['dev']
+
+                pprint.pprint(config)
+            except yaml.YAMLError as err:
+                logger.error(err)
+
+
         authorizer = DummyAuthorizer()
         authorizer.add_user('user', '12345', homedir='.', perm='elradfmwMT')
         authorizer.add_anonymous(homedir='.')
@@ -222,11 +228,7 @@ def main():
         broker = ThreadedAmqp()
         brokerUrl = None
 
-        if os.getenv('PRODUCTION') is not None: 
-            brokerUrl = config['broker']['produrl']
-        else:
-            brokerUrl = config['broker']['devurl']
-        
+        brokerUrl = config['broker']['uri']
         logger.info("Using broker url [{}]".format(brokerUrl))
 
         broker.init(
