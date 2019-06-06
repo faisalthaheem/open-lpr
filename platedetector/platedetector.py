@@ -196,9 +196,9 @@ class PlateDetector():
                         )
                 
                 return {
-                        'boxes': translatedBoxes,
-                        'scores': scores[0].tolist(),
-                        'classes': classes[0].tolist()
+                        'boxes': translatedBoxes[:10],
+                        'scores': scores[0].tolist()[:10],
+                        'classes': classes[0].tolist()[:10]
                 }
 
 def signal_handler(sig, frame):

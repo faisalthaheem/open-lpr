@@ -74,13 +74,8 @@ class PlateClassifier():
                 
                 self.pc_model, self.pc_classes, self.pc_graph, self.pc_sess = utils.loadModel(config['model']["modelfile"], config["model"]['modelLoss'])
         
-
-                brokerUrl = None
-                if os.getenv('PRODUCTION') is not None: 
-                        brokerUrl = config['broker']['produrl']
-                else:
-                        brokerUrl = config['broker']['devurl']
-                        
+     
+                brokerUrl = config['broker']['uri']
                 logger.info("Using broker url [{}]".format(brokerUrl))
 
                 self._consumer = ThreadedAmqp()
@@ -131,10 +126,8 @@ class PlateClassifier():
 
 
         def getDbConnection(self):
-                if os.getenv('PRODUCTION') is not None: 
-                        client = MongoClient(config['mongo']['prod'])
-                else:
-                        client = MongoClient(config['mongo']['dev'])
+                
+                client = MongoClient(config['mongo']['uri'])
 
                 #open db
                 if not "openlpr" in client.database_names():
@@ -241,8 +234,13 @@ if __name__ == '__main__':
 
         with open(args["config.file"]) as stream:
                 try:
-                        config = yaml.load(stream)
+                        if os.getenv('PRODUCTION') is not None: 
+                                config = yaml.load(stream)['prod']
+                        else:
+                                config = yaml.load(stream)['dev']
+
                         pprint.pprint(config)
+
                 except yaml.YAMLError as err:
                         logger.error(err)
 
