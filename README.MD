@@ -1,6 +1,6 @@
 # Milestones
 
-## Work on classification module is in progress.
+## Work on OCR module is in progress.
 
 ![Milestones](https://rawcdn.githack.com/faisalthaheem/open-lpr/0bf07f8c06ce40fe42ff82e0e021d269225afde9/docs/Milestones.png)
 
