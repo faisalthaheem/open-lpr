@@ -21,7 +21,7 @@ if __name__ == "__main__" and __package__ is None:
     from os.path import dirname as dir
 
     path.append(dir(path[0]))
-    __package__ = "platedetector"
+    __package__ = "plateclassifier"
     
 from shared.amqp import ThreadedAmqp
 import shared.utils as utils
@@ -48,10 +48,10 @@ from skimage.transform import resize
 
 
 #create logger
-logger = logging.getLogger('platedetector.service')
+logger = logging.getLogger('plateclassifier.service')
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('platedetector.service.log')
+fh = logging.FileHandler('plateclassifier.service.log')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -65,17 +65,15 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 
-class PlateDetector():
-        platedetector = None
+class PlateClassifier():
+        pc_model, pc_classes, pc_graph, pc_sess = None,None,None,None
         _consumer = None
         _publisher = None
         
         def __init__(self, args):
                 
-                self.platedetector = ObjDetector()
-                self.platedetector.init(
-                        args["model.path"],
-                        args["label.path"])
+                self.pc_model, self.pc_classes, self.pc_graph, self.pc_sess = utils.loadModel(config['model']["modelfile"], config["model"]['modelLoss'])
+        
 
                 brokerUrl = None
                 if os.getenv('PRODUCTION') is not None: 
@@ -89,7 +87,10 @@ class PlateDetector():
                 self._consumer.callbackEvents.on_message += self.newImageQueued
                 self._consumer.init(
                         brokerUrl,
-                        consumerMode=True
+                        consumerMode=True,
+                        exchange=config['broker']['consumeFrom']['exchange'],
+                        exchangeType=config['broker']['consumeFrom']['exchangeType'],
+                        routingKey=config['broker']['consumeFrom']['routingKey'],
                 )
                 
                 self._publisher = ThreadedAmqp()
@@ -103,6 +104,20 @@ class PlateDetector():
  
                 logger.info("Init complete")
 
+        def classifyPlate(self, img):
+
+                plate_img_with_black_bg = utils.overlayImageOnBlackCanvas(img)
+                plate_img_gs = utils.convertToGrayscaleForClassification(plate_img_with_black_bg)
+                plate_img_expanded = np.expand_dims(plate_img_gs, axis=0)
+                
+                with self.pc_graph.as_default():
+                        with self.pc_sess.as_default():
+                                predictions = self.pc_model.predict(plate_img_expanded)
+
+                max_score_index = np.argmax(predictions[0])
+
+                return self.pc_classes[max_score_index], float(predictions[0][max_score_index])
+
         def cleanup(self):
                 if self._consumer is not None:
                         self._consumer.stop()
@@ -114,7 +129,8 @@ class PlateDetector():
                 self._consumer.start()
                 self._publisher.start()
 
-        def updateDb(self, doc):
+
+        def getDbConnection(self):
                 if os.getenv('PRODUCTION') is not None: 
                         client = MongoClient(config['mongo']['prod'])
                 else:
@@ -124,6 +140,26 @@ class PlateDetector():
                 if not "openlpr" in client.database_names():
                         logger.info("database openlpr does not exist, will be created after first document insert")
                         
+                return client
+
+        def getDoc(self, docid):
+
+                client = self.getDbConnection()
+
+                db = client["openlpr"]
+                query = {"_id": docid}
+
+                col = db['lprevents']
+                document = col.find_one(query)
+
+                client.close()
+                
+                return document
+                
+        def updateDb(self, doc):
+
+                client = self.getDbConnection()
+
                 db = client["openlpr"]
                 query = {"_id": doc['_id']}
                 updatedDoc = { "$set": doc}
@@ -132,6 +168,7 @@ class PlateDetector():
                 col.update_one(query, updatedDoc)
 
                 client.close()
+
 
         def newImageQueued(self, msg):
                 logger.debug(msg)
@@ -142,27 +179,31 @@ class PlateDetector():
 
                         originalImage = utils.load_image_into_numpy_array(msg['diskpath'], None, False)
                         originalShape = originalImage.shape
-                        originalImage = None
-
-                        msg['imgDimensions'] = {
-                                "height": originalShape[0],
-                                "width": originalShape[1],
-                                "channels": originalShape[2]
-                        }
                         
-                        img = utils.load_image_into_numpy_array(
-                                msg['diskpath'], 
-                                (config['detection']['loadHeight'],config['detection']['loadWidth']), 
-                                config['detection']['grayScale'])
-
                         logger.debug("Loaded image [{}]".format(msg['diskpath']))
 
-                        # detect plates
-                        detections = self.detectPlate(img, originalShape)
-                        logger.debug(detections)
+                        msg['classifications'] = []
+                        document = msg
+
+                        # slice
+                        plateImage = originalImage[
+                                document['detections']['boxes'][0][0]:document['detections']['boxes'][0][2],
+                                document['detections']['boxes'][0][1]:document['detections']['boxes'][0][3]
+                        ]
+
+                        # classify first plate
+                        # todo classify each plate above a certain confidence threshold
+                        platetype, score  = self.classifyPlate(plateImage)
+                        msg['classifications'].append(
+                                {
+                                        'platetype': platetype,
+                                        'score': score
+                                }
+                        )
+
+                        logger.info("[{}] classified as [{}] with confidence [{}]".format(msg['_id'],platetype, score))
 
                         # save to db
-                        msg['detections'] = detections
                         self.updateDb(msg)
 
                         # dispatch to mq
@@ -171,35 +212,6 @@ class PlateDetector():
                 except:
                         logger.error(sys.exc_info())
 
-        def detectPlate(self, imgData, originalShape):
-
-                start=time.time()
-                
-                h,w,_ = imgData.shape
-                oh,ow,_ = originalShape
-                mulH = oh/h
-                mulW = ow/w
-                
-                image_np_expanded = np.expand_dims(imgData, axis=0)
-                (boxes, scores, classes, num) = self.platedetector.detect(image_np_expanded)
-                end=time.time()
-                
-                translatedBoxes = []
-                for box in boxes[0]:
-                        translatedBoxes.append(
-                                (
-                                int(box[0] * h * mulH),
-                                int(box[1] * w * mulW),
-                                int(box[2] * h * mulH),
-                                int(box[3] * w * mulW),
-                                )
-                        )
-                
-                return {
-                        'boxes': translatedBoxes,
-                        'scores': scores[0].tolist(),
-                        'classes': classes[0].tolist()
-                }
 
 def signal_handler(sig, frame):
     try:
@@ -219,12 +231,7 @@ if __name__ == '__main__':
 
         ap = argparse.ArgumentParser()
 
-        ap.add_argument("-mp", "--model.path", required=True,
-                help="folder containing the model")
-        ap.add_argument("-lp", "--label.path", required=True,
-                help="path to labels")
-
-        ap.add_argument("-cf", "--config.file", default='platedetector.yaml',
+        ap.add_argument("-cf", "--config.file", default='plateclassifier.yaml',
                 help="Config file describing service parameters")
 
         args = vars(ap.parse_args())
@@ -240,7 +247,7 @@ if __name__ == '__main__':
                         logger.error(err)
 
 
-        detector = PlateDetector(args)
+        detector = PlateClassifier(args)
         detector.loop_forever()
 
 
