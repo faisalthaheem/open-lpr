@@ -179,22 +179,28 @@ class PlateClassifier():
                         document = msg
 
                         # slice
-                        plateImage = originalImage[
-                                document['detections']['boxes'][0][0]:document['detections']['boxes'][0][2],
-                                document['detections']['boxes'][0][1]:document['detections']['boxes'][0][3]
-                        ]
+                        for i in range(0, len(document['detections']['boxes'])):
+                                if document['detections']['scores'][i] >= config['classification']['minScore']:
+                                        plateImage = originalImage[
+                                                document['detections']['boxes'][0][0]:document['detections']['boxes'][0][2],
+                                                document['detections']['boxes'][0][1]:document['detections']['boxes'][0][3]
+                                        ]
 
-                        # classify first plate
-                        # todo classify each plate above a certain confidence threshold
-                        platetype, score  = self.classifyPlate(plateImage)
-                        msg['classifications'].append(
-                                {
-                                        'platetype': platetype,
-                                        'score': score
-                                }
-                        )
+                                        # classify first plate
+                                        # todo classify each plate above a certain confidence threshold
+                                        platetype, score  = self.classifyPlate(plateImage)
+                                        
+                                else:
+                                        platetype, score  = 'not classified',0.0
 
-                        logger.info("[{}] classified as [{}] with confidence [{}]".format(msg['_id'],platetype, score))
+
+                                msg['classifications'].append(
+                                        {
+                                                'platetype': platetype,
+                                                'score': score
+                                        }
+                                )
+                                logger.info("[{}] classified as [{}] with confidence [{}]".format(msg['_id'],platetype, score))
 
                         # save to db
                         self.updateDb(msg)

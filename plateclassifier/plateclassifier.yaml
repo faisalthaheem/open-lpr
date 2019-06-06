@@ -18,9 +18,8 @@ dev:
     imgHeight: 300
     imgChan: 3
   classification:
-    loadHeight: 288
-    loadWidth: 384
-    grayScale: False
+    # what should be the min score that we stop classifying after
+    minScore: 0.9
 prod:
   broker:
     uri: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'
@@ -41,6 +40,4 @@ prod:
     imgHeight: 300
     imgChan: 3
   classification:
-    loadHeight: 288
-    loadWidth: 384
-    grayScale: False
+    minScore: 0.9
