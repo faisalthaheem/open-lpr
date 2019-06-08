@@ -191,7 +191,8 @@ class PlateClassifier():
                                         #save this plate image to be used in ocr
                                         filename = "{}_plate_{}.jpg".format(msg['_id'],i)
                                         filename = os.path.join(os.path.dirname(msg['diskpath']), filename)
-                                        cv2.imwrite(filename, plateImage)
+                                        msg['plate_img_path'] = filename
+                                        cv2.imwrite(filename, cv2.cvtColor(plateImage.copy(), cv2.COLOR_RGB2BGR))
 
 
                                         # classify first plate
