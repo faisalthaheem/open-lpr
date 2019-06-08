@@ -194,11 +194,7 @@ class PlateClassifier():
                                         msg['plate_img_path'] = filename
                                         cv2.imwrite(filename, cv2.cvtColor(plateImage.copy(), cv2.COLOR_RGB2BGR))
 
-
-                                        # classify first plate
-                                        # todo classify each plate above a certain confidence threshold
                                         platetype, score  = self.classifyPlate(plateImage)
-
                                         
                                 else:
                                         platetype, score  = 'not classified',0.0
