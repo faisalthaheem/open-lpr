@@ -32,6 +32,8 @@ class ThreadedAmqp(Thread):
     #PUBLISH_INTERVAL = 1
     QUEUE = 'from.ftp'
     ROUTING_KEY = 'new.request'
+    EXCHANGE_DURABLE = True
+    QUEUE_DURABLE = False
 
     callbackEvents = Events(('on_message'))
 
@@ -65,7 +67,7 @@ class ThreadedAmqp(Thread):
         return
 
     def init(self, amqp_url, 
-        exchange = None, exchangeType = None, queue = None, routingKey = None, 
+        exchange = None, exchangeType = None, exchangeDurable=True, queue = None, queueDurable=True, routingKey = None, 
         consumerMode = False):
         """Setup the example publisher object, passing in the URL we will use
         to connect to RabbitMQ.
@@ -81,6 +83,8 @@ class ThreadedAmqp(Thread):
         if exchangeType is not None:
             self.EXCHANGE_TYPE = exchangeType
         
+        self.EXCHANGE_DURABLE = exchangeDurable
+        self.QUEUE_DURABLE = queueDurable
         
         if queue is not None:
             self.QUEUE = queue
@@ -212,6 +216,7 @@ class ThreadedAmqp(Thread):
         self._channel.exchange_declare(
             exchange=exchange_name,
             exchange_type=self.EXCHANGE_TYPE,
+            durable=self.EXCHANGE_DURABLE,
             callback=cb)
 
     def on_exchange_declareok(self, _unused_frame, userdata):
@@ -245,7 +250,7 @@ class ThreadedAmqp(Thread):
         LOGGER.info('Declaring queue %s', queue_name)
         self._channel.queue_declare(
             queue=queue_name, 
-            durable=True,
+            durable=self.QUEUE_DURABLE,
             callback=self.on_queue_declareok)
 
     def on_queue_declareok(self, _unused_frame):
