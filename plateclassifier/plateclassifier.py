@@ -45,6 +45,7 @@ import signal
 import json
 from pymongo import MongoClient
 from skimage.transform import resize
+import cv2
 
 
 #create logger
@@ -86,6 +87,7 @@ class PlateClassifier():
                         exchange=config['broker']['consumeFrom']['exchange'],
                         exchangeType=config['broker']['consumeFrom']['exchangeType'],
                         routingKey=config['broker']['consumeFrom']['routingKey'],
+                        queueName=config['broker']['consumeFrom']['queueName'],
                 )
                 
                 self._publisher = ThreadedAmqp()
@@ -186,9 +188,16 @@ class PlateClassifier():
                                                 document['detections']['boxes'][0][1]:document['detections']['boxes'][0][3]
                                         ]
 
+                                        #save this plate image to be used in ocr
+                                        filename = "{}_plate_{}.jpg".format(msg['_id'],i)
+                                        filename = os.path.join(os.path.dirname(msg['diskpath']), filename)
+                                        cv2.imwrite(filename, plateImage)
+
+
                                         # classify first plate
                                         # todo classify each plate above a certain confidence threshold
                                         platetype, score  = self.classifyPlate(plateImage)
+
                                         
                                 else:
                                         platetype, score  = 'not classified',0.0

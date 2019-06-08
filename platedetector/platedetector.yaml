@@ -5,6 +5,11 @@ dev:
       exchange: 'platedetector'
       exchangeType: 'fanout'
       routingKey: 'platedetection'
+    consumeFrom:
+      exchange: 'ftp'
+      exchangeType: 'fanout'
+      routingKey: 'new.request'
+      queueName: 'detection_enqueue'
   mongo:
     uri: 'mongodb://lpr:lpr@localhost:27017'
   detection:
@@ -18,6 +23,11 @@ prod:
       exchange: 'platedetector'
       exchangeType: 'fanout'
       routingKey: 'platedetection'
+    consumeFrom:
+      exchange: 'ftp'
+      exchangeType: 'fanout'
+      routingKey: 'new.request'
+      queueName: 'detection_enqueue'
   mongo:
     uri: 'mongodb://lpr:lpr@mongo:27017'
   detection:

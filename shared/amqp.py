@@ -67,7 +67,7 @@ class ThreadedAmqp(Thread):
         return
 
     def init(self, amqp_url, 
-        exchange = None, exchangeType = None, exchangeDurable=True, queue = None, queueDurable=True, routingKey = None, 
+        exchange = None, exchangeType = None, exchangeDurable=True, queueName = None, queueDurable=True, routingKey = None, 
         consumerMode = False):
         """Setup the example publisher object, passing in the URL we will use
         to connect to RabbitMQ.
@@ -86,8 +86,8 @@ class ThreadedAmqp(Thread):
         self.EXCHANGE_DURABLE = exchangeDurable
         self.QUEUE_DURABLE = queueDurable
         
-        if queue is not None:
-            self.QUEUE = queue
+        if queueName is not None:
+            self.QUEUE = queueName
         
         
         if routingKey is not None:

@@ -84,7 +84,11 @@ class PlateDetector():
                 self._consumer.callbackEvents.on_message += self.newImageQueued
                 self._consumer.init(
                         brokerUrl,
-                        consumerMode=True
+                        consumerMode=True,
+                        exchange=config['broker']['consumeFrom']['exchange'],
+                        exchangeType=config['broker']['consumeFrom']['exchangeType'],
+                        routingKey=config['broker']['consumeFrom']['routingKey'],
+                        queueName=config['broker']['consumeFrom']['queueName'],
                 )
                 
                 self._publisher = ThreadedAmqp()
