@@ -213,6 +213,7 @@ def find_rois(image, debugEnabled=False):
         t_start = time.time()
 
         cvfunc = getNewCVFuncs(debugEnabled)
+        cvfunc.debugEnabled = False
         rects, rois = cvfunc.processPlate(image,"test")
 
         t_end = time.time()

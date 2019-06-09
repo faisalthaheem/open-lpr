@@ -1049,7 +1049,7 @@ class CvFuncs:
 
         localImg = img.copy()
 
-        im2, contours, hierarchy = cv2.findContours(localImg, cv2.RETR_LIST , cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(localImg, cv2.RETR_LIST , cv2.CHAIN_APPROX_SIMPLE)
         if self.debugEnabled:
             print("findAndAppendContours Found [{}] contours".format(len(contours)))
 

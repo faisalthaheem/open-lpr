@@ -21,10 +21,11 @@ if __name__ == "__main__" and __package__ is None:
     from os.path import dirname as dir
 
     path.append(dir(path[0]))
-    __package__ = "plateclassifier"
+    __package__ = "ocr"
     
 from shared.amqp import ThreadedAmqp
 import shared.utils as utils
+import shared.cvfuncs as cvfuncs
 from shared.obj_detector import ObjDetector
 
 import pprint
@@ -49,10 +50,10 @@ import cv2
 
 
 #create logger
-logger = logging.getLogger('plateclassifier.service')
+logger = logging.getLogger('ocr.service')
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
-fh = logging.FileHandler('plateclassifier.service.log')
+fh = logging.FileHandler('ocr.service.log')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -67,13 +68,13 @@ logger.addHandler(ch)
 
 
 class PlateClassifier():
-        pc_model, pc_classes, pc_graph, pc_sess = None,None,None,None
+        lc_model, lc_classes, lc_graph, lc_sess = None,None,None,None
         _consumer = None
         _publisher = None
         
         def __init__(self, args):
                 
-                self.pc_model, self.pc_classes, self.pc_graph, self.pc_sess = utils.loadModel(config['model']["modelfile"], config["model"]['modelLoss'])
+                self.lc_model, self.lc_classes, self.lc_graph, self.lc_sess = utils.loadModel(config['model']["modelfile"], config["model"]['modelLoss'])
         
      
                 brokerUrl = config['broker']['uri']
@@ -164,6 +165,40 @@ class PlateClassifier():
 
                 client.close()
 
+        def classifyTextRois(self, rects, rois):
+
+                letters = []
+                filteredRects = []
+                confidences = []
+                
+                try:
+                        rois = rois / 255
+
+                        with self.lc_graph.as_default():
+                                with self.lc_sess.as_default():
+                                        predictions = self.lc_model.predict(rois, 1)
+
+                        for i in range(0,len(rois)):
+                                max_score_i = np.argmax(predictions[i])
+                                conf_i = predictions[i][max_score_i]
+                                class_i = self.lc_classes[max_score_i]
+
+                                if class_i != 'skipped' and conf_i >= 0.9:
+                                        letters.append(class_i)
+                                        filteredRects.append([
+                                                float(rects[i][0]), #x
+                                                float(rects[i][1]), #y
+                                                float(rects[i][2]), #w
+                                                float(rects[i][3]), #h
+                                        ])
+                                        confidences.append(float(conf_i))
+
+                        return np.mean(confidences), filteredRects, confidences,''.join(letters[:6])
+                except:
+                        logger.error(traceback.format_exc())
+                                
+                return 0.0, [], [], ''
+
 
         def newImageQueued(self, msg):
                 logger.debug(msg)
@@ -172,47 +207,38 @@ class PlateClassifier():
                         # load image
                         msg = json.loads(msg)
 
-                        originalImage = utils.load_image_into_numpy_array(msg['diskpath'], None, False)
-                        originalShape = originalImage.shape
-                        
-                        logger.debug("Loaded image [{}]".format(msg['diskpath']))
+                        msg['ocr'] = []
 
-                        msg['classifications'] = []
-                        document = msg
+                        # loop and ocr
+                        for i in range(0, len(msg['plate_imgs'])):
+                                if msg['classifications'][i]['score'] >= config['classification']['minScore']:
+                                        
+                                        plate_img = utils.load_image_into_numpy_array(msg['plate_imgs'][i], None, False)
+                                        plate_class = msg['classifications'][i]['platetype']
 
-                        # slice
-                        plate_images = []
-                        for i in range(0, len(document['detections']['boxes'])):
-                                if document['detections']['scores'][i] >= config['classification']['minScore']:
-                                        plateImage = originalImage[
-                                                document['detections']['boxes'][0][0]:document['detections']['boxes'][0][2],
-                                                document['detections']['boxes'][0][1]:document['detections']['boxes'][0][3]
-                                        ]
 
-                                        #save this plate image to be used in ocr
-                                        filename = "{}_plate_{}.jpg".format(msg['_id'],i)
-                                        filename = os.path.join(os.path.dirname(msg['diskpath']), filename)
-                                        plate_images.append(filename)
+                                        #extract text roi region
+                                        text_roi_region = utils.extractTextRoiFromPlate(plate_img, plate_class)
 
-                                        cv2.imwrite(filename, cv2.cvtColor(plateImage.copy(), cv2.COLOR_RGB2BGR))
+                                        #find letter rois
+                                        rects, rois = utils.find_rois(text_roi_region, True)
 
-                                        platetype, score  = self.classifyPlate(plateImage)
+                                        #classify the letter rois
+                                        avgTextConf, filteredRects, letterconfidences, lprtext = self.classifyTextRois(rects, rois)
                                         
                                 else:
-                                        platetype, score  = 'not classified',0.0
+                                        avgTextConf, filteredRects, letterconfidences, lprtext  = 0.0, [], [], 'not classified'
 
-
-                                msg['classifications'].append(
+                                msg['ocr'].append(
                                         {
-                                                'platetype': platetype,
-                                                'score': score
+                                                'avgTextConf': avgTextConf,
+                                                'filteredRects': filteredRects,
+                                                'letterconfidences': letterconfidences,
+                                                'lprtext': lprtext
                                         }
                                 )
-                                logger.info("[{}] classified as [{}] with confidence [{}]".format(msg['_id'],platetype, score))
+                                logger.info("[{}] ocr [{}] with confidence [{}]".format(msg['_id'],lprtext, avgTextConf))
 
-                        #todo fix later, possible bug, num plates inequal num classifications/detections
-                        msg['plate_imgs'] = plate_images
-                        
                         # save to db
                         self.updateDb(msg)
 
@@ -241,7 +267,7 @@ if __name__ == '__main__':
 
         ap = argparse.ArgumentParser()
 
-        ap.add_argument("-cf", "--config.file", default='plateclassifier.yaml',
+        ap.add_argument("-cf", "--config.file", default='ocr.yaml',
                 help="Config file describing service parameters")
 
         args = vars(ap.parse_args())
