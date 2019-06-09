@@ -2,7 +2,7 @@
 
 ## Work on OCR module is in progress.
 
-![Milestones](https://rawcdn.githack.com/faisalthaheem/open-lpr/0bf07f8c06ce40fe42ff82e0e021d269225afde9/docs/Milestones.png)
+![Milestones](https://raw.githack.com/faisalthaheem/open-lpr/master/docs/Milestones.png)
 
 
 # Overview
