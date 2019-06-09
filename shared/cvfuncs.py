@@ -1135,9 +1135,9 @@ class CvFuncs:
         rectsFound = 0
 
         thresh = cv2.adaptiveThreshold(localImage.copy(),255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,blockDim,0)
-        cv2.imwrite("filter.thresh.bininv.jpg",thresh)        
+        #cv2.imwrite("filter.thresh.bininv.jpg",thresh)        
         edges = cv2.Canny(thresh,100,200)
-        cv2.imwrite("filter.edges.thresh.bininv.jpg",edges)
+        #cv2.imwrite("filter.edges.thresh.bininv.jpg",edges)
         rectsFound = rectsFound + self.findAndAppendContours(edges)
         
 
