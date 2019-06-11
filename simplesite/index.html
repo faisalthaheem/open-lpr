@@ -1,16 +1,63 @@
 <html>
     <head>
-
+        <script
+        src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+        crossorigin="anonymous"></script>
+        <script async src="https://docs.opencv.org/master/opencv.js" type="text/javascript"></script>
     </head>
     <body>
 
+        <img id="main-image" src="" style="display:none;" />
+
+        <div>
+            <h1>
+                <span id="lpr-text">
+                    LPR Text will appear here
+                </span>
+            </h1>
+        </div>
+        <canvas id="outputCanvas"></canvas>
+
     </body>
     <script>
+
+        host='http://localhost:1890';
+
         if (!!window.EventSource) {
-            var source = new EventSource('http://localhost:1890/sse/lprevents');
+            var source = new EventSource(host + '/sse/lprevents');
 
             source.addEventListener('message', function(e) {
                 console.log(e.data);
+
+                $.ajax({
+                    url: host + "/get-plate-image?_id=" + JSON.parse(e.data).id,
+                    type: "GET",
+                    headers: {
+                    },
+                    mimeType: "text/plain; charset=x-user-defined"
+                }).done(function( data, textStatus, jqXHR ) {
+                    var doc = JSON.parse(data);
+                    console.log(doc.doc);
+
+                    $("#lpr-text").text(doc.doc.ocr[0].lprtext);
+                    
+                    $("#main-image").attr('src', doc.img);
+
+                    let point1 = new cv.Point(doc.doc.detections.boxes[0][1], doc.doc.detections.boxes[0][0]);
+                    let point2 = new cv.Point(doc.doc.detections.boxes[0][3], doc.doc.detections.boxes[0][2]);
+                    let boxColor = new cv.Scalar(255,0,0);
+
+                    let mat = cv.imread(document.getElementById('main-image'));
+                    cv.rectangle(mat, point1, point2, boxColor, 2, cv.LINE_AA, 0);
+
+                    cv.imshow('outputCanvas', mat);
+                    mat.delete();
+
+                }).fail(function( jqXHR, textStatus, errorThrown ) {
+                    alert("fail: " + errorThrown);
+                });
+                    
             }, false);
 
             source.addEventListener('open', function(e) {

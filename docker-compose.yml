@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3.3'
 services:
   broker:
     image: rabbitmq:3.7.14-management
@@ -13,11 +13,16 @@ services:
       - PORT=1890
     ports:
       - '1890:1890'
+    volumes:
+      - ./filestorage:/filestorage
   mongodb:
     image: mongo:4.1.11-bionic
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: lpr
       MONGO_INITDB_ROOT_PASSWORD: lpr
+      MONGO_INITDB_DATABASE: openlpr
+    volumes:
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - 27017:27017
