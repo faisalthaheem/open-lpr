@@ -137,7 +137,8 @@ class PlateDetector():
                         # load image
                         msg = json.loads(msg)
 
-                        originalImage = utils.load_image_into_numpy_array(msg['diskpath'], None, False)
+                        diskpath = os.path.join(config['storage']['path'], msg['unique_name'])
+                        originalImage = utils.load_image_into_numpy_array(diskpath, None, False)
                         originalShape = originalImage.shape
                         originalImage = None
 
@@ -148,11 +149,11 @@ class PlateDetector():
                         }
                         
                         img = utils.load_image_into_numpy_array(
-                                msg['diskpath'], 
+                                diskpath, 
                                 (config['detection']['loadHeight'],config['detection']['loadWidth']), 
                                 config['detection']['grayScale'])
 
-                        logger.debug("Loaded image [{}]".format(msg['diskpath']))
+                        logger.debug("Loaded image [{}]".format(diskpath))
 
                         # detect plates
                         detections = self.detectPlate(img, originalShape)

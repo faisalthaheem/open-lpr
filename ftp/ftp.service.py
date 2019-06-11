@@ -66,8 +66,6 @@ ap.add_argument("-cf", "--config.file", default='ftp.service.yaml',
         help="Config file describing service parameters")
 ap.add_argument("-bl", "--brokers.list", default='127.0.0.1',
         help="Kafka brokers")
-ap.add_argument("-sp", "--storage.path", default='/data',
-        help="Storage Path")
 args = vars(ap.parse_args())
 
 
@@ -83,7 +81,7 @@ config = None
 
 
 def dispatcher():
-    storagePath = args['storage.path']
+    storagePath = config['storage']['path']
     logger.info("Will be storing all files to [{}]".format(storagePath))
 
     client = None
@@ -115,11 +113,12 @@ def dispatcher():
 
                 # save to disk
                 try:
-                    destPath = os.path.join(storagePath, "{}_{}".format(msg['_id'], msg['filename']))
-                    msg['diskpath'] = destPath
+                    unique_name = "{}_{}".format(msg['_id'], msg['filename'])
+                    msg['unique_name'] = unique_name
+                    destPath = os.path.join(storagePath, unique_name)
                     logger.info("Moving from [{}] to [{}]".format(qItm['diskpath'], destPath))
                     
-                    shutil.move(qItm['diskpath'], msg['diskpath'])
+                    shutil.move(qItm['diskpath'], destPath)
 
                 except:
                     logger.error(sys.exc_info())

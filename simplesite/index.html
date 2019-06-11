@@ -1,0 +1,30 @@
+<html>
+    <head>
+
+    </head>
+    <body>
+
+    </body>
+    <script>
+        if (!!window.EventSource) {
+            var source = new EventSource('http://localhost:1890/sse/lprevents');
+
+            source.addEventListener('message', function(e) {
+                console.log(e.data);
+            }, false);
+
+            source.addEventListener('open', function(e) {
+                // Connection was opened.
+            }, false);
+
+            source.addEventListener('error', function(e) {
+            if (e.readyState == EventSource.CLOSED) {
+                // Connection was closed.
+            }
+            }, false);
+       } else {
+            // Result to xhr polling :(
+            console.log('sse not supported.')
+        }
+    </script>
+</html>

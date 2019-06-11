@@ -16,6 +16,8 @@ dev:
     loadHeight: 288
     loadWidth: 384
     grayScale: False
+  storage:
+    path: '../filestorage'
 prod:
   broker:
     uri: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'
@@ -34,3 +36,5 @@ prod:
     loadHeight: 288
     loadWidth: 384
     grayScale: False
+  storage:
+    path: '../filestorage'

@@ -5,6 +5,8 @@ dev:
     uri: 'mongodb://lpr:lpr@localhost:27017'
   dispatcher:
     period: 1
+  storage:
+    path: '../filestorage'
 prod:
   broker:
     uri: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'
@@ -12,3 +14,5 @@ prod:
     uri: 'mongodb://lpr:lpr@mongo:27017'
   dispatcher:
     period: 1
+  storage:
+    path: '../filestorage'

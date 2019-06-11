@@ -172,10 +172,11 @@ class PlateClassifier():
                         # load image
                         msg = json.loads(msg)
 
-                        originalImage = utils.load_image_into_numpy_array(msg['diskpath'], None, False)
+                        diskpath = os.path.join(config['storage']['path'], msg['unique_name'])
+                        originalImage = utils.load_image_into_numpy_array(diskpath, None, False)
                         originalShape = originalImage.shape
                         
-                        logger.debug("Loaded image [{}]".format(msg['diskpath']))
+                        logger.debug("Loaded image [{}]".format(diskpath))
 
                         msg['classifications'] = []
                         document = msg
@@ -191,8 +192,9 @@ class PlateClassifier():
 
                                         #save this plate image to be used in ocr
                                         filename = "{}_plate_{}.jpg".format(msg['_id'],i)
-                                        filename = os.path.join(os.path.dirname(msg['diskpath']), filename)
                                         plate_images.append(filename)
+
+                                        filename = os.path.join(config['storage']['path'], filename)
 
                                         cv2.imwrite(filename, cv2.cvtColor(plateImage.copy(), cv2.COLOR_RGB2BGR))
 

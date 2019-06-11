@@ -213,7 +213,8 @@ class PlateClassifier():
                         for i in range(0, len(msg['plate_imgs'])):
                                 if msg['classifications'][i]['score'] >= config['classification']['minScore']:
                                         
-                                        plate_img = utils.load_image_into_numpy_array(msg['plate_imgs'][i], None, False)
+                                        diskpath = os.path.join(config['storage']['path'], msg['plate_imgs'][i])
+                                        plate_img = utils.load_image_into_numpy_array(diskpath, None, False)
                                         plate_class = msg['classifications'][i]['platetype']
 
 
