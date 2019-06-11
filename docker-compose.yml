@@ -15,6 +15,7 @@ services:
       - '1890:1890'
     volumes:
       - ./filestorage:/filestorage
+      - ./static-html-content:/static-html-content
   mongodb:
     image: mongo:4.1.11-bionic
     restart: always
