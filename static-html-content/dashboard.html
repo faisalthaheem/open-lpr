@@ -23,6 +23,7 @@
     <script>
 
         host='http://localhost:1890';
+        var eventAlreadyBound = false;
 
         if (!!window.EventSource) {
             var source = new EventSource(host + '/sse/lprevents');
@@ -44,18 +45,27 @@
                     
                     $("#main-image").attr('src', doc.img);
 
-                    let point1 = new cv.Point(doc.doc.detections.boxes[0][1], doc.doc.detections.boxes[0][0]);
-                    let point2 = new cv.Point(doc.doc.detections.boxes[0][3], doc.doc.detections.boxes[0][2]);
-                    let boxColor = new cv.Scalar(255,0,0);
+                    if(!eventAlreadyBound){
+                        eventAlreadyBound = true;
 
-                    let mat = cv.imread(document.getElementById('main-image'));
-                    cv.rectangle(mat, point1, point2, boxColor, 2, cv.LINE_AA, 0);
+                        $("#main-image").on('load', function(){
 
-                    cv.imshow('outputCanvas', mat);
-                    mat.delete();
+                            let point1 = new cv.Point(doc.doc.detections.boxes[0][1], doc.doc.detections.boxes[0][0]);
+                            let point2 = new cv.Point(doc.doc.detections.boxes[0][3], doc.doc.detections.boxes[0][2]);
+                            let boxColor = new cv.Scalar(255,255,0);
 
+                            let mat = cv.imread(document.getElementById('main-image'));
+                            console.log(mat.shape);
+                            cv.rectangle(mat, point1, point2, boxColor, 2, cv.LINE_AA, 0);
+
+                            cv.imshow('outputCanvas', mat);
+                            mat.delete();
+                            
+                        });
+                    }    
+                    
                 }).fail(function( jqXHR, textStatus, errorThrown ) {
-                    alert("fail: " + errorThrown);
+                    console.log("fail: " + errorThrown);
                 });
                     
             }, false);
@@ -73,5 +83,6 @@
             // Result to xhr polling :(
             console.log('sse not supported.')
         }
+
     </script>
 </html>
