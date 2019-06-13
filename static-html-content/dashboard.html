@@ -55,7 +55,7 @@
                             let boxColor = new cv.Scalar(255,255,0);
 
                             let mat = cv.imread(document.getElementById('main-image'));
-                            console.log(mat.shape);
+                            
                             cv.rectangle(mat, point1, point2, boxColor, 2, cv.LINE_AA, 0);
 
                             cv.imshow('outputCanvas', mat);
