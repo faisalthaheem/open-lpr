@@ -6,4 +6,4 @@ RUN npm install --no-cache --save \
     node-red-contrib-image-tools  \
     node-red-contrib-mongodb3 
 
-ADD flows.json /data
+ADD ["flows.json","settings.js","/data/"]
