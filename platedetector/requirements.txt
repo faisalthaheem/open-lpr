@@ -1,0 +1,5 @@
+pymongo==3.8.0
+numpy==1.16.3
+scikit_image==0.15.0
+skimage==0.0
+PyYAML==5.1.1

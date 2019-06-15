@@ -27,3 +27,13 @@ services:
       - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - 27017:27017
+  ftp:
+    image: openlpr/ftp:1.0
+    restart: always
+    environment:
+      PRODUCTION: 'yes'
+    depends_on:
+      - broker
+      - mongodb
+    ports:
+      - 2121:2121
