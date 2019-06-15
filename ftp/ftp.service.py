@@ -97,7 +97,7 @@ def dispatcher():
         db = client["openlpr"]
 
     except:
-        logger.error(sys.exc_info())
+        logger.error("An error occurred: ", exc_info=True)
 
     while True:
         try:
@@ -121,7 +121,7 @@ def dispatcher():
                     shutil.move(qItm['diskpath'], destPath)
 
                 except:
-                    logger.error(sys.exc_info())
+                    logger.error("An error occurred: ", exc_info=True)
 
                 # save to db
                 dbcollection = db["lprevents"]
@@ -133,7 +133,7 @@ def dispatcher():
                 logger.info("[{}] published".format(msg['_id']))
 
         except:
-            logger.error(sys.exc_info())
+            logger.error("An error occurred: ", exc_info=True)
 
         if threading.main_thread().is_alive() is False:
             logger.info("Main thread exited, dispatcher exiting")
@@ -181,7 +181,7 @@ class MyHandler(FTPHandler):
             logger.info("Queued new file [{}]".format(file_name))
             
         except:
-            logger.error(sys.exc_info())
+            logger.error("An error occurred: ", exc_info=True)
         pass
     
     def readFileContent(self, path):
@@ -216,7 +216,7 @@ def main():
 
                 pprint.pprint(config)
             except yaml.YAMLError as err:
-                logger.error(err)
+                logger.error("An error occurred: ", exc_info=True)
 
 
         authorizer = DummyAuthorizer()
@@ -244,7 +244,7 @@ def main():
         server = FTPServer(('0.0.0.0', 2121), handler)
         server.serve_forever()
     except:
-        logger.error(sys.exc_info())
+        logger.error("An error occurred: ", exc_info=True)
 
 def signal_handler(sig, frame):
     try:
@@ -253,7 +253,7 @@ def signal_handler(sig, frame):
         broker.stop()
         dispatcherThread.stop()
     except:
-        logger.error(sys.exc_info())
+        logger.error("An error occurred: ", exc_info=True)
     
 #handle ctrl-c
 signal.signal(signal.SIGINT, signal_handler)

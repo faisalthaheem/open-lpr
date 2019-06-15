@@ -31,9 +31,24 @@ services:
     image: openlpr/ftp:1.0
     restart: always
     environment:
-      PRODUCTION: 'yes'
+      PRODUCTION: production
     depends_on:
       - broker
       - mongodb
     ports:
       - 2121:2121
+    volumes:
+      - shared:/filestorage
+  ftp:
+    image: openlpr/platedetector:1.0
+    restart: always
+    environment:
+      PRODUCTION: production
+    depends_on:
+      - broker
+      - mongodb
+    volumes:
+      - shared:/filestorage
+      - ./models:/models
+volumes:
+  shared:
