@@ -195,7 +195,7 @@ class PlateClassifier():
 
                         return np.mean(confidences), filteredRects, confidences,''.join(letters[:6])
                 except:
-                        logger.error(traceback.format_exc())
+                        logger.error("An error occurred: ", exc_info=True)
                                 
                 return 0.0, [], [], ''
 
@@ -247,7 +247,7 @@ class PlateClassifier():
                         self._publisher.publish_message(msg)
 
                 except:
-                        logger.error(sys.exc_info())
+                        logger.error("An error occurred: ", exc_info=True)
 
 
 def signal_handler(sig, frame):
@@ -257,7 +257,7 @@ def signal_handler(sig, frame):
         if detector is not None:
                 detector.cleanup()
     except:
-        logger.error(sys.exc_info())
+        logger.error("An error occurred: ", exc_info=True)
     
 
 if __name__ == '__main__':
@@ -286,7 +286,7 @@ if __name__ == '__main__':
                         pprint.pprint(config)
 
                 except yaml.YAMLError as err:
-                        logger.error(err)
+                        logger.error("An error occurred: ", exc_info=True)
 
 
         detector = PlateClassifier(args)

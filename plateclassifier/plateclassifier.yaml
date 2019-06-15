@@ -13,7 +13,7 @@ dev:
   mongo:
     uri: 'mongodb://lpr:lpr@localhost:27017'
   model:
-    modelfile: './model/plateclassifier'
+    modelfile: '../models/plateclassifier'
     modelLoss: 'categorical_crossentropy'
     imgWidth: 300
     imgHeight: 300
@@ -36,9 +36,9 @@ prod:
       routingKey: 'platedetection'
       queueName: 'classification_enqueue'
   mongo:
-    uri: 'mongodb://lpr:lpr@mongo:27017'
+    uri: 'mongodb://lpr:lpr@mongodb:27017'
   model:
-    modelfile: './model/plateclassifier'
+    modelfile: '/models/plateclassifier'
     modelLoss: 'categorical_crossentropy'
     imgWidth: 300
     imgHeight: 300
@@ -46,4 +46,4 @@ prod:
   classification:
     minScore: 0.9
   storage:
-    path: '../filestorage'
+    path: '/filestorage'

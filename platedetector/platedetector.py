@@ -167,8 +167,8 @@ class PlateDetector():
                         self._publisher.publish_message(msg)
 
                 except:
-                        logger.error(sys.exc_info())
-
+                        logger.error("An error occurred: ", exc_info=True)
+                
         def detectPlate(self, imgData, originalShape):
 
                 start=time.time()
@@ -206,7 +206,7 @@ def signal_handler(sig, frame):
         if detector is not None:
                 detector.cleanup()
     except:
-        logger.error(sys.exc_info())
+        logger.error("An error occurred: ", exc_info=True)
     
 
 if __name__ == '__main__':
@@ -239,7 +239,7 @@ if __name__ == '__main__':
 
                         pprint.pprint(config)
                 except yaml.YAMLError as err:
-                        logger.error(err)
+                        logger.error("An error occurred: ", exc_info=True)
 
 
         detector = PlateDetector(args)
