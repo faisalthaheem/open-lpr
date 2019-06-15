@@ -13,6 +13,9 @@ services:
       - PORT=1890
     ports:
       - '1890:1890'
+    depends_on:
+      - broker
+      - mongodb
     volumes:
       - ./filestorage:/filestorage
       - ./static-html-content:/static-html-content
