@@ -17,7 +17,7 @@
                 </span>
             </h1>
         </div>
-        <canvas id="outputCanvas"></canvas>
+        <canvas id="outputCanvas" width=1280 height=720></canvas>
 
     </body>
     <script>
@@ -41,7 +41,7 @@
                     var doc = JSON.parse(data);
                     console.log(doc.doc);
 
-                    $("#lpr-text").text(doc.doc.ocr[0].lprtext);
+                    $("#lpr-text").text(doc.doc.ocr[0].lprtext + " is of type " + doc.doc.classifications[0].platetype);
                     
                     $("#main-image").attr('src', doc.img);
 
@@ -52,11 +52,11 @@
 
                             let point1 = new cv.Point(doc.doc.detections.boxes[0][1], doc.doc.detections.boxes[0][0]);
                             let point2 = new cv.Point(doc.doc.detections.boxes[0][3], doc.doc.detections.boxes[0][2]);
-                            let boxColor = new cv.Scalar(255,255,0);
+                            let boxColor = new cv.Scalar(255,0,0,255);
 
                             let mat = cv.imread(document.getElementById('main-image'));
                             
-                            cv.rectangle(mat, point1, point2, boxColor, 2, cv.LINE_AA, 0);
+                            cv.rectangle(mat, point1, point2, boxColor, 4, cv.LINE_AA, 0);
 
                             cv.imshow('outputCanvas', mat);
                             mat.delete();
