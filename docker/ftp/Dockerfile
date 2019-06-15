@@ -4,6 +4,7 @@ LABEL maintainer="faisal.ajmal@gmail.com"
 ADD ./shared /openlpr/shared
 ADD ./ftp /openlpr/ftp
 ADD ./shared/empty /filestorage/
+ADD ./shared/empty /temp-storage/
 
 WORKDIR /openlpr/ftp
 
