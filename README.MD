@@ -1,6 +1,6 @@
 # Milestones
 
-## Work on OCR module is in progress.
+## Work on Documentation is in progress.
 
 ![Milestones](https://raw.githack.com/faisalthaheem/open-lpr/master/docs/Milestones.png)
 
