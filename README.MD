@@ -1,6 +1,6 @@
 
-# Open ALPR
-Open Automatic License Plate Recognition uses deep neural networks to detect license plates, classify them and perform OCR. Following image illustrates a dashboard that shows real time ALPR result.
+# Open LPR
+Open License Plate Recognition uses deep neural networks to detect license plates, classify them and perform OCR. Following image illustrates a dashboard that shows real time LPR result.
 
 ![In Action](https://rawcdn.githack.com/faisalthaheem/open-lpr/f60aa4c7a48470d278d814804e3d53eb6f01318a/docs/alpr-result.jpg)
 
@@ -31,7 +31,7 @@ The dashboard will update to reflect the detected plate and OCR text like in the
 
 # Overview
 
-Open ALPR is a distributed system aimed towards ease of management and high LPR throughput. The core consists of modules to perform the tasks of plate detection, classification and OCR.
+Open LPR is a distributed system aimed towards ease of management and high LPR throughput. The core consists of modules to perform the tasks of plate detection, classification and OCR.
 
 Ground up the system is built to be scalable and can handle the load of a single site to a city wide area.
 
