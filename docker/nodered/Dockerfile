@@ -1,9 +1,8 @@
-FROM nodered/node-red-docker:v10
+FROM nodered/node-red-docker:0.18.7-v8
 
 RUN npm install --no-cache --save \
-    node-red-contrib-amqp \
+    node-red-contrib-amqp@1.0.1 \
     @ekaralis/node-red-contrib-sse-plus \
-    node-red-contrib-image-tools  \
     node-red-contrib-mongodb3 
 
 ADD ["flows.json","settings.js","/data/"]

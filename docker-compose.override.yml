@@ -50,3 +50,8 @@ services:
         - ./models:/models
 volumes:
   shared:
+    driver: local
+    driver_opts:
+      type: none
+      device: $PWD/filestorage
+      o: bind
