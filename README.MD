@@ -4,6 +4,8 @@ Open License Plate Recognition uses deep neural networks to detect license plate
 
 ![In Action](https://rawcdn.githack.com/faisalthaheem/open-lpr/f60aa4c7a48470d278d814804e3d53eb6f01318a/docs/alpr-result.jpg)
 
+# Documentation
+Head over to the wiki for [documentation](https://github.com/faisalthaheem/open-lpr/wiki/Documentation).
 
 # Quick Start
 
