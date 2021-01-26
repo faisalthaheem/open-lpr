@@ -4,7 +4,7 @@ services:
     volumes:
       - shared:/filestorage
   ftp:
-    image: openlpr/ftp:1.0
+    image: openlpr/ftp:2.0
     restart: always
     environment:
       PRODUCTION: production
@@ -16,7 +16,7 @@ services:
     volumes:
       - shared:/filestorage
   platedetector:
-    image: openlpr/platedetector:1.0
+    image: openlpr/platedetector:2.0
     restart: always
     environment:
       PRODUCTION: production
@@ -27,7 +27,7 @@ services:
       - shared:/filestorage
       - ./models:/models
   plateclassifier:
-      image: openlpr/plateclassifier:1.0
+      image: openlpr/plateclassifier:2.0
       restart: always
       environment:
         PRODUCTION: production
@@ -38,7 +38,7 @@ services:
         - shared:/filestorage
         - ./models:/models
   ocr:
-      image: openlpr/ocr:1.0
+      image: openlpr/ocr:2.0
       restart: always
       environment:
         PRODUCTION: production

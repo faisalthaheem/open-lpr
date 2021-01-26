@@ -14,8 +14,6 @@
    limitations under the License.
 """
 
-# Ugly hack to allow absolute import from the root folder
-# whatever its name is. Please forgive the heresy.
 if __name__ == "__main__" and __package__ is None:
     from sys import path
     from os.path import dirname as dir

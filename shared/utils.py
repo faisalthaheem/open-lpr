@@ -27,10 +27,11 @@ from pprint import pprint
 from random import shuffle
 from PIL import Image
 
-from keras.backend.tensorflow_backend import set_session
-from keras.utils import np_utils
-from keras.models import Model, load_model, model_from_json
-from keras.preprocessing import image
+
+from tensorflow.compat.v1.keras.backend import set_session
+from tensorflow.compat.v1.keras.utils import to_categorical
+from tensorflow.compat.v1.keras.models import Model, load_model, model_from_json
+from tensorflow.compat.v1.keras.preprocessing import image
 from sklearn.preprocessing import LabelEncoder
 from skimage.transform import resize
 from skimage.color import rgb2gray
@@ -38,13 +39,13 @@ from skimage.color import rgb2gray
 def tf_new_session(device_id = "0", memory_fraction = 1.0):
     
     
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.per_process_gpu_memory_fraction = memory_fraction
     config.gpu_options.allow_growth = True
     config.gpu_options.visible_device_list = device_id
-    sess = tf.Session(config=config)
+    sess = tf.compat.v1.Session(config=config)
     # see https://github.com/keras-team/keras/issues/4780
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
     
     return sess
 
@@ -52,13 +53,13 @@ def tf_new_session(device_id = "0", memory_fraction = 1.0):
 
 def set_tf_session_for_keras(device_id = "0", memory_fraction = 1.0):
     
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.per_process_gpu_memory_fraction = memory_fraction
     config.gpu_options.allow_growth = True
     config.gpu_options.visible_device_list = device_id
-    sess = tf.Session(config=config)
+    sess = tf.compat.v1.Session(config=config)
     # see https://github.com/keras-team/keras/issues/4780
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
     set_session(sess)
 
 def load_image_into_numpy_array(path_to_image, imgdim=(96,96,1), grayScale = True):
@@ -318,15 +319,10 @@ def load_minibatch(classes, train_files_list, batch_size, batch_number,imgdim=(9
     # print("[{}] to allocate empty array".format((t_2-t_1)))
     # print("[{}] to load images".format((t_3-t_2)))
     # print("[{}] to identify missing classes".format((t_4-t_3)))
-    # print("[{}] to fill in empty classes".format((t_5-t_4)))
-
-    return X, Y
-
-def convert_to_one_hot(classes, labels):
-    encoder = LabelEncoder()
+    # print("[{}] to fill in empty classes".format((t_5-t_4)))np_utils
     encoder.fit(classes)
     encoded_labels = encoder.transform(labels)
-    one_hot_labels = np_utils.to_categorical(encoded_labels)
+    one_hot_labels = to_categorical(encoded_labels)
     return encoded_labels, one_hot_labels
 
 def write_file_contents(file_name, content):
