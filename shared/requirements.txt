@@ -1,4 +1,4 @@
-tensorflow==1.13.1
+tensorflow==2.4.0
 pika==1.0.1
 numpy==1.16.3
 Events==0.3
