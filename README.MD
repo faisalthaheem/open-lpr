@@ -1,11 +1,18 @@
 
 # Open LPR
-Open License Plate Recognition uses deep neural networks to detect license plates, classify them and perform OCR. Following image illustrates a dashboard that shows real time LPR result.
+**Free forever Open Source License Plate Recognition software which uses deep neural networks to detect license plates, classify them and perform OCR.**
+
+Following image illustrates a dashboard built using nodered that shows real time LPR results. NodeRED can be used to build RESTful services, integrate with other systems such as over modbus to extend the business functionality of the system.
+
 
 ![In Action](https://rawcdn.githack.com/faisalthaheem/open-lpr/f60aa4c7a48470d278d814804e3d53eb6f01318a/docs/alpr-result.jpg)
-
-# Documentation
+Shows 349253 as the license plate text, and qa.priv_broad as the type of number plate. An abundance of information such as bounding boxes, confidence scores etc are availabel in the raw JSON data published by the services and available to NodeRED and any other integrating service for consumption.
+# Documentation & Updates
 Head over to the wiki for [documentation](https://github.com/faisalthaheem/open-lpr/wiki/Documentation).
+
+**Jan 13, 2021**: Ported to tensorflow 2 with compatibility mode for tensorflow 1.
+
+
 
 # Quick Start
 
