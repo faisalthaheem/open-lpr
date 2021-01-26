@@ -1,3 +1,3 @@
-pymongo==3.8.0
+pymongo==3.11.2
 pyftpdlib==1.5.5
-PyYAML==5.1.1
+PyYAML==5.4.1

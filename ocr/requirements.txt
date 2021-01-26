@@ -1,5 +1,5 @@
-numpy==1.16.3
-scikit_image==0.15.0
-opencv_python==4.1.0.25
-pymongo==3.8.0
-PyYAML==5.1.1
+numpy==1.19.5
+scikit_image==0.18.1
+opencv_python==4.5.1.48
+pymongo==3.11.2
+PyYAML==5.4.1

@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.8
 LABEL maintainer="faisal.ajmal@gmail.com"
 
 ADD ./shared /openlpr/shared
@@ -8,7 +8,7 @@ ADD ./shared/empty /temp-storage/
 
 WORKDIR /openlpr/ftp
 
-RUN pip3 install --no-cache-dir -r /openlpr/shared/requirements.txt && \
+RUN sh -c "/openlpr/shared/install-python-deps.sh" && \
     pip3 install --no-cache-dir -r /openlpr/ftp/requirements.txt
 
 EXPOSE 2121
