@@ -17,7 +17,7 @@ dev:
     loadWidth: 384
     grayScale: False
   storage:
-    path: '../filestorage'
+    path: '../tmp/accepted-uploads'
 prod:
   broker:
     uri: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'

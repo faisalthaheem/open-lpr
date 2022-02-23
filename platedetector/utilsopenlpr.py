@@ -1,0 +1,1 @@
+open_lpr_classes = ["background", "vehicle", "plate"]

@@ -22,27 +22,30 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "platedetector"
     
 from shared.amqp import ThreadedAmqp
-import shared.utils as utils
-from shared.obj_detector import ObjDetector
+
+import numpy as np
+import argparse
+import torch
+from transform import SSDTransformer
+import cv2
+from PIL import Image
+
+from utils import generate_dboxes, Encoder, colors, coco_classes
+from model import SSD, ResNet
+
+from utilsopenlpr import open_lpr_classes
 
 import pprint
 import yaml
-import threading
-import sys
 import numpy as np
 import time
 import os
 import argparse as argparse
 import json
-import queue
-import uuid
 import logging
-import pickle
-import traceback
 import signal
 import json
 from pymongo import MongoClient
-from skimage.transform import resize
 
 
 #create logger
@@ -64,16 +67,27 @@ logger.addHandler(ch)
 
 
 class PlateDetector():
-        platedetector = None
+
         _consumer = None
         _publisher = None
         
         def __init__(self, args):
+                print(args)
+                self.model = SSD(backbone=ResNet())
                 
-                self.platedetector = ObjDetector()
-                self.platedetector.init(
-                        args["model.path"],
-                        args["label.path"])
+                if torch.cuda.is_available():
+                        checkpoint = torch.load(args['model'])
+                else:
+                        map_location=torch.device('cpu')
+                        checkpoint = torch.load(args['model'], map_location=map_location)
+                        
+                self.model.load_state_dict(checkpoint["model_state_dict"])
+                if torch.cuda.is_available():
+                        self.model.cuda()
+                self.model.eval()
+                dboxes = generate_dboxes()
+                self.transformer = SSDTransformer(dboxes, (300, 300), val=True)
+                self.encoder = Encoder(dboxes)
 
                 brokerUrl = config['broker']['uri']        
                 logger.info("Using broker url [{}]".format(brokerUrl))
@@ -112,11 +126,12 @@ class PlateDetector():
                 self._publisher.start()
 
         def updateDb(self, doc):
+                print(doc)
 
                 client = MongoClient(config['mongo']['uri'])
 
                 #open db
-                if not "openlpr" in client.database_names():
+                if not "openlpr" in client.list_database_names():
                         logger.info("database openlpr does not exist, will be created after first document insert")
                         
                 db = client["openlpr"]
@@ -136,36 +151,65 @@ class PlateDetector():
                         msg = json.loads(msg)
 
                         diskpath = os.path.join(config['storage']['path'], msg['unique_name'])
-                        originalImage = utils.load_image_into_numpy_array(diskpath, None, False)
-                        originalShape = originalImage.shape
-                        originalImage = None
+                        img = Image.open(diskpath).convert("RGB")
+                        
+                        width = img.width
+                        height = img.height
 
                         msg['imgDimensions'] = {
-                                "height": originalShape[0],
-                                "width": originalShape[1],
-                                "channels": originalShape[2]
+                                "height": img.width,
+                                "width": img.height,
+                                "channels": img.mode
                         }
-                        
-                        img = utils.load_image_into_numpy_array(
-                                diskpath, 
-                                (config['detection']['loadHeight'],config['detection']['loadWidth']), 
-                                config['detection']['grayScale'])
+
+                        img, _, _, _ = self.transformer(img, None, torch.zeros(1,4), torch.zeros(1))
+                        if torch.cuda.is_available():
+                                img = img.cuda()
 
                         logger.debug("Loaded image [{}]".format(diskpath))
 
+
                         # detect plates
-                        detections = self.detectPlate(img, originalShape)
-                        logger.debug(detections)
+                        with torch.no_grad():
+                                ploc, plabel = self.model(img.unsqueeze(dim=0))
+                                result = self.encoder.decode_batch(ploc, plabel, args['nms_threshold'], 20)[0]
+                                loc, label, prob = [r.cpu().numpy() for r in result]
+                                best = np.argwhere(prob > args['cls_threshold']).squeeze(axis=1)
+                                loc = loc[best]
+                                label = label[best]
+                                prob = prob[best]
 
-                        # save to db
-                        msg['detections'] = detections
-                        self.updateDb(msg)
+                                
+                                        
+                                logger.debug(label)
+                                logger.debug(loc)
+                                logger.debug(prob)
+                                
+                                originalLocations = []
+                                for l in loc:
+                                        l[0] *= width
+                                        l[2] *= width
+                                        l[1] *= height
+                                        l[3] *= height
+                                        
+                                        originalLocations.append(l.astype(int).tolist())
+                                
+                                detections = {
+                                        'boxes': originalLocations,
+                                        'scores': list(prob.tolist()),
+                                        'classes': list(label.tolist())
+                                }
 
-                        # dispatch to mq
-                        self._publisher.publish_message(msg)
+                                # save to db
+                                msg['detections'] = detections
+                                self.updateDb(msg)
+
+                                # dispatch to mq
+                                self._publisher.publish_message(msg)
 
                 except:
                         logger.error("An error occurred: ", exc_info=True)
+                        #todo - post to mq
                 
         def detectPlate(self, imgData, originalShape):
 
@@ -215,10 +259,9 @@ if __name__ == '__main__':
 
         ap = argparse.ArgumentParser()
 
-        ap.add_argument("-mp", "--model.path", required=True,
-                help="folder containing the model")
-        ap.add_argument("-lp", "--label.path", required=True,
-                help="path to labels")
+        ap.add_argument("--cls-threshold", type=float, default=0.3)
+        ap.add_argument("--nms-threshold", type=float, default=0.5)
+        ap.add_argument("--model", type=str, default="trained_models/SSD.pth")
 
         ap.add_argument("-cf", "--config.file", default='platedetector.yaml',
                 help="Config file describing service parameters")
@@ -231,9 +274,9 @@ if __name__ == '__main__':
         with open(args["config.file"]) as stream:
                 try:
                         if os.getenv('PRODUCTION') is not None: 
-                                config = yaml.load(stream)['prod']
+                                config = yaml.safe_load(stream)['prod']
                         else:
-                                config = yaml.load(stream)['dev']
+                                config = yaml.safe_load(stream)['dev']
 
                         pprint.pprint(config)
                 except yaml.YAMLError as err:
