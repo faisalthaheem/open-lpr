@@ -6,8 +6,8 @@ dev:
   dispatcher:
     period: 1
   storage:
-    path: '../filestorage'
-    upload-path: '/filestorage'
+    path: '../tmp/accepted-uploads'
+    upload-path: '../tmp/ftp-in'
 prod:
   broker:
     uri: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'
