@@ -64,8 +64,6 @@ logger.addHandler(ch)
 ap = argparse.ArgumentParser()
 ap.add_argument("-cf", "--config.file", default='ftp.service.yaml',
         help="Config file describing service parameters")
-ap.add_argument("-bl", "--brokers.list", default='127.0.0.1',
-        help="Kafka brokers")
 args = vars(ap.parse_args())
 
 
