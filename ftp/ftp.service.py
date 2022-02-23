@@ -91,7 +91,7 @@ def dispatcher():
         client = MongoClient(config['mongo']['uri'])
 
         #open db
-        if not "openlpr" in client.database_names():
+        if not "openlpr" in client.list_database_names():
             logger.info("database openlpr does not exist, will be created after first document insert")
         
         db = client["openlpr"]
@@ -210,9 +210,9 @@ def main():
         with open(args["config.file"]) as stream:
             try:
                 if os.getenv('PRODUCTION') is not None: 
-                        config = yaml.load(stream)['prod']
+                        config = yaml.safe_load(stream)['prod']
                 else:
-                        config = yaml.load(stream)['dev']
+                        config = yaml.safe_load(stream)['dev']
 
                 pprint.pprint(config)
             except yaml.YAMLError as err:
