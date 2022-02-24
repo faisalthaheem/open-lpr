@@ -1,1 +1,0 @@
-name = "open_alpr"
