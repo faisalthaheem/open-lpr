@@ -4,7 +4,7 @@ services:
     volumes:
       - shared:/filestorage
   ftp:
-    image: openlpr/ftp:2.0
+    image: openlpr/ftp:3.0
     restart: always
     environment:
       PRODUCTION: production
@@ -13,10 +13,11 @@ services:
       - mongodb
     ports:
       - 2121:2121
+      - 60000-60050:60000-60050
     volumes:
       - shared:/filestorage
   platedetector:
-    image: openlpr/platedetector:2.0
+    image: openlpr/platedetector:3.0
     restart: always
     environment:
       PRODUCTION: production
@@ -25,20 +26,8 @@ services:
       - mongodb
     volumes:
       - shared:/filestorage
-      - ./models:/models
-  plateclassifier:
-      image: openlpr/plateclassifier:2.0
-      restart: always
-      environment:
-        PRODUCTION: production
-      depends_on:
-        - broker
-        - mongodb
-      volumes:
-        - shared:/filestorage
-        - ./models:/models
   ocr:
-      image: openlpr/ocr:2.0
+      image: openlpr/ocr:3.0
       restart: always
       environment:
         PRODUCTION: production
@@ -47,7 +36,6 @@ services:
         - mongodb
       volumes:
         - shared:/filestorage
-        - ./models:/models
 volumes:
   shared:
     driver: local
