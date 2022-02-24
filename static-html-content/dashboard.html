@@ -41,7 +41,7 @@
                     var doc = JSON.parse(data);
                     console.log(doc.doc);
 
-                    $("#lpr-text").text(doc.doc.ocr[0].lprtext + " is of type " + doc.doc.classifications[0].platetype);
+                    $("#lpr-text").text(doc.doc.ocr[0][0]);
                     
                     $("#main-image").attr('src', doc.img);
 
@@ -50,8 +50,8 @@
 
                         $("#main-image").on('load', function(){
 
-                            let point1 = new cv.Point(doc.doc.detections.boxes[0][1], doc.doc.detections.boxes[0][0]);
-                            let point2 = new cv.Point(doc.doc.detections.boxes[0][3], doc.doc.detections.boxes[0][2]);
+                            let point1 = new cv.Point(doc.doc.detections.boxes[0][0], doc.doc.detections.boxes[0][1]);
+                            let point2 = new cv.Point(doc.doc.detections.boxes[0][2], doc.doc.detections.boxes[0][3]);
                             let boxColor = new cv.Scalar(255,0,0,255);
 
                             let mat = cv.imread(document.getElementById('main-image'));

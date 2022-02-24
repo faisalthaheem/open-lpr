@@ -12,12 +12,8 @@ dev:
       queueName: 'detection_enqueue'
   mongo:
     uri: 'mongodb://lpr:lpr@localhost:27017'
-  detection:
-    loadHeight: 288
-    loadWidth: 384
-    grayScale: False
   storage:
-    path: '../filestorage'
+    path: '../tmp/accepted-uploads'
 prod:
   broker:
     uri: 'amqp://guest:guest@broker:5672/%2F?connection_attempts=3&heartbeat=3600'
@@ -32,9 +28,5 @@ prod:
       queueName: 'detection_enqueue'
   mongo:
     uri: 'mongodb://lpr:lpr@mongodb:27017'
-  detection:
-    loadHeight: 288
-    loadWidth: 384
-    grayScale: False
   storage:
     path: '/filestorage'

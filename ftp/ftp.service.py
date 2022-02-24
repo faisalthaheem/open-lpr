@@ -13,17 +13,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-
-# Ugly hack to allow absolute import from the root folder
-# whatever its name is. Please forgive the heresy.
-if __name__ == "__main__" and __package__ is None:
-    from sys import path
-    from os.path import dirname as dir
-
-    path.append(dir(path[0]))
-    __package__ = "ftp"
     
-from shared.amqp import ThreadedAmqp
+from amqp import ThreadedAmqp
 
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
@@ -64,8 +55,6 @@ logger.addHandler(ch)
 ap = argparse.ArgumentParser()
 ap.add_argument("-cf", "--config.file", default='ftp.service.yaml',
         help="Config file describing service parameters")
-ap.add_argument("-bl", "--brokers.list", default='127.0.0.1',
-        help="Kafka brokers")
 args = vars(ap.parse_args())
 
 
@@ -91,7 +80,7 @@ def dispatcher():
         client = MongoClient(config['mongo']['uri'])
 
         #open db
-        if not "openlpr" in client.database_names():
+        if not "openlpr" in client.list_database_names():
             logger.info("database openlpr does not exist, will be created after first document insert")
         
         db = client["openlpr"]
@@ -210,9 +199,9 @@ def main():
         with open(args["config.file"]) as stream:
             try:
                 if os.getenv('PRODUCTION') is not None: 
-                        config = yaml.load(stream)['prod']
+                        config = yaml.safe_load(stream)['prod']
                 else:
-                        config = yaml.load(stream)['dev']
+                        config = yaml.safe_load(stream)['dev']
 
                 pprint.pprint(config)
             except yaml.YAMLError as err:
@@ -240,8 +229,15 @@ def main():
         
         handler = MyHandler
         handler.authorizer = authorizer
+        handler.banner = "OpenLPR FTP server, no liabilities or warranties."
+        handler.passive_ports = range(60000, 60050)
 
         server = FTPServer(('0.0.0.0', 2121), handler)
+        
+        # set a limit for connections
+        server.max_cons = 50
+        server.max_cons_per_ip = 2
+        
         server.serve_forever()
     except:
         logger.error("An error occurred: ", exc_info=True)

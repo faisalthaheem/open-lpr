@@ -1,0 +1,5 @@
+Events==0.4
+pika==1.2.0
+pyftpdlib==1.5.6
+pymongo==4.0.1
+PyYAML==6.0

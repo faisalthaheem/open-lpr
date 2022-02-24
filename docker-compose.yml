@@ -7,10 +7,12 @@ services:
       - 15672:15672
       - 5672:5672
   nodered:
-    image: openlpr/nodered:v10
+    image: openlpr/nodered:2.2.2-14
     restart: always
     environment:
       - PORT=1890
+      - BROKER_USERNAME=guest
+      - BROKER_PASSWORD=guest
     ports:
       - '1890:1890'
     depends_on:

@@ -114,3 +114,5 @@ model/*
 *.classes.json
 *.model.json
 models/*
+
+tmp/**/*.jpg

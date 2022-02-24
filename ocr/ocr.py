@@ -14,38 +14,18 @@
    limitations under the License.
 """
 
-if __name__ == "__main__" and __package__ is None:
-    from sys import path
-    from os.path import dirname as dir
-
-    path.append(dir(path[0]))
-    __package__ = "ocr"
-    
-from shared.amqp import ThreadedAmqp
-import shared.utils as utils
-import shared.cvfuncs as cvfuncs
-from shared.obj_detector import ObjDetector
+from amqp import ThreadedAmqp
 
 import pprint
 import yaml
-import threading
-import sys
-import numpy as np
-import time
 import os
 import argparse as argparse
 import json
-import queue
-import uuid
 import logging
-import pickle
-import traceback
 import signal
-import json
 from pymongo import MongoClient
-from skimage.transform import resize
+import easyocr
 import cv2
-
 
 #create logger
 logger = logging.getLogger('ocr.service')
@@ -69,11 +49,11 @@ class PlateClassifier():
         lc_model, lc_classes, lc_graph, lc_sess = None,None,None,None
         _consumer = None
         _publisher = None
+        reader = None
         
         def __init__(self, args):
                 
-                self.lc_model, self.lc_classes, self.lc_graph, self.lc_sess = utils.loadModel(config['model']["modelfile"], config["model"]['modelLoss'])
-        
+                self.reader = easyocr.Reader(['en'],gpu=False)
      
                 brokerUrl = config['broker']['uri']
                 logger.info("Using broker url [{}]".format(brokerUrl))
@@ -100,20 +80,6 @@ class PlateClassifier():
  
                 logger.info("Init complete")
 
-        def classifyPlate(self, img):
-
-                plate_img_with_black_bg = utils.overlayImageOnBlackCanvas(img)
-                plate_img_gs = utils.convertToGrayscaleForClassification(plate_img_with_black_bg)
-                plate_img_expanded = np.expand_dims(plate_img_gs, axis=0)
-                
-                with self.pc_graph.as_default():
-                        with self.pc_sess.as_default():
-                                predictions = self.pc_model.predict(plate_img_expanded)
-
-                max_score_index = np.argmax(predictions[0])
-
-                return self.pc_classes[max_score_index], float(predictions[0][max_score_index])
-
         def cleanup(self):
                 if self._consumer is not None:
                         self._consumer.stop()
@@ -131,7 +97,7 @@ class PlateClassifier():
                 client = MongoClient(config['mongo']['uri'])
 
                 #open db
-                if not "openlpr" in client.database_names():
+                if not "openlpr" in client.list_database_names():
                         logger.info("database openlpr does not exist, will be created after first document insert")
                         
                 return client
@@ -163,81 +129,47 @@ class PlateClassifier():
 
                 client.close()
 
-        def classifyTextRois(self, rects, rois):
-
-                letters = []
-                filteredRects = []
-                confidences = []
-                
-                try:
-                        rois = rois / 255
-
-                        with self.lc_graph.as_default():
-                                with self.lc_sess.as_default():
-                                        predictions = self.lc_model.predict(rois, 1)
-
-                        for i in range(0,len(rois)):
-                                max_score_i = np.argmax(predictions[i])
-                                conf_i = predictions[i][max_score_i]
-                                class_i = self.lc_classes[max_score_i]
-
-                                if class_i != 'skipped' and conf_i >= 0.9:
-                                        letters.append(class_i)
-                                        filteredRects.append([
-                                                float(rects[i][0]), #x
-                                                float(rects[i][1]), #y
-                                                float(rects[i][2]), #w
-                                                float(rects[i][3]), #h
-                                        ])
-                                        confidences.append(float(conf_i))
-
-                        return np.mean(confidences), filteredRects, confidences,''.join(letters[:6])
-                except:
-                        logger.error("An error occurred: ", exc_info=True)
-                                
-                return 0.0, [], [], ''
-
-
+        
         def newImageQueued(self, msg):
-                logger.debug(msg)
 
                 try:
                         # load image
                         msg = json.loads(msg)
 
                         msg['ocr'] = []
-
-                        # loop and ocr
-                        for i in range(0, len(msg['plate_imgs'])):
-                                if msg['classifications'][i]['score'] >= config['classification']['minScore']:
+                        
+                        # loop and perform ocr on image regions identified as plates
+                        for i in range(0, len(msg['detections']['boxes'])):
+                                if msg['detections']['scores'][i] >= config['detection']['minScore']:
                                         
-                                        diskpath = os.path.join(config['storage']['path'], msg['plate_imgs'][i])
-                                        plate_img = utils.load_image_into_numpy_array(diskpath, None, False)
-                                        plate_class = msg['classifications'][i]['platetype']
+                                        diskpath = os.path.join(config['storage']['path'], msg['unique_name'])
+                                        orig_img = cv2.imread(diskpath)
 
-
-                                        #extract text roi region
-                                        text_roi_region = utils.extractTextRoiFromPlate(plate_img, plate_class)
+                                        #focus on the plate
+                                        (x,y,w,h) = msg['detections']['boxes'][i]
+                                        w = w-x
+                                        h = h-y
+                                        
+                                        plate_img= orig_img[y:y+h, x:x+w]
 
                                         #find letter rois
-                                        rects, rois = utils.find_rois(text_roi_region, True)
-
-                                        #classify the letter rois
-                                        avgTextConf, filteredRects, letterconfidences, lprtext = self.classifyTextRois(rects, rois)
+                                        ocr_raw = self.reader.readtext(plate_img)
                                         
-                                else:
-                                        avgTextConf, filteredRects, letterconfidences, lprtext  = 0.0, [], [], 'not classified'
+                                        for (regions, text, conf) in ocr_raw:
+                                                logger.debug("Evaluating ocr result [Text: {}, Conf: {}]".format(text, conf))
+                                                
+                                                if conf >= config['ocr']['minScore']:
+                                                        msg['ocr'].append(
+                                                                [
+                                                                        text,
+                                                                        float(conf)
+                                                                ]
+                                                        )
 
-                                msg['ocr'].append(
-                                        {
-                                                'avgTextConf': avgTextConf,
-                                                'filteredRects': filteredRects,
-                                                'letterconfidences': letterconfidences,
-                                                'lprtext': lprtext
-                                        }
-                                )
-                                logger.info("[{}] ocr [{}] with confidence [{}]".format(msg['_id'],lprtext, avgTextConf))
-
+                                                        logger.debug("Accepted [{}]".format(text))
+                                                else:
+                                                        logger.debug("Ignored [{}] due to low confidence".format(text))
+                
                         # save to db
                         self.updateDb(msg)
 
@@ -277,9 +209,9 @@ if __name__ == '__main__':
         with open(args["config.file"]) as stream:
                 try:
                         if os.getenv('PRODUCTION') is not None: 
-                                config = yaml.load(stream)['prod']
+                                config = yaml.safe_load(stream)['prod']
                         else:
-                                config = yaml.load(stream)['dev']
+                                config = yaml.safe_load(stream)['dev']
 
                         pprint.pprint(config)
 

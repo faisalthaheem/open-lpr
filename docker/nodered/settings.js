@@ -271,5 +271,8 @@ module.exports = {
             // To enable the Projects feature, set this value to true
             enabled: false
         }
-    }
+    },
+
+    MW_CONTRIB_AMQP_USERNAME: process.env.BROKER_USERNAME,
+    MW_CONTRIB_AMQP_PASSWORD: process.env.BROKER_PASSWORD
 }
