@@ -7,7 +7,7 @@ services:
       - 15672:15672
       - 5672:5672
   nodered:
-    image: faisalthaheem/open-lpr-nodered:main
+    image: openlpr/nodered:2.2.2-14
     restart: always
     environment:
       - PORT=1890
@@ -19,8 +19,8 @@ services:
       - broker
       - mongodb
     volumes:
-      - ./filestorage:/filestorage
-      - ./static-html-content:/static-html-content
+      - ../filestorage:/filestorage
+      - ../static-html-content:/static-html-content
   mongodb:
     image: mongo:4.1.11-bionic
     restart: always
@@ -29,7 +29,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: lpr
       MONGO_INITDB_DATABASE: openlpr
     volumes:
-      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ../scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     ports:
       - 27017:27017
   

@@ -4,7 +4,7 @@ services:
     volumes:
       - shared:/filestorage
   ftp:
-    image: faisalthaheem/open-lpr-ftp:main
+    image: openlpr/ftp:3.0
     restart: always
     environment:
       PRODUCTION: production
@@ -17,7 +17,7 @@ services:
     volumes:
       - shared:/filestorage
   platedetector:
-    image: faisalthaheem/open-lpr-plate-detection:main
+    image: openlpr/platedetector:3.0
     restart: always
     environment:
       PRODUCTION: production
@@ -27,7 +27,7 @@ services:
     volumes:
       - shared:/filestorage
   ocr:
-      image: faisalthaheem/open-lpr-ocr:main
+      image: openlpr/ocr:3.0
       restart: always
       environment:
         PRODUCTION: production
@@ -41,5 +41,5 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: $PWD/filestorage
+      device: $PWD/../filestorage
       o: bind
