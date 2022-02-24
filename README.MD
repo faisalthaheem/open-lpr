@@ -5,7 +5,15 @@
 |OCR|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-ocr)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-ocr/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-ocr/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-ocr)|
 |NodeRed|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-nodered)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-nodered)|
 
-# Open LPR
+# TOC
+- [About](https://github.com/faisalthaheem/open-lpr#about)
+- [Open LPR](https://github.com/faisalthaheem/open-lpr#about)
+- [Quick Start in 4 steps](https://github.com/faisalthaheem/open-lpr#quick-start-in-4-steps)
+- [Training your own Plate Detection Models](https://github.com/faisalthaheem/open-lpr#training-your-own-plate-detection-models)
+- [Milestones](https://github.com/faisalthaheem/open-lpr#milestones)
+- [Overview](https://github.com/faisalthaheem/open-lpr#overview)
+
+# About
 
 > **Free forever & Open Source License Plate Recognition software which uses deep neural networks to detect license plates and perform OCR.**
 
