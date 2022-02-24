@@ -13,17 +13,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-
-# Ugly hack to allow absolute import from the root folder
-# whatever its name is. Please forgive the heresy.
-if __name__ == "__main__" and __package__ is None:
-    from sys import path
-    from os.path import dirname as dir
-
-    path.append(dir(path[0]))
-    __package__ = "ftp"
     
-from shared.amqp import ThreadedAmqp
+from amqp import ThreadedAmqp
 
 from pyftpdlib.handlers import FTPHandler
 from pyftpdlib.servers import FTPServer
@@ -238,8 +229,15 @@ def main():
         
         handler = MyHandler
         handler.authorizer = authorizer
+        handler.banner = "OpenLPR FTP server, no liabilities or warranties."
+        handler.passive_ports = range(60000, 60050)
 
         server = FTPServer(('0.0.0.0', 2121), handler)
+        
+        # set a limit for connections
+        server.max_cons = 50
+        server.max_cons_per_ip = 2
+        
         server.serve_forever()
     except:
         logger.error("An error occurred: ", exc_info=True)
