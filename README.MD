@@ -1,3 +1,9 @@
+|Repository|Last commit|Docker CI Health|Docker pulls|
+|---|---|---|---|
+|FTP|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-ftp)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-ftp/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-ftp/actions/workflows/docker-publish.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-ftp)|
+|Plate Detection|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-plate-detection)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-plate-detection/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-plate-detection/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-plate-detection)|
+|OCR|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-ocr)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-ocr/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-ocr/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-ocr)|
+|NodeRed|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-nodered)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-nodered)|
 
 # Open LPR
 
@@ -9,7 +15,7 @@ Following image illustrates a dashboard built using nodered that shows real time
 
 In the above example it can be see that LPR was performed on the image uploaded through FTP and text 349253 was extracted successfully from the license plate area.
 
- An abundance of information such as bounding boxes, confidence scores etc are available in the raw JSON data published by the services and available to NodeRED and any other integrating service for consumption.
+An abundance of information such as bounding boxes, confidence scores etc are available in the raw JSON data published by the services and available to NodeRED and any other integrating service for consumption.
  
  For the above example, the following detail is available in db and also published on the message broker (RabbitMQ) and is as well available in NodeRED for further processing
 
@@ -49,15 +55,30 @@ In the above example it can be see that LPR was performed on the image uploaded 
 }
 ```
 
-# Quick Start
+# Quick Start in 4 steps
 
 The following instrctions assume you are running a linux flavor such as debian, ubuntu or popos!
 
- 1. Install [Docker](https://www.docker.com/get-started) 
- 2. Open shell and issue build-images.sh and wait for the process to finish.
- 3. While on shell issue docker-compose up -d and wait for services to start 
- 4. Open browser and navigate to [dashboard](http://localhost:1890/show-dashboard)
- 5. Using any FTP client software (or configure your camera) to connect to localhost (or the ip of your pc) on port 2121 with username "user" and password "12345" (without quotes) and upload an image containing a car with a readable number plate.
+## 1. Install [Docker](https://www.docker.com/get-started)
+Goto https://www.docker.com/get-started and install the distribution relevant to your operating system.
+Also install docker-compose.
+
+## 2. Clone this repo & start services
+This step will take a few minutes depending on your internet connection speed.
+
+```bash
+git clone https://github.com/faisalthaheem/open-lpr
+cd open-lpr
+docker-compose up -d
+```
+## 3. Open your browser and upload file to process
+
+Use google chrome to navigate to the following address
+http://localhost:1890/show-dashboard
+
+## 4. Upload a file using FTP
+
+Use any FTP client, for example, [FileZilla](https://filezilla-project.org/) to connect to your localhost on port 2121 with the username and password user/12345 and upload any carg image with readable license plate.
 
 The dashboard will update to reflect the detected plate and OCR text like in the image above.
 
@@ -77,10 +98,9 @@ Jan 2021|Ported to tensorflow 2 with compatibility mode for tensorflow 1.
 # Milestones
  
 
-## Work on Documentation is in progress.
+## Work on GPU supported container images is in progress.
 
 ![Milestones](https://raw.githack.com/faisalthaheem/open-lpr/master/docs/Milestones.png)
-  
 
 # Overview
 
