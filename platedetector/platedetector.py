@@ -13,21 +13,13 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-
-if __name__ == "__main__" and __package__ is None:
-    from sys import path
-    from os.path import dirname as dir
-
-    path.append(dir(path[0]))
-    __package__ = "platedetector"
-    
-from shared.amqp import ThreadedAmqp
+ 
+from amqp import ThreadedAmqp
 
 import numpy as np
 import argparse
 import torch
 from transform import SSDTransformer
-import cv2
 from PIL import Image
 
 from utils import generate_dboxes, Encoder, colors, coco_classes
@@ -38,7 +30,6 @@ from utilsopenlpr import open_lpr_classes
 import pprint
 import yaml
 import numpy as np
-import time
 import os
 import argparse as argparse
 import json
@@ -210,36 +201,6 @@ class PlateDetector():
                 except:
                         logger.error("An error occurred: ", exc_info=True)
                         #todo - post to mq
-                
-        def detectPlate(self, imgData, originalShape):
-
-                start=time.time()
-                
-                h,w,_ = imgData.shape
-                oh,ow,_ = originalShape
-                mulH = oh/h
-                mulW = ow/w
-                
-                image_np_expanded = np.expand_dims(imgData, axis=0)
-                (boxes, scores, classes, num) = self.platedetector.detect(image_np_expanded)
-                end=time.time()
-                
-                translatedBoxes = []
-                for box in boxes[0]:
-                        translatedBoxes.append(
-                                (
-                                int(box[0] * h * mulH),
-                                int(box[1] * w * mulW),
-                                int(box[2] * h * mulH),
-                                int(box[3] * w * mulW),
-                                )
-                        )
-                
-                return {
-                        'boxes': translatedBoxes[:10],
-                        'scores': scores[0].tolist()[:10],
-                        'classes': classes[0].tolist()[:10]
-                }
 
 def signal_handler(sig, frame):
     try:
