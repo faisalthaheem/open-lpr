@@ -77,10 +77,12 @@ Also install docker-compose.
 This step will take a few minutes depending on your internet connection speed.
 
 ```bash
-git clone https://github.com/faisalthaheem/open-lpr
-cd open-lpr
+git clone https://github.com/faisalthaheem/open-lpr && \
+cd open-lpr && \
 docker-compose up -d
 ```
+> **Important** Please issue `docker-compose pull` regularly to pull the latest updates and fixes or use `watchtower` to keep your deployment updated automatically.
+
 ## 3. Open your browser and upload file to process
 
 Use google chrome to navigate to the following address
