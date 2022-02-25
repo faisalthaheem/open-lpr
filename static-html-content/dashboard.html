@@ -22,7 +22,7 @@
     </body>
     <script>
 
-        host='http://localhost:1890';
+        const host=location.protocol + '//' + location.host;
         var eventAlreadyBound = false;
 
         if (!!window.EventSource) {
