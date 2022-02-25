@@ -27,7 +27,7 @@ In the above example it can be see that LPR was performed on the image uploaded 
 
 An abundance of information such as bounding boxes, confidence scores etc are available in the raw JSON data published by the services and available to NodeRED and any other integrating service for consumption.
  
- For the above example, the following detail is available in db and also published on the message broker (RabbitMQ) and is as well available in NodeRED for further processing
+ For the above example, the following detail is available in db and also published on the message broker (RabbitMQ) and is as well available in NodeRED for further processing, furthermore this detail is also returned as JSON when using the REST (described further below) interface
 
 ```json
 {
@@ -103,6 +103,8 @@ curl \
 ```
 
 In the above command `image==@/path/to/image.jpg` points to the file that is to be submitted for processing, and localhost:5000 represents where the OpenLPR services are running.
+
+The returned response is JSON as given in the example above
 
 # Training your own Plate Detection Models
 Please follow instructions given in the following repo
