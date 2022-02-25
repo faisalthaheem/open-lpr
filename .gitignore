@@ -108,7 +108,11 @@ settings.json
 ftp/*.jpg
 *.pb
 *.pbtxt
-filestorage/*
+filestorage/*.jpg
+filestorage/*.png
+filestorage/*.bmp
+filestorage/*.jpeg
+filestorage/*.tif
 model/*
 *.h5
 *.classes.json
