@@ -36,6 +36,18 @@ services:
         - mongodb
       volumes:
         - shared:/filestorage
+  rest:
+      image: openlpr/rest:3.0
+      restart: always
+      environment:
+        PRODUCTION: production
+      depends_on:
+        - broker
+        - mongodb
+      ports:
+        - 5000:5000
+      volumes:
+        - shared:/filestorage
 volumes:
   shared:
     driver: local

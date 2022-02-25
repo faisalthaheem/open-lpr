@@ -3,12 +3,14 @@
 |FTP|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-ftp)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-ftp/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-ftp/actions/workflows/docker-publish.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-ftp)|
 |Plate Detection|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-plate-detection)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-plate-detection/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-plate-detection/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-plate-detection)|
 |OCR|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-ocr)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-ocr/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-ocr/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-ocr)|
+|REST|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-rest)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-rest/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-rest/actions/workflows/docker-publish.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-rest)|
 |NodeRed|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-nodered)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-nodered)|
 
 # TOC
 - [About](https://github.com/faisalthaheem/open-lpr#about)
 - [Open LPR](https://github.com/faisalthaheem/open-lpr#about)
 - [Quick Start in 4 steps](https://github.com/faisalthaheem/open-lpr#quick-start-in-4-steps)
+- [REST interface](https://github.com/faisalthaheem/open-lpr#rest-interface)
 - [Training your own Plate Detection Models](https://github.com/faisalthaheem/open-lpr#training-your-own-plate-detection-models)
 - [Milestones](https://github.com/faisalthaheem/open-lpr#milestones)
 - [Overview](https://github.com/faisalthaheem/open-lpr#overview)
@@ -89,6 +91,18 @@ http://localhost:1890/show-dashboard
 Use any FTP client, for example, [FileZilla](https://filezilla-project.org/) to connect to your localhost on port 2121 with the username and password user/12345 and upload any carg image with readable license plate.
 
 The dashboard will update to reflect the detected plate and OCR text like in the image above.
+
+# REST Interface
+
+You can also use the REST interface to submit an image for processing. Once services have started a command similar to following can be used
+```bash
+curl \
+  -F "filecomment=Sample file" \
+  -F "image=@/path/to/image.jpg" \
+  localhost:5000/process
+```
+
+In the above command `image==@/path/to/image.jpg` points to the file that is to be submitted for processing, and localhost:5000 represents where the OpenLPR services are running.
 
 # Training your own Plate Detection Models
 Please follow instructions given in the following repo

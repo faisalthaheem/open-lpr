@@ -1,11 +1,14 @@
 version: '3.3'
+
 services:
+  
   broker:
     image: rabbitmq:3.7.14-management
     restart: always
     ports:
       - 15672:15672
       - 5672:5672
+  
   nodered:
     image: faisalthaheem/open-lpr-nodered:main
     restart: always
@@ -21,6 +24,7 @@ services:
     volumes:
       - ./filestorage:/filestorage
       - ./static-html-content:/static-html-content
+  
   mongodb:
     image: mongo:4.1.11-bionic
     restart: always
@@ -33,3 +37,8 @@ services:
     ports:
       - 27017:27017
   
+  redis:
+    image: redis:6
+    restart: always
+    ports:
+      - 6379:6379

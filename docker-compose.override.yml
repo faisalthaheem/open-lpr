@@ -1,8 +1,10 @@
 version: '3.3'
 services:
+  
   nodered:
     volumes:
       - shared:/filestorage
+  
   ftp:
     image: faisalthaheem/open-lpr-ftp:main
     restart: always
@@ -16,6 +18,7 @@ services:
       - 60000-60050:60000-60050
     volumes:
       - shared:/filestorage
+  
   platedetector:
     image: faisalthaheem/open-lpr-plate-detection:main
     restart: always
@@ -26,6 +29,7 @@ services:
       - mongodb
     volumes:
       - shared:/filestorage
+  
   ocr:
       image: faisalthaheem/open-lpr-ocr:main
       restart: always
@@ -36,6 +40,20 @@ services:
         - mongodb
       volumes:
         - shared:/filestorage
+  
+  rest:
+      image: faisalthaheem/open-lpr-rest:main
+      restart: always
+      environment:
+        PRODUCTION: production
+      depends_on:
+        - broker
+        - mongodb
+      ports:
+        - 5000:5000
+      volumes:
+        - shared:/filestorage
+
 volumes:
   shared:
     driver: local
