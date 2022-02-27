@@ -7,6 +7,7 @@
 |[NodeRed](https://github.com/faisalthaheem/open-lpr-nodered)|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-nodered)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-nodered)|
 
 # TOC
+- [Demo](https://github.com/faisalthaheem/open-lpr#demo)
 - [About](https://github.com/faisalthaheem/open-lpr#about)
 - [Open LPR](https://github.com/faisalthaheem/open-lpr#about)
 - [Quick Start in 4 steps](https://github.com/faisalthaheem/open-lpr#quick-start-in-4-steps)
@@ -15,6 +16,9 @@
 - [Milestones](https://github.com/faisalthaheem/open-lpr#milestones)
 - [Overview](https://github.com/faisalthaheem/open-lpr#overview)
 
+# Demo
+## [Visit here for a live demo of REST interface](https://rest-openlpr.computedsynergy.com/). 
+Please note the demo server is deliberately kept underpowered to prevent abuse. In case your request times out the server may just be too busy with other requests. You can always try running OpenLPR locally as described below.
 # About
 
 > **Free forever & Open Source License Plate Recognition software which uses deep neural networks to detect license plates and perform OCR.**
