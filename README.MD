@@ -6,11 +6,12 @@
 |[REST](https://github.com/faisalthaheem/open-lpr-rest)|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-rest)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-rest/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-rest/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-rest)|
 |[NodeRed](https://github.com/faisalthaheem/open-lpr-nodered)|![GithubLastCommit](https://img.shields.io/github/last-commit/faisalthaheem/open-lpr-nodered)|[![Docker Image CI](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml/badge.svg)](https://github.com/faisalthaheem/open-lpr-nodered/actions/workflows/docker-image.yml)|![DockerPulls](https://img.shields.io/docker/pulls/faisalthaheem/open-lpr-nodered)|
 
+<br/>
+
 # TOC
 - [Demo](https://github.com/faisalthaheem/open-lpr#demo)
 - [About](https://github.com/faisalthaheem/open-lpr#about)
-- [Open LPR](https://github.com/faisalthaheem/open-lpr#about)
-- [Quick Start in 4 steps](https://github.com/faisalthaheem/open-lpr#quick-start-in-4-steps)
+- [Quick Start in 3 steps](https://github.com/faisalthaheem/open-lpr#quick-start-in-3-steps)
 - [REST interface](https://github.com/faisalthaheem/open-lpr#rest-interface)
 - [Training your own Plate Detection Models](https://github.com/faisalthaheem/open-lpr#training-your-own-plate-detection-models)
 - [Milestones](https://github.com/faisalthaheem/open-lpr#milestones)
@@ -19,6 +20,9 @@
 # Demo
 ## [Visit here for a live demo of REST interface](https://rest-openlpr.computedsynergy.com/). 
 Please note the demo server is deliberately kept underpowered to prevent abuse. In case your request times out the server may just be too busy with other requests. You can always try running OpenLPR locally as described below.
+
+<br/>
+
 # About
 
 > **Free forever & Open Source License Plate Recognition software which uses deep neural networks to detect license plates and perform OCR.**
@@ -69,12 +73,14 @@ An abundance of information such as bounding boxes, confidence scores etc are av
 }
 ```
 
-# Quick Start in 4 steps
+<br/><br/>
+
+# Quick Start in 3 steps
 
 The following instrctions assume you are running a linux flavor such as debian, ubuntu or popos!
 
 ## 1. Install [Docker](https://www.docker.com/get-started)
-Goto https://www.docker.com/get-started and install the distribution relevant to your operating system.
+Goto https://www.docker.com/get-started and install the distribution relevant to your operating system. Consider using a convenience script to fast track the installation.
 Also install docker-compose.
 
 ## 2. Clone this repo & start services
@@ -85,22 +91,24 @@ git clone https://github.com/faisalthaheem/open-lpr && \
 cd open-lpr && \
 docker-compose up -d
 ```
-> **Important** Please issue `docker-compose pull` regularly to pull the latest updates and fixes or use `watchtower` to keep your deployment updated automatically.
-
+> **Important** Images are updated frequently, therefore to ensure you are running the latest version consider using watchtower.
 ## 3. Open your browser and upload file to process
 
 Use google chrome to navigate to the following address
-http://localhost:1890/show-dashboard
+http://localhost:5000/
 
-## 4. Upload a file using FTP
+## Optional - Upload a file using FTP
 
-Use any FTP client, for example, [FileZilla](https://filezilla-project.org/) to connect to your localhost on port 2121 with the username and password user/12345 and upload any carg image with readable license plate.
+Use any FTP client, for example, [FileZilla](https://filezilla-project.org/) to connect to your localhost on port 2121 with the username and password user/12345 and upload any car image with readable license plate.
 
-The dashboard will update to reflect the detected plate and OCR text like in the image above.
+The dashboard at http://localhost:1890/show-dashboard will update to reflect the detected plate and OCR text like in the image above.
+
+<br/><br/>
 
 # REST Interface
 
-You can also use the REST interface to submit an image for processing. Once services have started a command similar to following can be used
+You can use the REST interface to submit an image for processing. Once services have started a command similar to following can be used from the shell to try it out; you can ofcourse use the REST interface with any programming language.
+
 ```bash
 curl \
   -F "filecomment=Sample file" \
@@ -112,25 +120,36 @@ In the above command `image==@/path/to/image.jpg` points to the file that is to 
 
 The returned response is JSON as given in the example above
 
+<br/><br/>
+
 # Training your own Plate Detection Models
 Please follow instructions given in the following repo
 [OpenLPR Pre-trained models](https://github.com/faisalthaheem/open-lpr-pretrained-models)
+
+<br/><br/>
 
 # Documentation & Updates
 Head over to the wiki for [documentation](https://github.com/faisalthaheem/open-lpr/wiki/Documentation).
 
 Dated|Description
 ---|---
+Feb 2022|Added arm64 support to all containers except OCR and detection.
+Feb 2022|Added REST interface.
 Feb 2022|Ported stack to torch. Removed plate classification.
 Feb 2022|Completed documentation.
 Jan 2021|Ported to tensorflow 2 with compatibility mode for tensorflow 1.
- 
+
+<br/><br/>
+
 # Milestones
- 
+
 
 ## Work on GPU supported container images is in progress.
 
 ![Milestones](https://raw.githack.com/faisalthaheem/open-lpr/master/docs/Milestones.png)
+
+
+<br/><br/>
 
 # Overview
 
