@@ -84,7 +84,7 @@ Goto https://www.docker.com/get-started and install the distribution relevant to
 Also install docker-compose.
 
 ## 2. Clone this repo & start services
-This step will take a few minutes depending on your internet connection speed.
+This step will take a few minutes depending on your internet connection speed. Use "bash" shell to issue the following commands
 
 ```bash
 git clone https://github.com/faisalthaheem/open-lpr && \
