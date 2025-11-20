@@ -266,8 +266,8 @@ curl http://localhost:8000/health/
 | DEBUG | False | Django debug mode |
 | ALLOWED_HOSTS | localhost,127.0.0.1 | Allowed hosts for Django |
 | QWEN_API_KEY | - | Qwen3-VL API key (required) |
-| QWEN_BASE_URL | https://ollama.computedsynergy.com/compatible-mode/v1 | API endpoint URL |
-| QWEN_MODEL | qwen3-vl | AI model name |
+| QWEN_BASE_URL | https://ollama.computedsynergy.com/v1 | API endpoint URL |
+| QWEN_MODEL | qwen3-vl-4b-instruct | AI model name |
 | UPLOAD_FILE_MAX_SIZE | 10485760 | Maximum upload size (10MB) |
 | MAX_BATCH_SIZE | 10 | Maximum batch processing size |
 | DJANGO_SUPERUSER_USERNAME | - | Auto-create superuser username |

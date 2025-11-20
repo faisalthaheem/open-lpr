@@ -23,8 +23,8 @@ services:
       
       # Qwen3-VL API Configuration
       - QWEN_API_KEY=${QWEN_API_KEY}
-      - QWEN_BASE_URL=${QWEN_BASE_URL:-https://ollama.computedsynergy.com/compatible-mode/v1}
-      - QWEN_MODEL=${QWEN_MODEL:-qwen3-vl}
+      - QWEN_BASE_URL=${QWEN_BASE_URL:-https://ollama.computedsynergy.com/v1}
+      - QWEN_MODEL=${QWEN_MODEL:-qwen3-vl-4b-instructvl}
       
       # File Upload Settings
       - UPLOAD_FILE_MAX_SIZE=${UPLOAD_FILE_MAX_SIZE:-10485760}

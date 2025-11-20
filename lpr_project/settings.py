@@ -127,8 +127,8 @@ ALLOWED_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'webp']
 
 # Qwen3-VL API Configuration
 QWEN_API_KEY = config('QWEN_API_KEY', default='')
-QWEN_BASE_URL = config('QWEN_BASE_URL', default='https://ollama.computedsynergy.com/compatible-mode/v1')
-QWEN_MODEL = config('QWEN_MODEL', default='qwen3-vl')
+QWEN_BASE_URL = config('QWEN_BASE_URL', default='https://ollama.computedsynergy.com/v1')
+QWEN_MODEL = config('QWEN_MODEL', default='qwen3-vl-4b-instruct')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
