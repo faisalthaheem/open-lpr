@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% block title %}Details - {{ uploaded_image.filename }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Image Information -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    <i class="bi bi-file-earmark me-2"></i>Image Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Original Image</h6>
+                        {% if uploaded_image.original_image %}
+                        <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm mb-3" alt="{{ uploaded_image.filename }}">
+                        {% endif %}
+                        
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Filename:</th>
+                                <td>{{ uploaded_image.filename }}</td>
+                            </tr>
+                            <tr>
+                                <th>File Size:</th>
+                                <td>{{ uploaded_image.file_size_mb|default:"N/A" }} MB</td>
+                            </tr>
+                            <tr>
+                                <th>Upload Time:</th>
+                                <td>{{ uploaded_image.upload_timestamp|date:"Y-m-d H:i:s" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Processing Status:</th>
+                                <td>
+                                    <span class="badge {% if uploaded_image.processing_status == 'completed' %}bg-success{% elif uploaded_image.processing_status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ uploaded_image.get_processing_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% if uploaded_image.processing_timestamp %}
+                            <tr>
+                                <th>Processing Time:</th>
+                                <td>{{ uploaded_image.processing_timestamp|date:"Y-m-d H:i:s" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if uploaded_image.error_message %}
+                            <tr>
+                                <th>Error Message:</th>
+                                <td class="text-danger">{{ uploaded_image.error_message }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Processed Image</h6>
+                        {% if uploaded_image.processed_image %}
+                        <img src="{{ uploaded_image.processed_image.url }}" class="img-fluid rounded shadow-sm mb-3" alt="Processed {{ uploaded_image.filename }}">
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ uploaded_image.original_image.url }}" download="{{ uploaded_image.filename }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-download me-1"></i>Download Original
+                            </a>
+                            <a href="{{ uploaded_image.processed_image.url }}" download="processed_{{ uploaded_image.filename }}" 
+                               class="btn btn-success btn-sm">
+                                <i class="bi bi-download me-1"></i>Download Processed
+                            </a>
+                            {% if uploaded_image.processing_status == 'completed' %}
+                            <a href="{% url 'lpr_app:result' uploaded_image.id %}" class="btn btn-info btn-sm">
+                                <i class="bi bi-eye me-1"></i>View Results
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No processed image available. 
+                            {% if uploaded_image.processing_status == 'pending' %}
+                                Processing may still be in progress.
+                            {% elif uploaded_image.processing_status == 'failed' %}
+                                Processing failed.
+                            {% else %}
+                                Processing has not been completed.
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detection Results Summary -->
+        {% if uploaded_image.processing_status == 'completed' and uploaded_image.get_detection_results %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-bar-chart me-2"></i>Detection Summary
+                </h5>
+                
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-primary mb-1">{{ uploaded_image.get_plate_count }}</h4>
+                            <small class="text-muted">License Plates</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-success mb-1">{{ uploaded_image.get_total_ocr_count }}</h4>
+                            <small class="text-muted">OCR Texts</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-info mb-1">
+                                {% if uploaded_image.get_detection_results.detections %}
+                                    {{ uploaded_image.get_detection_results.detections|length }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h4>
+                            <small class="text-muted">Total Detections</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Response -->
+        {% if uploaded_image.api_response %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-code-slash me-2"></i>Raw API Response
+                </h5>
+                
+                <div class="accordion" id="apiResponseAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingApi">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapseApi" aria-expanded="false">
+                                <span class="w-100">
+                                    <i class="bi bi-json me-2"></i>
+                                    View JSON Response
+                                    <i class="bi bi-chevron-down float-end"></i>
+                                </span>
+                            </button>
+                        </h2>
+                        <div id="collapseApi" class="accordion-collapse collapse" 
+                             aria-labelledby="headingApi" data-bs-parent="#apiResponseAccordion">
+                            <div class="accordion-body">
+                                <pre class="bg-light p-3 rounded"><code>{{ uploaded_image.api_response|pprint }}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Processing Logs -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-clock-history me-2"></i>Processing Logs
+                </h5>
+                
+                {% if processing_logs %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Message</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in processing_logs %}
+                            <tr>
+                                <td>{{ log.timestamp|date:"H:i:s" }}</td>
+                                <td>
+                                    <span class="badge {% if log.status == 'success' %}bg-success{% elif log.status == 'error' %}bg-danger{% elif log.status == 'api_call' %}bg-info{% else %}bg-secondary{% endif %}">
+                                        {{ log.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ log.message }}</td>
+                                <td>
+                                    {% if log.duration_ms %}
+                                        {% if log.duration_ms < 1000 %}
+                                            {{ log.duration_ms }}ms
+                                        {% else %}
+                                            {{ log.duration_ms|floatformat:2 }}s
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No processing logs available for this image.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="text-center mt-4">
+            <a href="{% url 'lpr_app:home' %}" class="btn btn-outline-primary btn-lg me-2">
+                <i class="bi bi-house me-1"></i>Upload Another Image
+            </a>
+            <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-images me-1"></i>View All Images
+            </a>
+            {% if uploaded_image.processing_status == 'completed' %}
+            <a href="{% url 'lpr_app:result' uploaded_image.id %}" class="btn btn-success btn-lg">
+                <i class="bi bi-eye me-1"></i>View Results
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Copy JSON response to clipboard
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed top-0 end-0 p-3 bg-success text-white';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = '<i class="bi bi-check-circle me-2"></i>Copied to clipboard!';
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+
+    // Add copy button to JSON response
+    document.addEventListener('DOMContentLoaded', function() {
+        const apiResponse = document.querySelector('#collapseApi pre code');
+        if (apiResponse) {
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'btn btn-sm btn-outline-secondary float-end';
+            copyBtn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
+            copyBtn.onclick = () => copyToClipboard(apiResponse.textContent);
+            
+            const accordionBody = document.querySelector('#collapseApi .accordion-body');
+            accordionBody.style.position = 'relative';
+            accordionBody.appendChild(copyBtn);
+        }
+    });
+</script>
+
+<style>
+    .position-fixed {
+        position: fixed !important;
+    }
+    
+    .top-0 {
+        top: 1rem !important;
+    }
+    
+    .end-0 {
+        right: 1rem !important;
+    }
+    
+    .float-end {
+        float: right !important;
+    }
+    
+    pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}

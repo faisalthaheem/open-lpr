@@ -1,0 +1,406 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload Image{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Upload Form -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    <i class="bi bi-cloud-upload me-2"></i>Upload Image for License Plate Recognition
+                </h5>
+                
+                <form id="uploadForm" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Drag and Drop Area -->
+                    <div id="uploadArea" class="upload-area mb-4">
+                        <i class="bi bi-image upload-icon"></i>
+                        <h4>Drag & Drop Image Here</h4>
+                        <p class="text-muted mb-3">or click to browse</p>
+                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('image-upload').click()">
+                            <i class="bi bi-folder2-open me-1"></i>Choose File
+                        </button>
+                        <input type="file" id="image-upload" name="image" accept="image/*" style="display: none;">
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Supported formats: JPEG, PNG, WEBP | Max size: {{ settings.UPLOAD_FILE_MAX_SIZE|filesizeformat }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- File Preview -->
+                    <div id="filePreview" class="mb-4" style="display: none;">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <img id="previewImage" class="image-preview me-3" style="max-width: 100px; height: auto;">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1" id="fileName">filename.jpg</h6>
+                                <small class="text-muted" id="fileSize">2.5 MB</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" disabled>
+                            <i class="bi bi-search me-2"></i>Analyze License Plates
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- API Usage Examples -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="accordion" id="apiUsageAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingApiUsage">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseApiUsage" aria-expanded="false">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-code-slash me-2"></i>REST API Usage
+                                </h5>
+                            </button>
+                        </h2>
+                        <div id="collapseApiUsage" class="accordion-collapse collapse"
+                             aria-labelledby="headingApiUsage" data-bs-parent="#apiUsageAccordion">
+                            <div class="accordion-body">
+                                <p class="text-muted mb-4">
+                                    You can also use our REST API to process images programmatically. Upload an image and receive OCR results in JSON format.
+                                </p>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <h6><i class="bi bi-terminal me-1"></i>cURL Example</h6>
+                                        <div class="bg-dark text-light p-3 rounded">
+                                            <code style="font-size: 0.85rem;">
+                                                curl -X POST \<br>
+                                                &nbsp;&nbsp;-F "image=@license_plate.jpg" \<br>
+                                                &nbsp;&nbsp;http://{{ request.get_host }}/api/v1/ocr/
+                                            </code>
+                                        </div>
+                                        <small class="text-muted">Replace <code>license_plate.jpg</code> with your image file path</small>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <h6><i class="bi bi-terminal me-1"></i>wget Example</h6>
+                                        <div class="bg-dark text-light p-3 rounded">
+                                            <code style="font-size: 0.85rem;">
+                                                wget --method=POST \<br>
+                                                &nbsp;&nbsp;--body-file=image_data.txt \<br>
+                                                &nbsp;&nbsp;--header="Content-Type: multipart/form-data" \<br>
+                                                &nbsp;&nbsp;http://{{ request.get_host }}/api/v1/ocr/
+                                            </code>
+                                        </div>
+                                        <small class="text-muted">Create <code>image_data.txt</code> with multipart form data</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6><i class="bi bi-file-earmark-code me-1"></i>Sample Response</h6>
+                                    <div class="bg-light p-3 rounded">
+                                        <pre style="font-size: 0.8rem; max-height: 200px; overflow-y: auto;"><code>{
+    "success": true,
+    "image_id": 123,
+    "filename": "license_plate.jpg",
+    "processing_time_ms": 2450,
+    "results": {
+        "detections": [
+            {
+                "plate_id": "plate1",
+                "plate": {
+                    "confidence": 0.85,
+                    "coordinates": {
+                        "x1": 100, "y1": 200, "x2": 250, "y2": 250
+                    }
+                },
+                "ocr": [
+                    {
+                        "text": "ABC123",
+                        "confidence": 0.92,
+                        "coordinates": {
+                            "x1": 105, "y1": 210, "x2": 245, "y2": 240
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "summary": {
+        "total_plates": 1,
+        "total_ocr_texts": 1
+    }
+}</code></pre>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center mt-3">
+                                    <a href="{% url 'lpr_app:health_check' %}" class="btn btn-outline-info btn-sm" target="_blank">
+                                        <i class="bi bi-heart-pulse me-1"></i>Check API Health
+                                    </a>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="copyApiExample()">
+                                        <i class="bi bi-clipboard me-1"></i>Copy cURL Command
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Uploads -->
+        {% if recent_uploads %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    <i class="bi bi-clock-history me-2"></i>Recent Uploads
+                </h5>
+                
+                <div class="row">
+                    {% for upload in recent_uploads %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card result-card h-100">
+                            {% if upload.original_image %}
+                            <img src="{{ upload.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                            {% endif %}
+                            <div class="card-body">
+                                <h6 class="card-title">{{ upload.filename|truncatechars:20 }}</h6>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>{{ upload.upload_timestamp|date:"M d, Y H:i" }}
+                                    </small><br>
+                                    <small class="text-muted">
+                                        <i class="bi bi-hdd me-1"></i>{{ upload.file_size_mb|default:"N/A" }} MB
+                                    </small>
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge {% if upload.processing_status == 'completed' %}bg-success{% elif upload.processing_status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ upload.get_processing_status_display }}
+                                    </span>
+                                    {% if upload.processing_status == 'completed' %}
+                                    <a href="{% url 'lpr_app:result' upload.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye me-1"></i>View
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-images me-1"></i>View All Images
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedFile = null;
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('image-upload');
+    const filePreview = document.getElementById('filePreview');
+    const previewImage = document.getElementById('previewImage');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const submitBtn = document.getElementById('submitBtn');
+    const uploadForm = document.getElementById('uploadForm');
+
+    // Drag and drop events
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    });
+
+    // Click to upload
+    uploadArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    // Handle file selection
+    function handleFileSelect(file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file.');
+            return;
+        }
+
+        // Validate file size (10MB max)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            alert('File size must be less than 10MB.');
+            return;
+        }
+
+        selectedFile = file;
+        showFilePreview(file);
+        submitBtn.disabled = false;
+    }
+
+    // Show file preview
+    function showFilePreview(file) {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            previewImage.src = e.target.result;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            filePreview.style.display = 'block';
+        };
+        
+        reader.readAsDataURL(file);
+    }
+
+    // Clear selected file
+    function clearFile() {
+        selectedFile = null;
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+        submitBtn.disabled = true;
+    }
+
+    // Form submission
+    uploadForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        if (!selectedFile) {
+            alert('Please select an image to upload.');
+            return;
+        }
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append('image', selectedFile);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        // Show loading
+        showLoading('Analyzing image...');
+
+        // Submit via AJAX
+        fetch('{% url "lpr_app:upload" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            
+            if (data.success) {
+                // Redirect to results page
+                window.location.href = data.redirect_url;
+            } else {
+                // Show error
+                handleAjaxError({ responseJSON: data });
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            handleAjaxError({ responseText: error.message });
+        });
+    });
+
+    // Form validation
+    (function () {
+        'use strict';
+        
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        // Loop over them and prevent submission
+        Array.prototype.slice.call(forms).forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+
+    // Copy API example to clipboard
+    function copyApiExample() {
+        const curlCommand = `curl -X POST \\
+  -F "image=@license_plate.jpg" \\
+  http://${window.location.host}/api/v1/ocr/`;
+        
+        navigator.clipboard.writeText(curlCommand).then(() => {
+            // Show success message
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
+            
+            // Reset after 2 seconds
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = curlCommand;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            // Show success message
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+            }, 2000);
+        });
+    }
+</script>
+{% endblock %}

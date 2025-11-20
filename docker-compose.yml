@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  lpr-app:
+    image: ghcr.io/faisalthaheem/open-lpr:latest
+    container_name: open-lpr-app
+    ports:
+      - "8000:8000"
+    volumes:
+      # SQLite database persistence
+      - ./container-data:/app/data
+      # Media files persistence (uploaded and processed images)
+      - ./container-media:/app/media
+      # Static files (optional - for development)
+      - ./staticfiles:/app/staticfiles
+    # Run as root initially for setup, then entrypoint switches to django user
+    user: "0:0"
+    environment:
+      # Django Settings
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-me-in-production}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      
+      # Qwen3-VL API Configuration
+      - QWEN_API_KEY=${QWEN_API_KEY}
+      - QWEN_BASE_URL=${QWEN_BASE_URL:-https://ollama.computedsynergy.com/compatible-mode/v1}
+      - QWEN_MODEL=${QWEN_MODEL:-qwen3-vl}
+      
+      # File Upload Settings
+      - UPLOAD_FILE_MAX_SIZE=${UPLOAD_FILE_MAX_SIZE:-10485760}
+      - MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-10}
+      
+      # Database Configuration
+      - DATABASE_PATH=/app/data/db.sqlite3
+      
+      # Optional: Superuser creation
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    entrypoint: ["./docker-entrypoint.sh"]
+    command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "lpr_project.wsgi:application"]
+
+volumes:
+  lpr_data:
+    driver: local
+  lpr_media:
+    driver: local
+  lpr_static:
+    driver: local

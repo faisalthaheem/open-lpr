@@ -102,3 +102,30 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# openlpr
+settings.json
+ftp/*.jpg
+*.pb
+*.pbtxt
+filestorage/*.jpg
+filestorage/*.png
+filestorage/*.bmp
+filestorage/*.jpeg
+filestorage/*.tif
+model/*
+*.h5
+*.classes.json
+*.model.json
+models/*
+
+tmp/**/*.jpg
+
+.stfolder
+
+media/*
+container-media/*
+container-data/*
+
+# Static files (collected by Django)
+staticfiles/

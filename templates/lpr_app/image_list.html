@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block title %}Image History{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <!-- Search and Filter -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">
+                    <i class="bi bi-search me-2"></i>Search & Filter Images
+                </h5>
+                
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="{{ search_form.query.id_for_label }}" class="form-label">Search</label>
+                        {{ search_form.query }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ search_form.date_from.id_for_label }}" class="form-label">From Date</label>
+                        {{ search_form.date_from }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ search_form.date_to.id_for_label }}" class="form-label">To Date</label>
+                        {{ search_form.date_to }}
+                    </div>
+                    <div class="col-md-2">
+                        <label for="{{ search_form.processing_status.id_for_label }}" class="form-label">Status</label>
+                        {{ search_form.processing_status }}
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel me-1"></i>Filter
+                        </button>
+                        <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-secondary ms-2">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results Summary -->
+        {% if page_obj %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-primary mb-1">{{ page_obj.paginator.count }}</h4>
+                            <small class="text-muted">Total Images</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-success mb-1">
+                                {{ page_obj.paginator.num_pages }}
+                            </h4>
+                            <small class="text-muted">Pages</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-info mb-1">{{ page_obj.number }}</h4>
+                            <small class="text-muted">Current Page</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-warning mb-1">
+                                {% if search_form.query.value %}
+                                    {{ search_form.query.value|length }}
+                                {% else %}
+                                    All
+                                {% endif %}
+                            </h4>
+                            <small class="text-muted">Filter</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Grid -->
+        {% if page_obj %}
+        <div class="row">
+            {% for image in page_obj %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card result-card h-100">
+                    {% if image.original_image %}
+                    <img src="{{ image.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ image.filename }}">
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title">{{ image.filename|truncatechars:25 }}</h6>
+                            <p class="card-text">
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-calendar me-1"></i>{{ image.upload_timestamp|date:"M d, Y H:i" }}
+                                </small>
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-hdd me-1"></i>{{ image.file_size_mb|default:"N/A" }} MB
+                                </small>
+                                {% if image.processing_timestamp %}
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-clock me-1"></i>Processed: {{ image.processing_timestamp|date:"M d, H:i" }}
+                                </small>
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <span class="badge {% if image.processing_status == 'completed' %}bg-success{% elif image.processing_status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ image.get_processing_status_display }}
+                            </span>
+                            
+                            <div class="btn-group" role="group">
+                                {% if image.processing_status == 'completed' %}
+                                <a href="{% url 'lpr_app:result' image.id %}" class="btn btn-sm btn-outline-primary" 
+                                   title="View Results" data-bs-toggle="tooltip">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'lpr_app:image_detail' image.id %}" class="btn btn-sm btn-outline-info" 
+                                   title="View Details" data-bs-toggle="tooltip">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
+                                <a href="{{ image.original_image.url }}" download="{{ image.filename }}" 
+                                   class="btn btn-sm btn-outline-secondary" title="Download Original" data-bs-toggle="tooltip">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                {% if image.processed_image %}
+                                <a href="{{ image.processed_image.url }}" download="processed_{{ image.filename }}" 
+                                   class="btn btn-sm btn-outline-success" title="Download Processed" data-bs-toggle="tooltip">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Image pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i> Previous
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                        Next <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <div class="py-5">
+                    <i class="bi bi-images display-1 mb-3" style="font-size: 4rem; color: #6c757d;"></i>
+                    <h5>No Images Found</h5>
+                    <p class="text-muted">
+                        {% if search_form.query.value or search_form.date_from.value or search_form.date_to.value or search_form.processing_status.value %}
+                            No images match your current filters.
+                        {% else %}
+                            No images have been uploaded yet.
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'lpr_app:home' %}" class="btn btn-primary">
+                        <i class="bi bi-cloud-upload me-1"></i>Upload First Image
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form on filter change
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form[method="get"]');
+        const inputs = form.querySelectorAll('input, select');
+        
+        inputs.forEach(input => {
+            // Don't auto-submit on date inputs to allow proper date selection
+            if (input.type !== 'date') {
+                input.addEventListener('change', () => {
+                    form.submit();
+                });
+            }
+        });
+        
+        // Submit form when date input is closed (user has selected a date)
+        const dateInputs = form.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            input.addEventListener('blur', () => {
+                if (input.value) {
+                    form.submit();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

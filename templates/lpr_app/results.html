@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+
+{% block title %}Results - {{ uploaded_image.filename }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <!-- Results Header -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h5 class="card-title mb-1">
+                            <i class="bi bi-search me-2"></i>Analysis Results
+                        </h5>
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-file-earmark me-1"></i>{{ uploaded_image.filename }}
+                            <span class="ms-3">
+                                <i class="bi bi-calendar me-1"></i>{{ uploaded_image.upload_timestamp|date:"M d, Y H:i" }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge {% if uploaded_image.processing_status == 'completed' %}bg-success{% else %}bg-danger{% endif %} fs-6">
+                            {{ uploaded_image.get_processing_status_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if uploaded_image.processing_status == 'completed' and detection_results %}
+        <!-- Detection Summary -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-bar-chart me-2"></i>Detection Summary
+                </h6>
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-primary mb-1">{{ plate_count }}</h4>
+                            <small class="text-muted">License Plates Detected</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-success mb-1">{{ ocr_count }}</h4>
+                            <small class="text-muted">OCR Texts Found</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-info mb-1">{{ uploaded_image.file_size_mb|default:"N/A" }}</h4>
+                            <small class="text-muted">File Size (MB)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Comparison -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title mb-3">
+                    <i class="bi bi-images me-2"></i>Image Comparison
+                </h6>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-center mb-2">Original Image</h6>
+                        {% if uploaded_image.original_image %}
+                        <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm" alt="Original">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-center mb-2">Processed Image</h6>
+                        {% if uploaded_image.processed_image %}
+                        <img src="{{ uploaded_image.processed_image.url }}" class="img-fluid rounded shadow-sm" alt="Processed">
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ uploaded_image.original_image.url }}" download="{{ uploaded_image.filename }}" 
+                       class="btn btn-outline-primary btn-sm me-2">
+                        <i class="bi bi-download me-1"></i>Download Original
+                    </a>
+                    {% if uploaded_image.processed_image %}
+                    <a href="{{ uploaded_image.processed_image.url }}" download="processed_{{ uploaded_image.filename }}" 
+                       class="btn btn-success btn-sm">
+                        <i class="bi bi-download me-1"></i>Download Processed
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Detection Details -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title mb-3">
+                    <i class="bi bi-list-ul me-2"></i>Detection Details
+                </h6>
+                
+                {% if detection_results.detections %}
+                <div class="accordion" id="detectionAccordion">
+                    {% for detection_data in detection_results.detections %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="false">
+                                <div class="d-flex justify-content-between align-items-center w-100">
+                                    <span>
+                                        <i class="bi bi-card-text me-2"></i>
+                                        Detection #{{ forloop.counter }}
+                                        {% if detection_data.plate.confidence %}
+                                        <span class="badge bg-primary ms-2">
+                                            Confidence: {{ detection_data.plate.confidence|floatformat:2 }}
+                                        </span>
+                                        {% endif %}
+                                    </span>
+                                    <i class="bi bi-chevron-down"></i>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse"
+                             aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#detectionAccordion">
+                            <div class="accordion-body">
+                                <!-- License Plate Info -->
+                                {% if detection_data.plate %}
+                                <div class="mb-3">
+                                    <h6 class="text-primary">
+                                        <i class="bi bi-credit-card me-1"></i>License Plate
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Confidence:</strong> {{ detection_data.plate.confidence|floatformat:2 }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Coordinates:</strong>
+                                            X1: {{ detection_data.plate.coordinates.x1 }},
+                                            Y1: {{ detection_data.plate.coordinates.y1 }},
+                                            X2: {{ detection_data.plate.coordinates.x2 }},
+                                            Y2: {{ detection_data.plate.coordinates.y2 }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- OCR Results -->
+                                {% if detection_data.ocr %}
+                                <div>
+                                    <h6 class="text-success">
+                                        <i class="bi bi-fonts me-1"></i>OCR Results
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Text</th>
+                                                    <th>Confidence</th>
+                                                    <th>Coordinates</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for ocr_item in detection_data.ocr %}
+                                                <tr>
+                                                    <td><code>{{ ocr_item.text }}</code></td>
+                                                    <td>
+                                                        <span class="badge bg-success">{{ ocr_item.confidence|floatformat:2 }}</span>
+                                                    </td>
+                                                    <td>
+                                                        X1: {{ ocr_item.coordinates.x1 }},
+                                                        Y1: {{ ocr_item.coordinates.y1 }},
+                                                        X2: {{ ocr_item.coordinates.x2 }},
+                                                        Y2: {{ ocr_item.coordinates.y2 }}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    No license plates were detected in this image.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Processing Failed -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Processing Failed
+                    </h6>
+                    <p class="mb-0">
+                        {{ uploaded_image.error_message|default:"An unknown error occurred during processing." }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="text-center mt-4">
+            <a href="{% url 'lpr_app:home' %}" class="btn btn-outline-primary btn-lg me-2">
+                <i class="bi bi-house me-1"></i>Upload Another Image
+            </a>
+            <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-images me-1"></i>View History
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize all accordions
+    document.addEventListener('DOMContentLoaded', function() {
+        const accordionButtons = document.querySelectorAll('.accordion-button');
+        accordionButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const icon = this.querySelector('i.bi-chevron-down, i.bi-chevron-up');
+                if (icon) {
+                    if (icon.classList.contains('bi-chevron-down')) {
+                        icon.classList.remove('bi-chevron-down');
+                        icon.classList.add('bi-chevron-up');
+                    } else {
+                        icon.classList.remove('bi-chevron-up');
+                        icon.classList.add('bi-chevron-down');
+                    }
+                }
+            });
+        });
+    });
+
+    // Image zoom functionality
+    const images = document.querySelectorAll('.img-fluid');
+    images.forEach(img => {
+        img.addEventListener('click', function() {
+            // Create modal for zoomed image
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Image Preview</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <img src="${this.src}" class="img-fluid" alt="Zoomed image">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const bootstrapModal = new bootstrap.Modal(modal);
+            bootstrapModal.show();
+            
+            // Clean up when modal is hidden
+            modal.addEventListener('hidden.bs.modal', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Add cursor pointer for clickable images
+        img.style.cursor = 'pointer';
+        img.title = 'Click to zoom';
+    });
+</script>
+
+<style>
+    .accordion-button:not(.collapsed) .bi-chevron-down {
+        transform: rotate(180deg);
+    }
+    
+    .modal {
+        background-color: rgba(0, 0, 0, 0.8);
+    }
+    
+    .modal-dialog {
+        margin: 2rem auto;
+    }
+    
+    .img-fluid:hover {
+        transform: scale(1.02);
+        transition: transform 0.2s ease;
+    }
+</style>
+{% endblock %}
