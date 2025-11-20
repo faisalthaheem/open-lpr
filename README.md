@@ -1,28 +1,67 @@
-# OPEN LPR - A License Plate Reader App
+<div align="center">
 
-A Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with OCR capabilities.
+# 🚗 OPEN LPR - License Plate Recognition System
 
-## Features
+[![GitHub release](https://img.shields.io/github/release/faisalthaheem/open-lpr.svg)](https://github.com/faisalthaheem/open-lpr/releases)
+[![GitHub stars](https://img.shields.io/github/stars/faisalthaheem/open-lpr.svg?style=social&label=Star)](https://github.com/faisalthaheem/open-lpr)
+[![GitHub forks](https://img.shields.io/github/forks/faisalthaheem/open-lpr.svg?style=social&label=Fork)](https://github.com/faisalthaheem/open-lpr)
+[![GitHub issues](https://img.shields.io/github/issues/faisalthaheem/open-lpr.svg)](https://github.com/faisalthaheem/open-lpr/issues)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/faisalthaheem/open-lpr?style=flat-square)](https://github.com/faisalthaheem/open-lpr/pkgs/container/open-lpr)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **AI-Powered Detection**: Uses qwen3-vl-4b-instruct vision-language model for accurate license plate recognition
-- **OCR Integration**: Extracts text from detected license plates with confidence scores
-- **Bounding Box Visualization**: Draws colored boxes around detected plates and OCR text
-- **Drag & Drop Upload**: Modern, user-friendly file upload interface
-- **Permanent Storage**: All uploaded and processed images are saved permanently
-- **Side-by-Side Comparison**: View original and processed images together
-- **Search & Filter**: Browse and search through processing history
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
+*A powerful Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
 
-## Technology Stack
+[Quick Start](#-quick-start) • [Demo](#-visual-showcase) • [Documentation](#-documentation) • [API Reference](#-api-endpoints) • [Docker](#-docker-deployment)
 
-- **Backend**: Django 4.2.7 with Python
-- **AI Model**: Qwen3-VL via OpenAI-compatible API
-- **Image Processing**: Pillow (PIL) for image manipulation
-- **Frontend**: Bootstrap 5 with custom CSS
-- **Database**: SQLite (default), configurable for PostgreSQL
-- **File Storage**: Django's media storage system
+</div>
 
-## Quick Start
+## 🌟 Visual Showcase
+
+### Main Interface
+<div align="center">
+  <img src="docs/open-lpr-index.png" alt="Open LPR Main Interface" width="800">
+</div>
+
+### Detection Results
+<div align="center">
+  <img src="docs/open-lpr-detection-result.png" alt="Detection Results" width="800">
+</div>
+
+### Detection Details
+<div align="center">
+  <img src="docs/open-lpr-detection-details.png" alt="Detection Details" width="800">
+</div>
+
+### Processed Image
+<div align="center">
+  <img src="docs/open-lpr-processed-image.png" alt="Processed Image with Bounding Boxes" width="800">
+</div>
+
+## ✨ Features
+
+- 🤖 **AI-Powered Detection**: Uses qwen3-vl-4b-instruct vision-language model for accurate license plate recognition
+- 🔍 **Advanced OCR Integration**: Extracts text from detected license plates with confidence scores
+- 🎯 **Bounding Box Visualization**: Draws colored boxes around detected plates and OCR text
+- 📤 **Drag & Drop Upload**: Modern, user-friendly file upload interface
+- 💾 **Permanent Storage**: All uploaded and processed images are saved permanently
+- 🔄 **Side-by-Side Comparison**: View original and processed images together
+- 🔎 **Search & Filter**: Browse and search through processing history
+- 📱 **Responsive Design**: Works on desktop, tablet, and mobile devices
+- 🐳 **Docker Support**: Easy deployment with Docker and Docker Compose
+- 🔌 **REST API**: Full API for programmatic access
+
+## 🛠️ Technology Stack
+
+<div align="center">
+
+| Backend | AI Model | Frontend | Database | Deployment |
+|---------|----------|----------|----------|------------|
+| ![Django](https://img.shields.io/badge/Django-4.2.7-092E20?style=flat-square&logo=django) | ![Qwen3-VL](https://img.shields.io/badge/Qwen3--VL-4B--instruct-FF6B35?style=flat-square) | ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?style=flat-square&logo=bootstrap) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
+| ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python) | ![OpenAI API](https://img.shields.io/badge/OpenAI%20Compatible-412991?style=flat-square&logo=openai) | ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
+
+</div>
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -34,7 +73,7 @@ A Django-based web application that uses Qwen3-VL AI model to detect and recogni
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/faisalthaheem/open-lpr.git
    cd open-lpr
    ```
 
@@ -74,7 +113,21 @@ A Django-based web application that uses Qwen3-VL AI model to detect and recogni
 8. **Access the application**
    Open http://127.0.0.1:8000 in your browser
 
-## Configuration
+### Docker Quick Start
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/faisalthaheem/open-lpr:latest
+
+# Run with Docker Compose
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+cp .env.example .env
+# Edit .env with your configuration
+docker-compose up -d
+```
+
+## ⚙️ Configuration
 
 ### Environment Variables
 
@@ -96,14 +149,7 @@ UPLOAD_FILE_MAX_SIZE=10485760  # 10MB
 MAX_BATCH_SIZE=10
 ```
 
-### API Configuration
-
-The application connects to the Qwen3-VL API at:
-- **Endpoint**: `https://your-open-api-compatible-endpoint.com/v1`
-- **Authentication**: Bearer token (API key)
-- **Model**: `qwen3-vl-4b-instruct` (configurable)
-
-## Usage
+## 📖 Usage
 
 ### Uploading Images
 
@@ -134,7 +180,7 @@ Access the "History" page to:
 - **Status Filter**: View by processing status
 - **Pagination**: Navigate through large numbers of uploads
 
-## API Endpoints
+## 🔌 API Endpoints
 
 ### Web Endpoints
 
@@ -152,19 +198,6 @@ Access the "History" page to:
 - `POST /api/v1/ocr/` - Upload an image and receive OCR results synchronously
 
 ### Response Format
-
-#### Web Interface Response Format
-
-The web interface returns JSON responses for AJAX requests:
-
-```json
-{
-    "success": true,
-    "image_id": 123,
-    "message": "Image processed successfully",
-    "redirect_url": "/result/123/"
-}
-```
 
 #### REST API Response Format
 
@@ -222,7 +255,105 @@ The LPR REST API returns JSON in this format:
 }
 ```
 
-## File Structure
+### Usage Examples
+
+#### Python Example
+
+```python
+import requests
+
+# API endpoint
+url = "http://localhost:8000/api/v1/ocr/"
+
+# Image file to upload
+image_path = "license_plate.jpg"
+
+# Read and upload the image
+with open(image_path, 'rb') as f:
+    files = {'image': f}
+    response = requests.post(url, files=files)
+
+# Check response
+if response.status_code == 200:
+    result = response.json()
+    if result['success']:
+        print(f"Found {result['summary']['total_plates']} license plates")
+        for detection in result['results']['detections']:
+            for ocr in detection['ocr']:
+                print(f"License plate text: {ocr['text']} (confidence: {ocr['confidence']:.2f})")
+    else:
+        print(f"Processing failed: {result['error']}")
+else:
+    print(f"HTTP Error: {response.status_code}")
+    print(response.text)
+```
+
+#### cURL Example
+
+```bash
+# Upload image and get OCR results
+curl -X POST \
+  -F "image=@license_plate.jpg" \
+  http://localhost:8000/api/v1/ocr/
+```
+
+## 🐳 Docker Deployment
+
+The project includes automated Docker image building and publishing to GitHub Container Registry (ghcr.io).
+
+### Using the Pre-built Docker Image
+
+The Docker image is automatically built and published to GitHub Container Registry when code is pushed to the main branch or when tags are created.
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/faisalthaheem/open-lpr:latest
+
+# Pull a specific version
+docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
+```
+
+### Docker Compose Deployment
+
+Use the provided `docker-compose.yml` file for easy deployment:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Copy environment file
+cp .env.example .env
+# Edit .env with your configuration
+
+# Start the application
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f
+```
+
+### CI/CD Workflow
+
+The project includes a GitHub Actions workflow (`.github/workflows/docker-publish.yml`) that:
+
+1. **Triggers** on:
+   - Push to main/master branch
+   - Creation of version tags (v*)
+   - Pull requests to main/master
+
+2. **Builds** the Docker image for multiple architectures:
+   - linux/amd64
+   - linux/arm64
+
+3. **Publishes** to GitHub Container Registry with tags:
+   - Branch name (e.g., `main`)
+   - Semantic version tags (e.g., `v1.0.0`, `v1.0`, `v1`)
+   - `latest` tag for the main branch
+
+4. **Generates** SBOM (Software Bill of Materials) for security scanning
+
+## 📁 File Structure
 
 ```
 open-lpr/
@@ -273,159 +404,16 @@ open-lpr/
 │       ├── image_list.html
 │       ├── results.html
 │       └── upload.html
+├── docs/                      # Documentation images
+│   ├── open-lpr-index.png
+│   ├── open-lpr-detection-result.png
+│   ├── open-lpr-detection-details.png
+│   └── open-lpr-processed-image.png
 └── .github/                  # GitHub workflows
     └── workflows/             # CI/CD configurations
 ```
 
-## REST API
-
-The application provides a REST API for programmatic license plate recognition.
-
-### Base URL
-
-```
-http://localhost:8000/api/v1/
-```
-
-### Authentication
-
-Currently, the API does not require authentication. For production use, consider implementing API keys or token-based authentication.
-
-### Endpoints
-
-#### OCR Processing
-
-**POST** `/api/v1/ocr/`
-
-Upload an image and receive OCR results for license plate detection and text recognition.
-
-**Request:**
-- **Method**: POST
-- **Content-Type**: multipart/form-data
-- **Body**: Image file with form field name `image`
-
-**Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| image | File | Yes | Image file (JPEG, PNG, or BMP) |
-
-**File Requirements:**
-- **Supported formats**: JPEG, JPG, PNG, BMP
-- **Maximum file size**: 10MB
-- **Recommended resolution**: 1920x1080 or higher for best results
-
-**Response:**
-See the Response Format section above for detailed response structure.
-
-#### Health Check
-
-**GET** `/health/`
-
-Check the health status of the API and its dependencies.
-
-**Response:**
-```json
-{
-    "status": "healthy",
-    "api_healthy": true,
-    "database_healthy": true,
-    "timestamp": "2023-12-07T15:30:45.123456"
-}
-```
-
-### Usage Examples
-
-#### Python Example
-
-```python
-import requests
-
-# API endpoint
-url = "http://localhost:8000/api/v1/ocr/"
-
-# Image file to upload
-image_path = "license_plate.jpg"
-
-# Read and upload the image
-with open(image_path, 'rb') as f:
-    files = {'image': f}
-    response = requests.post(url, files=files)
-
-# Check response
-if response.status_code == 200:
-    result = response.json()
-    if result['success']:
-        print(f"Found {result['summary']['total_plates']} license plates")
-        for detection in result['results']['detections']:
-            for ocr in detection['ocr']:
-                print(f"License plate text: {ocr['text']} (confidence: {ocr['confidence']:.2f})")
-    else:
-        print(f"Processing failed: {result['error']}")
-else:
-    print(f"HTTP Error: {response.status_code}")
-    print(response.text)
-```
-
-#### cURL Example
-
-```bash
-# Upload image and get OCR results
-curl -X POST \
-  -F "image=@license_plate.jpg" \
-  http://localhost:8000/api/v1/ocr/
-```
-
-#### JavaScript Example
-
-```javascript
-// Using fetch API
-async function processImage(imageFile) {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    
-    try {
-        const response = await fetch('http://localhost:8000/api/v1/ocr/', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-            console.log(`Found ${result.summary.total_plates} license plates`);
-            result.results.detections.forEach(detection => {
-                detection.ocr.forEach(ocr => {
-                    console.log(`License plate: ${ocr.text} (${ocr.confidence})`);
-                });
-            });
-        } else {
-            console.error('Processing failed:', result.error);
-        }
-    } catch (error) {
-        console.error('Request failed:', error);
-    }
-}
-
-// Usage with file input
-document.getElementById('imageInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        processImage(file);
-    }
-});
-```
-
-### Error Codes
-
-| Error Code | Description |
-|------------|-------------|
-| MISSING_IMAGE | No image file provided in the request |
-| INVALID_FILE_TYPE | Uploaded file is not a supported image format |
-| FILE_TOO_LARGE | Uploaded file exceeds the 10MB size limit |
-| PROCESSING_FAILED | Image processing failed (various causes) |
-| INTERNAL_ERROR | Internal server error during processing |
-
-### Testing
+## 🧪 Testing
 
 Use the provided test script to verify API functionality:
 
@@ -437,20 +425,7 @@ python test_api.py
 python test_api.py /path/to/your/image.jpg
 ```
 
-### Security Considerations
-
-1. **File Validation**: The API validates file types and sizes to prevent malicious uploads
-2. **Error Information**: Error responses avoid exposing sensitive system information
-3. **CSRF Protection**: The endpoint is exempt from CSRF protection for API usage
-4. **No Authentication**: Currently, the API does not require authentication. Consider implementing API keys or other authentication mechanisms for production use.
-
-### Performance Considerations
-
-- **Processing Time**: OCR processing typically takes 1-5 seconds depending on image size and complexity
-- **Memory Usage**: Large images may require significant memory during processing
-- **Concurrent Requests**: Django's development server handles requests sequentially. Use a production server (like Gunicorn) for concurrent request handling.
-
-## Development
+## 🔧 Development
 
 ### Running Tests
 
@@ -481,7 +456,7 @@ python manage.py migrate
 python manage.py collectstatic --noinput
 ```
 
-## Deployment
+## 🚀 Production Deployment
 
 ### Production Settings
 
@@ -492,156 +467,13 @@ python manage.py collectstatic --noinput
 5. **Set up media file serving** (nginx/AWS S3)
 6. **Use HTTPS** with SSL certificate
 
-### Docker Deployment
-
-The project includes automated Docker image building and publishing to GitHub Container Registry (ghcr.io).
-
-#### Using the Pre-built Docker Image
-
-The Docker image is automatically built and published to GitHub Container Registry when code is pushed to the main branch or when tags are created.
-
-```bash
-# Pull the latest image
-docker pull ghcr.io/faisalthaheem/open-lpr:latest
-
-# Pull a specific version
-docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
-```
-
-#### Docker Compose Deployment
-
-Use the provided `docker-compose.yml` file for easy deployment:
-
-```bash
-# Clone the repository
-git clone https://github.com/faisalthaheem/open-lpr.git
-cd open-lpr
-
-# Copy environment file
-cp .env.example .env
-# Edit .env with your configuration
-
-# Start the application
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f
-```
-
-#### Building Locally
-
-If you need to build the image locally:
-
-```dockerfile
-# Multi-stage Dockerfile for Open LPR Application
-# Stage 1: Base stage with Python dependencies
-FROM python:3.11-slim AS base
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    gosu \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create and activate virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Upgrade pip
-RUN pip install --upgrade pip
-
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# Verify gunicorn is installed
-RUN which gunicorn || (echo "Gunicorn not found in PATH" && exit 1)
-
-# Stage 2: Build stage for application code
-FROM base AS builder
-
-# Set work directory
-WORKDIR /app
-
-# Copy application code
-COPY . .
-
-# Create directories for volumes
-RUN mkdir -p /app/data /app/media /app/staticfiles
-
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
-# Stage 3: Production stage
-FROM base AS production
-
-# Create non-root user
-RUN groupadd -r django && useradd -r -g django django
-
-# Set work directory
-WORKDIR /app
-
-# Create directories with proper permissions
-RUN mkdir -p /app/data /app/media /app/staticfiles && \
-    chown -R django:django /app && \
-    chmod -R 755 /app/data /app/media /app/staticfiles
-
-# Copy application from builder stage
-COPY --from=builder --chown=django:django /app /app
-
-# Ensure PATH is set correctly for the virtual environment
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Switch to non-root user
-USER django
-
-# Expose port
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python manage.py check || exit 1
-
-# Default command
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "lpr_project.wsgi:application"]
-```
-
-#### CI/CD Workflow
-
-The project includes a GitHub Actions workflow (`.github/workflows/docker-publish.yml`) that:
-
-1. **Triggers** on:
-   - Push to main/master branch
-   - Creation of version tags (v*)
-   - Pull requests to main/master
-
-2. **Builds** the Docker image for multiple architectures:
-   - linux/amd64
-   - linux/arm64
-
-3. **Publishes** to GitHub Container Registry with tags:
-   - Branch name (e.g., `main`)
-   - Semantic version tags (e.g., `v1.0.0`, `v1.0`, `v1`)
-   - `latest` tag for the main branch
-
-4. **Generates** SBOM (Software Bill of Materials) for security scanning
-
-The workflow uses GitHub's built-in `GITHUB_TOKEN` for authentication, so no additional secrets need to be configured for basic usage.
-
 ### Environment-Specific Settings
 
 - **Development**: SQLite database, DEBUG=True
 - **Staging**: PostgreSQL, DEBUG=False, limited hosts
 - **Production**: PostgreSQL, DEBUG=False, HTTPS required
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Common Issues
 
@@ -676,22 +508,60 @@ Log levels:
 - `ERROR`: API failures and processing errors
 - `DEBUG`: Detailed debugging information
 
-## Contributing
+## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+We welcome contributions! Please follow these guidelines:
 
-## License
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Make your changes**
+4. **Add tests** if applicable
+5. **Ensure all tests pass** (`python manage.py test`)
+6. **Commit your changes** (`git commit -m 'Add some amazing feature'`)
+7. **Push to the branch** (`git push origin feature/amazing-feature`)
+8. **Open a Pull Request**
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Code Style
 
-## Support
+- Follow PEP 8 for Python code
+- Use meaningful variable and function names
+- Add docstrings to functions and classes
+- Keep commits small and focused
+
+### Issue Reporting
+
+When reporting issues, please include:
+- Detailed description of the problem
+- Steps to reproduce
+- Expected vs. actual behavior
+- Environment details (OS, Python version, etc.)
+- Relevant logs or error messages
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
 
 For issues and questions:
 - Check the troubleshooting section
 - Review application logs
 - Create an issue with detailed information
 - Include error messages and steps to reproduce
+
+## 🙏 Acknowledgments
+
+- [Qwen3-VL](https://github.com/QwenLM/Qwen-VL) for the powerful vision-language model
+- [Django](https://www.djangoproject.com/) for the robust web framework
+- [Bootstrap](https://getbootstrap.com/) for the responsive UI components
+- All contributors who help improve this project
+
+---
+
+<div align="center">
+
+**[⬆ Back to top](#-open-lpr---license-plate-recognition-system)**
+
+Made with ❤️ by [Open LPR Team](https://github.com/faisalthaheem/open-lpr)
+
+</div>
