@@ -63,73 +63,174 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Docker Deployment (Recommended)
 
-- Python 3.8+
-- pip package manager
-- Qwen3-VL API access
+The quickest way to get started is with Docker using one of the LlamaCpp compose files, which include everything needed for local inference without requiring any external API endpoints.
 
-### Installation
+#### Option 1: AMD Vulkan GPU Version (Fastest Local Inference)
+For users with AMD GPUs that support Vulkan:
 
-1. **Clone the repository**
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit the environment file with your settings
+nano .env.llamacpp
+
+# Create necessary directories
+mkdir -p model_files model_files_cache container-data container-media staticfiles
+
+# Start the application with AMD Vulkan GPU support
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f
+```
+
+#### Option 2: CPU Version (Universal Compatibility)
+For users without compatible GPUs or for testing purposes:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit the environment file with your settings
+nano .env.llamacpp
+
+# Create necessary directories
+mkdir -p model_files model_files_cache container-data container-media staticfiles
+
+# Start the application with CPU support
+docker-compose -f docker-compose-llamacpp-cpu.yml up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose -f docker-compose-llamacpp-cpu.yml logs -f
+```
+
+#### Option 3: Standard Docker (External API)
+For users who want to use an external OpenAI-compatible API endpoint:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.example .env
+
+# Edit the environment file with your API settings
+nano .env
+
+# Create necessary directories
+mkdir -p container-data container-media staticfiles
+
+# Start the application
+docker-compose up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose logs -f
+```
+
+### Docker Compose Files
+
+This project provides multiple Docker Compose files for different deployment scenarios:
+
+#### LlamaCpp Compose Files (Recommended for Quick Start)
+
+1. **docker-compose-llamacpp-amd-vulcan.yml**
+   - **Purpose**: Full local deployment with AMD GPU acceleration using Vulkan
+   - **Services**: OpenLPR + LlamaCpp server + optional Nginx
+   - **Prerequisites**:
+     - AMD GPU with Vulkan support
+     - ROCm drivers installed
+     - Sufficient GPU memory (8GB+ recommended)
+   - **Performance**: Fastest inference with GPU acceleration
+   - **Use Case**: Production deployment with AMD hardware
+
+2. **docker-compose-llamacpp-cpu.yml**
+   - **Purpose**: Full local deployment using CPU for inference
+   - **Services**: OpenLPR + LlamaCpp server + optional Nginx
+   - **Prerequisites**:
+     - Sufficient RAM (16GB+ recommended)
+     - Multi-core CPU for better performance
+   - **Performance**: Slower but universal compatibility
+   - **Use Case**: Testing, development, or hardware without GPU support
+
+#### Standard Compose File
+
+3. **docker-compose.yml**
+   - **Purpose**: OpenLPR deployment with external API endpoint
+   - **Services**: OpenLPR only
+   - **Prerequisites**:
+     - Access to an OpenAI-compatible API endpoint
+     - Valid API credentials
+   - **Performance**: Depends on external API
+   - **Use Case**: When using cloud-based AI services or existing inference infrastructure
+
+### Manual Installation
+
+For development or custom deployments:
+
+1. **Prerequisites**
+   - Python 3.8+
+   - pip package manager
+   - Qwen3-VL API access
+
+2. **Clone the repository**
    ```bash
    git clone https://github.com/faisalthaheem/open-lpr.git
    cd open-lpr
    ```
 
-2. **Create virtual environment**
+3. **Create virtual environment**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Install dependencies**
+4. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables**
+5. **Configure environment variables**
    ```bash
    cp .env.example .env
    # Edit .env with your settings
    ```
 
-5. **Set up database**
+6. **Set up database**
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
 
-6. **Create superuser (optional)**
+7. **Create superuser (optional)**
    ```bash
    python manage.py createsuperuser
    ```
 
-7. **Run development server**
+8. **Run development server**
    ```bash
    python manage.py runserver
    ```
 
-8. **Access the application**
+9. **Access the application**
    Open http://127.0.0.1:8000 in your browser
-
-### Docker Quick Start
-
-```bash
-# Pull the latest image
-docker pull ghcr.io/faisalthaheem/open-lpr:latest
-
-# Run with Docker Compose
-git clone https://github.com/faisalthaheem/open-lpr.git
-cd open-lpr
-cp .env.example .env
-# Edit .env with your configuration
-docker-compose up -d
-```
 
 ## ⚙️ Configuration
 
-### Environment Variables
+### Development Environment
+
+For local development (running Django directly):
 
 Create a `.env` file based on `.env.example`:
 
@@ -148,6 +249,41 @@ QWEN_MODEL=qwen3-vl-4b-instruct
 UPLOAD_FILE_MAX_SIZE=10485760  # 10MB
 MAX_BATCH_SIZE=10
 ```
+
+### Docker Environment with LlamaCpp
+
+For local LlamaCpp inference deployment:
+
+Create a `.env.llamacpp` file based on `.env.llamacpp.example`:
+
+```env
+# HuggingFace Token
+HF_TOKEN=hf_your_huggingface_token_here
+
+# Model Configuration
+MODEL_REPO=unsloth/Qwen3-VL-4B-Instruct-GGUF
+MODEL_FILE=Qwen3-VL-4B-Instruct-Q5_K_M.gguf
+MMPROJ_URL=https://huggingface.co/unsloth/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-BF16.gguf
+
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+
+# File Upload Settings
+UPLOAD_FILE_MAX_SIZE=10485760  # 10MB
+MAX_BATCH_SIZE=10
+
+# Database Configuration
+DATABASE_PATH=/app/data/db.sqlite3
+
+# Optional: Superuser creation
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_EMAIL=admin@example.com
+DJANGO_SUPERUSER_PASSWORD=your-secure-password
+```
+
+For detailed LlamaCpp deployment instructions, see [README-llamacpp.md](README-llamacpp.md).
 
 ## 📖 Usage
 
@@ -315,23 +451,22 @@ docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
 
 ### Docker Compose Deployment
 
-Use the provided `docker-compose.yml` file for easy deployment:
+This project provides multiple Docker Compose files for different deployment scenarios. For detailed deployment instructions, see the [Quick Start](#-quick-start) section and [Docker Deployment Guide](DOCKER_DEPLOYMENT.md).
+
+#### Quick Reference
 
 ```bash
-# Clone the repository
-git clone https://github.com/faisalthaheem/open-lpr.git
-cd open-lpr
+# For AMD GPU with Vulkan support
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
 
-# Copy environment file
-cp .env.example .env
-# Edit .env with your configuration
+# For CPU-only deployment
+docker-compose -f docker-compose-llamacpp-cpu.yml up -d
 
-# Start the application
+# For external API endpoint
 docker-compose up -d
-
-# Check logs
-docker-compose logs -f
 ```
+
+For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md).
 
 ### CI/CD Workflow
 
@@ -361,12 +496,23 @@ open-lpr/
 ├── requirements.txt              # Python dependencies
 ├── .env.example                # Environment variables template
 ├── .env                         # Environment variables (create from .env.example)
+├── .env.llamacpp.example       # LlamaCpp environment variables template
+├── .env.llamacpp               # LlamaCpp environment variables (create from .env.llamacpp.example)
 ├── .gitignore                   # Git ignore file
 ├── .dockerignore               # Docker ignore file
 ├── API_DOCUMENTATION.md        # Detailed REST API documentation
 ├── README_API.md               # REST API implementation summary
+├── README-llamacpp.md         # LlamaCpp deployment guide
+├── DOCKER_DEPLOYMENT.md        # Docker deployment guide
 ├── test_api.py                 # API testing script
 ├── test_setup.py               # Test setup utilities
+├── test-llamacpp-integration.py # LlamaCpp integration test script
+├── docker-compose.yml           # Standard Docker Compose configuration
+├── docker-compose-llamacpp-cpu.yml    # CPU-based LlamaCpp Docker Compose
+├── docker-compose-llamacpp-amd-vulcan.yml # AMD Vulkan GPU LlamaCpp Docker Compose
+├── docker-entrypoint.sh         # Docker entrypoint script
+├── Dockerfile                  # Docker image definition
+├── start-llamacpp-cpu.sh     # LlamaCpp CPU startup script
 ├── lpr_project/               # Django project settings
 │   ├── __init__.py
 │   ├── settings.py             # Django configuration
@@ -390,12 +536,16 @@ open-lpr/
 │   │   └── commands/
 │   │       ├── __init__.py
 │   │       └── setup_project.py
+│   ├── static/                # Static files
 │   └── migrations/            # Database migrations
 │       ├── __init__.py
 │       └── 0001_initial.py
 ├── media/                     # Uploaded images
 │   ├── uploads/               # Original images
 │   └── processed/             # Processed images
+├── container-data/             # Docker container data persistence
+├── container-media/            # Docker container media persistence
+├── staticfiles/               # Collected static files
 ├── templates/                 # HTML templates
 │   ├── base.html              # Base template
 │   └── lpr_app/               # App-specific templates
@@ -404,11 +554,15 @@ open-lpr/
 │       ├── image_list.html
 │       ├── results.html
 │       └── upload.html
-├── docs/                      # Documentation images
+├── docs/                      # Documentation
+│   ├── LLAMACPP_RESOURCES.md  # LlamaCpp and ROCm resources
 │   ├── open-lpr-index.png
 │   ├── open-lpr-detection-result.png
 │   ├── open-lpr-detection-details.png
 │   └── open-lpr-processed-image.png
+├── nginx/                     # Nginx configuration
+│   └── nginx.conf             # Nginx reverse proxy configuration
+├── logs/                      # Application logs
 └── .github/                  # GitHub workflows
     └── workflows/             # CI/CD configurations
 ```
@@ -555,6 +709,15 @@ For issues and questions:
 - [Django](https://www.djangoproject.com/) for the robust web framework
 - [Bootstrap](https://getbootstrap.com/) for the responsive UI components
 - All contributors who help improve this project
+
+## 📚 Additional Documentation
+
+For specialized deployment scenarios and additional resources:
+
+- [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
+- [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
+- [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
+- [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
 
 ---
 
