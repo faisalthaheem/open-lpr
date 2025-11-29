@@ -6,14 +6,20 @@
 [![GitHub stars](https://img.shields.io/github/stars/faisalthaheem/open-lpr.svg?style=social&label=Star)](https://github.com/faisalthaheem/open-lpr)
 [![GitHub forks](https://img.shields.io/github/forks/faisalthaheem/open-lpr.svg?style=social&label=Fork)](https://github.com/faisalthaheem/open-lpr)
 [![GitHub issues](https://img.shields.io/github/issues/faisalthaheem/open-lpr.svg)](https://github.com/faisalthaheem/open-lpr/issues)
-[![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/faisalthaheem/open-lpr?style=flat-square)](https://github.com/faisalthaheem/open-lpr/pkgs/container/open-lpr)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Container Registry](https://img.shields.io/badge/ghcr.io-open--lpr-blue?style=flat-square)](https://github.com/faisalthaheem/open-lpr/pkgs/container/open-lpr)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 *A powerful Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
 
 [Quick Start](#-quick-start) • [Demo](#-visual-showcase) • [Documentation](#-documentation) • [API Reference](#-api-endpoints) • [Docker](#-docker-deployment)
 
 </div>
+
+## 🚀 Live Demo
+
+Try the live demo of Open LPR at: **[https://rest-openlpr.computedsynergy.com/](https://rest-openlpr.computedsynergy.com/)**
+
+Experience the license plate recognition system in action without any installation required!
 
 ## 🌟 Visual Showcase
 
@@ -693,7 +699,7 @@ When reporting issues, please include:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
