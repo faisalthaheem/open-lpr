@@ -112,44 +112,45 @@ class QwenVLClient:
 
 
 # LPR prompt template for license plate recognition
-LPR_PROMPT = """Perform ocr on the attached image and respond with a JSON document with the following structure. Replace the sample values with actual bounding boxes for the image, scale back to the original image dimensions if necessary. IMPORTANT: be accurate, the coordinates of bounding boxes must be correct so that they can be verified using any measuring tools.
+LPR_PROMPT = """Perform OCR on the attached image and respond with a JSON document with the following structure. Analyze the actual image content and provide real detection results. DO NOT copy example data - analyze the image and provide actual results.
+
 {
-    "filename": "jeep.jpg",
+    "filename": "[actual filename of the image]",
     "detections": [
-        "1234" : {
+        {
             "plate": {
-                "confidence": 0.8,
+                "confidence": 0.95,
                 "coordinates": {
-                    "x1": 1,
-                    "y1": 2,
-                    "x2": 20,
-                    "y2": 10
+                    "x1": 100,
+                    "y1": 200,
+                    "x2": 400,
+                    "y2": 300
                 }
             },
             "ocr": [
-            "123456": {
-                "confidence": 0.8,
-                "coordinates": {
-                    "x1": 1,
-                    "y1": 2,
-                    "x2": 20,
-                    "y2": 10
+                {
+                    "text": "[actual license plate text you detect]",
+                    "confidence": 0.95,
+                    "coordinates": {
+                        "x1": 120,
+                        "y1": 220,
+                        "x2": 380,
+                        "y2": 280
+                    }
                 }
-            },
-            "abcdef": {
-                "confidence": 0.8,
-                "coordinates": {
-                    "x1": 1,
-                    "y1": 2,
-                    "x2": 20,
-                    "y2": 10
-                }
-            }
             ]
-            
         }
     ]
-}"""
+}
+
+IMPORTANT INSTRUCTIONS:
+1. Analyze the ACTUAL image provided
+2. Detect ALL license plates in the image
+3. Extract the ACTUAL text from each license plate
+4. Provide REAL coordinates that match the image content
+5. Use the actual filename from the image
+6. If no license plates are found, return an empty detections array: "detections": []
+7. Be precise with coordinates - they should accurately bound the license plates and text"""
 
 
 def convert_from_qwen2vl_format(bbox, original_h, original_w, resized_h=None, resized_w=None):

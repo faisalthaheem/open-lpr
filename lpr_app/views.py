@@ -171,9 +171,11 @@ def process_uploaded_image(uploaded_image: UploadedImage) -> Dict[str, Any]:
         if not base64_image:
             return {'success': False, 'error': 'Failed to encode image'}
         
-        # Call Qwen3-VL API
+        # Call Qwen3-VL API with customized prompt
         client = get_qwen_client()
-        api_response = client.analyze_image(base64_image, LPR_PROMPT)
+        # Customize prompt with actual filename
+        customized_prompt = LPR_PROMPT.replace('[actual filename of the image]', uploaded_image.filename)
+        api_response = client.analyze_image(base64_image, customized_prompt)
         
         if not api_response:
             return {'success': False, 'error': 'API call failed'}
@@ -447,12 +449,15 @@ def api_ocr_upload(request):
     
     uploaded_file = request.FILES['image']
     
-    # Validate file type
+    # Validate file type - use more robust detection
+    import mimetypes
+    content_type = uploaded_file.content_type or mimetypes.guess_type(uploaded_file.name)[0]
+    
     allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp']
-    if uploaded_file.content_type not in allowed_types:
+    if content_type not in allowed_types:
         return JsonResponse({
             'success': False,
-            'error': f'Unsupported file type: {uploaded_file.content_type}',
+            'error': f'Unsupported file type: {content_type}',
             'error_code': 'INVALID_FILE_TYPE'
         }, status=400)
     
