@@ -139,7 +139,22 @@
     <header class="lpr-header">
         <div class="container text-center">
             <h1><i class="bi bi-camera-fill me-3"></i>License Plate Recognition</h1>
-            <p class="lead mb-0">Upload images to detect and recognize license plates using AI-powered OCR</p>
+            <p class="lead mb-3">Upload images to detect and recognize license plates using AI-powered OCR</p>
+            
+            <!-- Disclaimer -->
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" style="background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
+                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>Important Disclaimer</h6>
+                <p class="mb-2 small">
+                    <strong>DEMO SYSTEM - NO LIABILITY ASSUMED:</strong> This is a demonstration application provided "as is" without any warranties or guarantees.
+                </p>
+                <p class="mb-2 small">
+                    <strong>DATA USAGE:</strong> All uploaded images will be <strong>retained</strong> and may be used for <strong>training purposes</strong> to improve our AI models.
+                </p>
+                <p class="mb-0 small">
+                    <strong>NO RESPONSIBILITY:</strong> We are not responsible for any consequences arising from the use of this system or the data processed.
+                </p>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+            </div>
         </div>
     </header>
     {% endblock %}
