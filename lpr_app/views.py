@@ -34,7 +34,7 @@ def home(request):
     # Get recent uploads for display
     recent_uploads = UploadedImage.objects.filter(
         processing_status='completed'
-    ).order_by('-upload_timestamp')[:5]
+    ).order_by('-upload_timestamp')[:9]
     
     context = {
         'upload_form': upload_form,
