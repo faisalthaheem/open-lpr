@@ -11,7 +11,17 @@
 
 *A powerful Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
 
-[Quick Start](#-quick-start) • [Demo](#-visual-showcase) • [Documentation](#-documentation) • [API Reference](#-api-endpoints) • [Docker](#-docker-deployment)
+## 📑 Table of Contents
+
+| | | |
+|---|---|---|
+| [🚀 Live Demo](#-live-demo) | [🌟 Visual Showcase](#-visual-showcase) | [✨ Features](#-features) |
+| [🛠️ Technology Stack](#-technology-stack) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration](#️-configuration) |
+| [📖 Usage](#-usage) | [🔌 API Endpoints](#-api-endpoints) | [🐳 Docker Deployment](#-docker-deployment) |
+| [📁 File Structure](#-file-structure) | [🧪 Testing](#-testing) | [🔧 Development](#-development) |
+| [🚀 Production Deployment](#-production-deployment) | [🐛 Troubleshooting](#-troubleshooting) | [🤝 Contributing](#-contributing) |
+| [📄 License](#-license) | [🆘 Support](#-support) | [🙏 Acknowledgments](#-acknowledgments) |
+| [📚 Additional Documentation](#-additional-documentation) | | |
 
 </div>
 
@@ -21,27 +31,15 @@ Try the live demo of Open LPR at: **[https://rest-openlpr.computedsynergy.com/](
 
 Experience the license plate recognition system in action without any installation required!
 
+
 ## 🌟 Visual Showcase
 
-### Main Interface
-<div align="center">
-  <img src="docs/open-lpr-index.png" alt="Open LPR Main Interface" width="800">
-</div>
-
-### Detection Results
-<div align="center">
-  <img src="docs/open-lpr-detection-result.png" alt="Detection Results" width="800">
-</div>
-
-### Detection Details
-<div align="center">
-  <img src="docs/open-lpr-detection-details.png" alt="Detection Details" width="800">
-</div>
-
-### Processed Image
-<div align="center">
-  <img src="docs/open-lpr-processed-image.png" alt="Processed Image with Bounding Boxes" width="800">
-</div>
+| Feature | Preview |
+|---------|---------|
+| **Main Interface** | <img src="docs/open-lpr-index.png" alt="Open LPR Main Interface" width="400"> |
+| **Detection Results** | <img src="docs/open-lpr-detection-result.png" alt="Detection Results" width="400"> |
+| **Detection Details** | <img src="docs/open-lpr-detection-details.png" alt="Detection Details" width="400"> |
+| **Processed Image** | <img src="docs/open-lpr-processed-image.png" alt="Processed Image with Bounding Boxes" width="400"> |
 
 ## ✨ Features
 
@@ -56,6 +54,7 @@ Experience the license plate recognition system in action without any installati
 - 🐳 **Docker Support**: Easy deployment with Docker and Docker Compose
 - 🔌 **REST API**: Full API for programmatic access
 
+
 ## 🛠️ Technology Stack
 
 <div align="center">
@@ -68,6 +67,9 @@ Experience the license plate recognition system in action without any installati
 </div>
 
 ## 🚀 Quick Start
+
+<details>
+<summary>Click to expand</summary>
 
 ### Docker Deployment (Recommended)
 
@@ -232,7 +234,12 @@ For development or custom deployments:
 9. **Access the application**
    Open http://127.0.0.1:8000 in your browser
 
+</details>
+
 ## ⚙️ Configuration
+
+<details>
+<summary>Click to expand</summary>
 
 ### Development Environment
 
@@ -291,7 +298,12 @@ DJANGO_SUPERUSER_PASSWORD=your-secure-password
 
 For detailed LlamaCpp deployment instructions, see [README-llamacpp.md](README-llamacpp.md).
 
+</details>
+
 ## 📖 Usage
+
+<details>
+<summary>Click to expand</summary>
 
 ### Uploading Images
 
@@ -308,7 +320,7 @@ After processing, you'll see:
 
 - **Detection Summary**: Number of plates and OCR texts found
 - **Image Comparison**: Side-by-side view of original and processed images
-- **Detection Details**: 
+- **Detection Details**:
   - License plate coordinates and confidence
   - OCR text results with confidence scores
   - Bounding box coordinates for all detections
@@ -322,7 +334,12 @@ Access the "History" page to:
 - **Status Filter**: View by processing status
 - **Pagination**: Navigate through large numbers of uploads
 
+</details>
+
 ## 🔌 API Endpoints
+
+<details>
+<summary>Click to expand</summary>
 
 ### Web Endpoints
 
@@ -439,7 +456,12 @@ curl -X POST \
   http://localhost:8000/api/v1/ocr/
 ```
 
+</details>
+
 ## 🐳 Docker Deployment
+
+<details>
+<summary>Click to expand</summary>
 
 The project includes automated Docker image building and publishing to GitHub Container Registry (ghcr.io).
 
@@ -494,7 +516,12 @@ The project includes a GitHub Actions workflow (`.github/workflows/docker-publis
 
 4. **Generates** SBOM (Software Bill of Materials) for security scanning
 
+</details>
+
 ## 📁 File Structure
+
+<details>
+<summary>Click to expand</summary>
 
 ```
 open-lpr/
@@ -573,7 +600,12 @@ open-lpr/
     └── workflows/             # CI/CD configurations
 ```
 
+</details>
+
 ## 🧪 Testing
+
+<details>
+<summary>Click to expand</summary>
 
 Use the provided test script to verify API functionality:
 
@@ -585,7 +617,12 @@ python test_api.py
 python test_api.py /path/to/your/image.jpg
 ```
 
+</details>
+
 ## 🔧 Development
+
+<details>
+<summary>Click to expand</summary>
 
 ### Running Tests
 
@@ -616,7 +653,12 @@ python manage.py migrate
 python manage.py collectstatic --noinput
 ```
 
+</details>
+
 ## 🚀 Production Deployment
+
+<details>
+<summary>Click to expand</summary>
 
 ### Production Settings
 
@@ -633,7 +675,12 @@ python manage.py collectstatic --noinput
 - **Staging**: PostgreSQL, DEBUG=False, limited hosts
 - **Production**: PostgreSQL, DEBUG=False, HTTPS required
 
+</details>
+
 ## 🐛 Troubleshooting
+
+<details>
+<summary>Click to expand</summary>
 
 ### Common Issues
 
@@ -668,7 +715,12 @@ Log levels:
 - `ERROR`: API failures and processing errors
 - `DEBUG`: Detailed debugging information
 
+</details>
+
 ## 🤝 Contributing
+
+<details>
+<summary>Click to expand</summary>
 
 We welcome contributions! Please follow these guidelines:
 
@@ -697,11 +749,21 @@ When reporting issues, please include:
 - Environment details (OS, Python version, etc.)
 - Relevant logs or error messages
 
+</details>
+
 ## 📄 License
+
+<details>
+<summary>Click to expand</summary>
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
+</details>
+
 ## 🆘 Support
+
+<details>
+<summary>Click to expand</summary>
 
 For issues and questions:
 - Check the troubleshooting section
@@ -709,14 +771,24 @@ For issues and questions:
 - Create an issue with detailed information
 - Include error messages and steps to reproduce
 
+</details>
+
 ## 🙏 Acknowledgments
+
+<details>
+<summary>Click to expand</summary>
 
 - [Qwen3-VL](https://github.com/QwenLM/Qwen-VL) for the powerful vision-language model
 - [Django](https://www.djangoproject.com/) for the robust web framework
 - [Bootstrap](https://getbootstrap.com/) for the responsive UI components
 - All contributors who help improve this project
 
+</details>
+
 ## 📚 Additional Documentation
+
+<details>
+<summary>Click to expand</summary>
 
 For specialized deployment scenarios and additional resources:
 
@@ -724,6 +796,8 @@ For specialized deployment scenarios and additional resources:
 - [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
 - [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
 - [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
+
+</details>
 
 ---
 
