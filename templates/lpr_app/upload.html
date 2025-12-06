@@ -174,14 +174,25 @@
                             <img src="{{ upload.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Original image">
                             {% endif %}
                             <div class="card-body">
+                                {% if upload.get_first_ocr_text %}
+                                <h6 class="card-title">{{ upload.get_first_ocr_text|truncatechars:20 }}</h6>
+                                {% else %}
                                 <h6 class="card-title">{{ upload.filename|truncatechars:20 }}</h6>
+                                {% endif %}
                                 <p class="card-text">
                                     <small class="text-muted">
                                         <i class="bi bi-calendar me-1"></i>{{ upload.upload_timestamp|date:"M d, Y H:i" }}
-                                    </small><br>
-                                    <small class="text-muted">
-                                        <i class="bi bi-hdd me-1"></i>{{ upload.file_size_mb|default:"N/A" }} MB
                                     </small>
+                                    {% if upload.processing_timestamp %}
+                                    <br><small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>Processed: {{ upload.processing_timestamp|date:"M d, H:i" }} UTC
+                                    </small>
+                                    {% endif %}
+                                    {% if upload.get_plate_count > 0 %}
+                                    <br><small class="text-muted">
+                                        <i class="bi bi-card-text me-1"></i>{{ upload.get_plate_count }} plate{{ upload.get_plate_count|pluralize }} identified
+                                    </small>
+                                    {% endif %}
                                 </p>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge {% if upload.processing_status == 'completed' %}bg-success{% elif upload.processing_status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">

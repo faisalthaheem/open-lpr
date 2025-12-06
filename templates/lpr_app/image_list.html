@@ -95,17 +95,23 @@
                     {% endif %}
                     <div class="card-body d-flex flex-column">
                         <div class="flex-grow-1">
+                            {% if image.get_first_ocr_text %}
+                            <h6 class="card-title">{{ image.get_first_ocr_text|truncatechars:25 }}</h6>
+                            {% else %}
                             <h6 class="card-title">{{ image.filename|truncatechars:25 }}</h6>
+                            {% endif %}
                             <p class="card-text">
                                 <small class="text-muted d-block">
                                     <i class="bi bi-calendar me-1"></i>{{ image.upload_timestamp|date:"M d, Y H:i" }}
                                 </small>
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-hdd me-1"></i>{{ image.file_size_mb|default:"N/A" }} MB
-                                </small>
                                 {% if image.processing_timestamp %}
                                 <small class="text-muted d-block">
-                                    <i class="bi bi-clock me-1"></i>Processed: {{ image.processing_timestamp|date:"M d, H:i" }}
+                                    <i class="bi bi-clock me-1"></i>Processed: {{ image.processing_timestamp|date:"M d, H:i" }} UTC
+                                </small>
+                                {% endif %}
+                                {% if image.get_plate_count > 0 %}
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-card-text me-1"></i>{{ image.get_plate_count }} plate{{ image.get_plate_count|pluralize }} identified
                                 </small>
                                 {% endif %}
                             </p>
