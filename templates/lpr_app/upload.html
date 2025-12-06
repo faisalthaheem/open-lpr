@@ -275,10 +275,10 @@
             return;
         }
 
-        // Validate file size (10MB max)
-        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        // Validate file size (250KB max)
+        const maxSize = 250 * 1024; // 250KB in bytes
         if (file.size > maxSize) {
-            alert('File size must be less than 10MB.');
+            alert('File size must be less than 250KB.');
             return;
         }
 

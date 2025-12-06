@@ -121,9 +121,9 @@ if not MEDIA_DIR.exists():
     os.makedirs(MEDIA_DIR)
 
 # File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-UPLOAD_FILE_MAX_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024  # 250KB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024  # 250KB
+UPLOAD_FILE_MAX_SIZE = 250 * 1024  # 250KB
 
 # Allowed file types for upload
 ALLOWED_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'webp']
