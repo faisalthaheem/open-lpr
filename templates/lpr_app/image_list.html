@@ -88,7 +88,9 @@
             {% for image in page_obj %}
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card result-card h-100">
-                    {% if image.original_image %}
+                    {% if image.processed_image %}
+                    <img src="{{ image.processed_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Processed image with license plate annotations">
+                    {% elif image.original_image %}
                     <img src="{{ image.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ image.filename }}">
                     {% endif %}
                     <div class="card-body d-flex flex-column">
