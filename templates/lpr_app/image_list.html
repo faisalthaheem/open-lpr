@@ -101,9 +101,6 @@
                             <h6 class="card-title">{{ image.filename|truncatechars:25 }}</h6>
                             {% endif %}
                             <p class="card-text">
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-calendar me-1"></i>{{ image.upload_timestamp|date:"M d, Y H:i" }}
-                                </small>
                                 {% if image.processing_timestamp %}
                                 <small class="text-muted d-block">
                                     <i class="bi bi-clock me-1"></i>Processed: {{ image.processing_timestamp|date:"M d, H:i" }} UTC

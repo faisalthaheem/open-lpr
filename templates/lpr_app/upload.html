@@ -180,11 +180,8 @@
                                 <h6 class="card-title">{{ upload.filename|truncatechars:20 }}</h6>
                                 {% endif %}
                                 <p class="card-text">
-                                    <small class="text-muted">
-                                        <i class="bi bi-calendar me-1"></i>{{ upload.upload_timestamp|date:"M d, Y H:i" }}
-                                    </small>
                                     {% if upload.processing_timestamp %}
-                                    <br><small class="text-muted">
+                                    <small class="text-muted">
                                         <i class="bi bi-clock me-1"></i>Processed: {{ upload.processing_timestamp|date:"M d, H:i" }} UTC
                                     </small>
                                     {% endif %}

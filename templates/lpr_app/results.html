@@ -15,9 +15,11 @@
                         </h5>
                         <p class="text-muted mb-0">
                             <i class="bi bi-file-earmark me-1"></i>{{ uploaded_image.filename }}
+                            {% if uploaded_image.processing_timestamp %}
                             <span class="ms-3">
-                                <i class="bi bi-calendar me-1"></i>{{ uploaded_image.upload_timestamp|date:"M d, Y H:i" }}
+                                <i class="bi bi-clock me-1"></i>Processed: {{ uploaded_image.processing_timestamp|date:"M d, H:i" }} UTC
                             </span>
+                            {% endif %}
                         </p>
                     </div>
                     <div class="col-md-4 text-end">

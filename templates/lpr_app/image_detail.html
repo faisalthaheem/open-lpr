@@ -29,10 +29,6 @@
                                 <td>{{ uploaded_image.file_size_mb|default:"N/A" }} MB</td>
                             </tr>
                             <tr>
-                                <th>Upload Time:</th>
-                                <td>{{ uploaded_image.upload_timestamp|date:"Y-m-d H:i:s" }}</td>
-                            </tr>
-                            <tr>
                                 <th>Processing Status:</th>
                                 <td>
                                     <span class="badge {% if uploaded_image.processing_status == 'completed' %}bg-success{% elif uploaded_image.processing_status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">
