@@ -106,6 +106,7 @@
         <div class="container">
             <a class="navbar-brand" href="{% url 'lpr_app:home' %}">
                 <i class="bi bi-camera-fill me-2"></i>LPR Web App
+                <small class="d-block fs-6 fw-normal mt-1">Upload images to detect and recognize license plates using AI-powered OCR</small>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -138,13 +139,17 @@
     {% block header %}
     <header class="lpr-header">
         <div class="container text-center">
-            <h3 class="mb-2"><i class="bi bi-camera-fill me-2"></i>License Plate Recognition</h3>
-            <p class="mb-2 small">Upload images to detect and recognize license plates using AI-powered OCR</p>
-            
             <!-- Disclaimer -->
-            <div class="alert alert-warning alert-dismissible fade show py-2" role="alert" style="background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
+            <div class="alert alert-warning alert-dismissible fade show py-3" role="alert" style="background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
+                <h6 class="alert-heading mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Important Disclaimer</h6>
+                <p class="mb-2 small">
+                    <strong>DEMO SYSTEM - NO LIABILITY ASSUMED:</strong> This is a demonstration application provided "as is" without any warranties or guarantees.
+                </p>
+                <p class="mb-1 small">
+                    <strong>DATA USAGE:</strong> All uploaded images will be <strong>retained</strong> and may be used for <strong>training purposes</strong> to improve our AI models.
+                </p>
                 <p class="mb-0 small">
-                    <strong>DEMO SYSTEM:</strong> This is a demonstration application. Uploaded images may be retained for training purposes.
+                    <strong>NO RESPONSIBILITY:</strong> We are not responsible for any consequences arising from the use of this system or the data processed.
                 </p>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
             </div>
