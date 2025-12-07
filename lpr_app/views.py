@@ -40,7 +40,8 @@ def home(request):
         'upload_form': upload_form,
         'search_form': search_form,
         'recent_uploads': recent_uploads,
-        'title': 'License Plate Recognition'
+        'title': 'License Plate Recognition',
+        'settings': settings
     }
     
     return render(request, 'lpr_app/upload.html', context)
