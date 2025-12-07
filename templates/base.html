@@ -14,7 +14,7 @@
         .lpr-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 2rem 0;
+            padding: 1rem 0;
         }
         .lpr-header h1 {
             font-weight: 300;
@@ -138,20 +138,13 @@
     {% block header %}
     <header class="lpr-header">
         <div class="container text-center">
-            <h1><i class="bi bi-camera-fill me-3"></i>License Plate Recognition</h1>
-            <p class="lead mb-3">Upload images to detect and recognize license plates using AI-powered OCR</p>
+            <h3 class="mb-2"><i class="bi bi-camera-fill me-2"></i>License Plate Recognition</h3>
+            <p class="mb-2 small">Upload images to detect and recognize license plates using AI-powered OCR</p>
             
             <!-- Disclaimer -->
-            <div class="alert alert-warning alert-dismissible fade show" role="alert" style="background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
-                <h6 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>Important Disclaimer</h6>
-                <p class="mb-2 small">
-                    <strong>DEMO SYSTEM - NO LIABILITY ASSUMED:</strong> This is a demonstration application provided "as is" without any warranties or guarantees.
-                </p>
-                <p class="mb-2 small">
-                    <strong>DATA USAGE:</strong> All uploaded images will be <strong>retained</strong> and may be used for <strong>training purposes</strong> to improve our AI models.
-                </p>
+            <div class="alert alert-warning alert-dismissible fade show py-2" role="alert" style="background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
                 <p class="mb-0 small">
-                    <strong>NO RESPONSIBILITY:</strong> We are not responsible for any consequences arising from the use of this system or the data processed.
+                    <strong>DEMO SYSTEM:</strong> This is a demonstration application. Uploaded images may be retained for training purposes.
                 </p>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
             </div>
@@ -160,7 +153,7 @@
     {% endblock %}
 
     <!-- Main Content -->
-    <main class="container my-4">
+    <main class="container my-2">
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">

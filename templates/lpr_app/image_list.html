@@ -6,34 +6,34 @@
 <div class="row">
     <div class="col-lg-12">
         <!-- Search and Filter -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h5 class="card-title mb-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-3">
+                <h6 class="card-title mb-3">
                     <i class="bi bi-search me-2"></i>Search & Filter Images
-                </h5>
+                </h6>
                 
-                <form method="get" class="row g-3">
+                <form method="get" class="row g-2">
                     <div class="col-md-3">
-                        <label for="{{ search_form.query.id_for_label }}" class="form-label">Search</label>
+                        <label for="{{ search_form.query.id_for_label }}" class="form-label small">Search</label>
                         {{ search_form.query }}
                     </div>
                     <div class="col-md-2">
-                        <label for="{{ search_form.date_from.id_for_label }}" class="form-label">From Date</label>
+                        <label for="{{ search_form.date_from.id_for_label }}" class="form-label small">From Date</label>
                         {{ search_form.date_from }}
                     </div>
                     <div class="col-md-2">
-                        <label for="{{ search_form.date_to.id_for_label }}" class="form-label">To Date</label>
+                        <label for="{{ search_form.date_to.id_for_label }}" class="form-label small">To Date</label>
                         {{ search_form.date_to }}
                     </div>
                     <div class="col-md-2">
-                        <label for="{{ search_form.processing_status.id_for_label }}" class="form-label">Status</label>
+                        <label for="{{ search_form.processing_status.id_for_label }}" class="form-label small">Status</label>
                         {{ search_form.processing_status }}
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-funnel me-1"></i>Filter
                         </button>
-                        <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-secondary ms-2">
+                        <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-secondary btn-sm ms-2">
                             <i class="bi bi-arrow-clockwise me-1"></i>Clear
                         </a>
                     </div>
@@ -43,38 +43,38 @@
 
         <!-- Results Summary -->
         {% if page_obj %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2">
                 <div class="row text-center">
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-primary mb-1">{{ page_obj.paginator.count }}</h4>
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-primary mb-0">{{ page_obj.paginator.count }}</h5>
                             <small class="text-muted">Total Images</small>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-success mb-1">
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-success mb-1">
                                 {{ page_obj.paginator.num_pages }}
-                            </h4>
+                            </h5>
                             <small class="text-muted">Pages</small>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-info mb-1">{{ page_obj.number }}</h4>
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-info mb-1">{{ page_obj.number }}</h5>
                             <small class="text-muted">Current Page</small>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-warning mb-1">
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-warning mb-1">
                                 {% if search_form.query.value %}
                                     {{ search_form.query.value|length }}
                                 {% else %}
                                     All
                                 {% endif %}
-                            </h4>
+                            </h5>
                             <small class="text-muted">Filter</small>
                         </div>
                     </div>
