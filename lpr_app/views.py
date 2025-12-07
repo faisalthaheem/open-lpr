@@ -307,6 +307,15 @@ def image_list(request):
     # Pagination
     paginator = Paginator(queryset, 12)  # 12 images per page
     page_number = request.GET.get('page')
+    
+    # Handle invalid page numbers gracefully
+    try:
+        page_number = int(page_number) if page_number else 1
+        if page_number < 1:
+            page_number = 1
+    except (ValueError, TypeError):
+        page_number = 1
+    
     page_obj = paginator.get_page(page_number)
     
     context = {
