@@ -46,9 +46,32 @@ if [ "$(id -u)" = "0" ]; then
     chmod 644 /app/data/django.log
 fi
 
+# Ensure database file has correct ownership if it exists
+# Get the database path from Django settings or use default
+DB_PATH="${DATABASE_PATH:-/app/db.sqlite3}"
+if [ -f "$DB_PATH" ]; then
+    echo "Setting ownership for database file: $DB_PATH"
+    if [ "$(id -u)" = "0" ]; then
+        chown django:django "$DB_PATH"
+        chmod 644 "$DB_PATH"
+    fi
+else
+    echo "Database file not found at $DB_PATH, will be created by Django migrations"
+fi
+
 # Run database migrations
 echo "Running database migrations..."
 python manage.py migrate --noinput
+
+# Ensure database file has correct ownership after migrations
+# This handles the case where the database was created during migrations
+if [ -f "$DB_PATH" ]; then
+    echo "Setting ownership for database file after migrations: $DB_PATH"
+    if [ "$(id -u)" = "0" ]; then
+        chown django:django "$DB_PATH"
+        chmod 644 "$DB_PATH"
+    fi
+fi
 
 # Collect static files (in case they weren't collected during build)
 echo "Collecting static files..."

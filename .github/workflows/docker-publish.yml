@@ -65,7 +65,7 @@ jobs:
 
       - name: Generate SBOM
         if: github.event_name != 'pull_request'
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@v0.17.2
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           format: spdx-json
@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload SBOM
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.spdx.json

@@ -1,82 +1,249 @@
-# OPEN LPR - A License Plate Reader App
+<div align="center">
 
-A Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with OCR capabilities.
+# 🚗 OPEN LPR - License Plate Recognition System
 
-## Features
+[![GitHub release](https://img.shields.io/github/release/faisalthaheem/open-lpr.svg)](https://github.com/faisalthaheem/open-lpr/releases)
+[![GitHub stars](https://img.shields.io/github/stars/faisalthaheem/open-lpr.svg?style=social&label=Star)](https://github.com/faisalthaheem/open-lpr)
+[![GitHub forks](https://img.shields.io/github/forks/faisalthaheem/open-lpr.svg?style=social&label=Fork)](https://github.com/faisalthaheem/open-lpr)
+[![GitHub issues](https://img.shields.io/github/issues/faisalthaheem/open-lpr.svg)](https://github.com/faisalthaheem/open-lpr/issues)
+[![GitHub Container Registry](https://img.shields.io/badge/ghcr.io-open--lpr-blue?style=flat-square)](https://github.com/faisalthaheem/open-lpr/pkgs/container/open-lpr)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-- **AI-Powered Detection**: Uses qwen3-vl-4b-instruct vision-language model for accurate license plate recognition
-- **OCR Integration**: Extracts text from detected license plates with confidence scores
-- **Bounding Box Visualization**: Draws colored boxes around detected plates and OCR text
-- **Drag & Drop Upload**: Modern, user-friendly file upload interface
-- **Permanent Storage**: All uploaded and processed images are saved permanently
-- **Side-by-Side Comparison**: View original and processed images together
-- **Search & Filter**: Browse and search through processing history
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
+*A powerful Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
 
-## Technology Stack
+## 📑 Table of Contents
 
-- **Backend**: Django 4.2.7 with Python
-- **AI Model**: Qwen3-VL via OpenAI-compatible API
-- **Image Processing**: Pillow (PIL) for image manipulation
-- **Frontend**: Bootstrap 5 with custom CSS
-- **Database**: SQLite (default), configurable for PostgreSQL
-- **File Storage**: Django's media storage system
+| | | |
+|---|---|---|
+| [🚀 Live Demo](#-live-demo) | [🌟 Visual Showcase](#-visual-showcase) | [✨ Features](#-features) |
+| [🛠️ Technology Stack](#-technology-stack) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration](#️-configuration) |
+| [📖 Usage](#-usage) | [🔌 API Endpoints](#-api-endpoints) | [🐳 Docker Deployment](#-docker-deployment) |
+| [📁 File Structure](#-file-structure) | [🧪 Testing](#-testing) | [🔧 Development](#-development) |
+| [🚀 Production Deployment](#-production-deployment) | [🐛 Troubleshooting](#-troubleshooting) | [🤝 Contributing](#-contributing) |
+| [📄 License](#-license) | [🆘 Support](#-support) | [🙏 Acknowledgments](#-acknowledgments) |
+| [📚 Additional Documentation](#-additional-documentation) | | |
 
-## Quick Start
+</div>
 
-### Prerequisites
+## 🚀 Live Demo
 
-- Python 3.8+
-- pip package manager
-- Qwen3-VL API access
+Try the live demo of Open LPR at: **[https://rest-openlpr.computedsynergy.com/](https://rest-openlpr.computedsynergy.com/)**
 
-### Installation
+Experience the license plate recognition system in action without any installation required!
 
-1. **Clone the repository**
+
+## 🌟 Visual Showcase
+
+| Feature | Preview |
+|---------|---------|
+| **Main Interface** | <img src="docs/open-lpr-index.png" alt="Open LPR Main Interface" width="400"> |
+| **Detection Results** | <img src="docs/open-lpr-detection-result.png" alt="Detection Results" width="400"> |
+| **Detection Details** | <img src="docs/open-lpr-detection-details.png" alt="Detection Details" width="400"> |
+| **Processed Image** | <img src="docs/open-lpr-processed-image.png" alt="Processed Image with Bounding Boxes" width="400"> |
+
+## ✨ Features
+
+- 🤖 **AI-Powered Detection**: Uses qwen3-vl-4b-instruct vision-language model for accurate license plate recognition
+- 🔍 **Advanced OCR Integration**: Extracts text from detected license plates with confidence scores
+- 🎯 **Bounding Box Visualization**: Draws colored boxes around detected plates and OCR text
+- 📤 **Drag & Drop Upload**: Modern, user-friendly file upload interface
+- 💾 **Permanent Storage**: All uploaded and processed images are saved permanently
+- 🔄 **Side-by-Side Comparison**: View original and processed images together
+- 🔎 **Search & Filter**: Browse and search through processing history
+- 📱 **Responsive Design**: Works on desktop, tablet, and mobile devices
+- 🐳 **Docker Support**: Easy deployment with Docker and Docker Compose
+- 🔌 **REST API**: Full API for programmatic access
+
+
+## 🛠️ Technology Stack
+
+<div align="center">
+
+| Backend | AI Model | Frontend | Database | Deployment |
+|---------|----------|----------|----------|------------|
+| ![Django](https://img.shields.io/badge/Django-4.2.7-092E20?style=flat-square&logo=django) | ![Qwen3-VL](https://img.shields.io/badge/Qwen3--VL-4B--instruct-FF6B35?style=flat-square) | ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?style=flat-square&logo=bootstrap) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
+| ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python) | ![OpenAI API](https://img.shields.io/badge/OpenAI%20Compatible-412991?style=flat-square&logo=openai) | ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
+
+</div>
+
+## 🚀 Quick Start
+
+<details>
+<summary>Click to expand</summary>
+
+### Docker Deployment (Recommended)
+
+The quickest way to get started is with Docker using one of the LlamaCpp compose files, which include everything needed for local inference without requiring any external API endpoints.
+
+#### Option 1: AMD Vulkan GPU Version (Fastest Local Inference)
+For users with AMD GPUs that support Vulkan:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit the environment file with your settings
+nano .env.llamacpp
+
+# Create necessary directories
+mkdir -p model_files model_files_cache container-data container-media staticfiles
+
+# Start the application with AMD Vulkan GPU support
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f
+```
+
+#### Option 2: CPU Version (Universal Compatibility)
+For users without compatible GPUs or for testing purposes:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit the environment file with your settings
+nano .env.llamacpp
+
+# Create necessary directories
+mkdir -p model_files model_files_cache container-data container-media staticfiles
+
+# Start the application with CPU support
+docker-compose -f docker-compose-llamacpp-cpu.yml up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose -f docker-compose-llamacpp-cpu.yml logs -f
+```
+
+#### Option 3: Standard Docker (External API)
+For users who want to use an external OpenAI-compatible API endpoint:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.example .env
+
+# Edit the environment file with your API settings
+nano .env
+
+# Create necessary directories
+mkdir -p container-data container-media staticfiles
+
+# Start the application
+docker-compose up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose logs -f
+```
+
+### Docker Compose Files
+
+This project provides multiple Docker Compose files for different deployment scenarios:
+
+#### LlamaCpp Compose Files (Recommended for Quick Start)
+
+1. **docker-compose-llamacpp-amd-vulcan.yml**
+   - **Purpose**: Full local deployment with AMD GPU acceleration using Vulkan
+   - **Services**: OpenLPR + LlamaCpp server + optional Nginx
+   - **Prerequisites**:
+     - AMD GPU with Vulkan support
+     - ROCm drivers installed
+     - Sufficient GPU memory (8GB+ recommended)
+   - **Performance**: Fastest inference with GPU acceleration
+   - **Use Case**: Production deployment with AMD hardware
+
+2. **docker-compose-llamacpp-cpu.yml**
+   - **Purpose**: Full local deployment using CPU for inference
+   - **Services**: OpenLPR + LlamaCpp server + optional Nginx
+   - **Prerequisites**:
+     - Sufficient RAM (16GB+ recommended)
+     - Multi-core CPU for better performance
+   - **Performance**: Slower but universal compatibility
+   - **Use Case**: Testing, development, or hardware without GPU support
+
+#### Standard Compose File
+
+3. **docker-compose.yml**
+   - **Purpose**: OpenLPR deployment with external API endpoint
+   - **Services**: OpenLPR only
+   - **Prerequisites**:
+     - Access to an OpenAI-compatible API endpoint
+     - Valid API credentials
+   - **Performance**: Depends on external API
+   - **Use Case**: When using cloud-based AI services or existing inference infrastructure
+
+### Manual Installation
+
+For development or custom deployments:
+
+1. **Prerequisites**
+   - Python 3.8+
+   - pip package manager
+   - Qwen3-VL API access
+
+2. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/faisalthaheem/open-lpr.git
    cd open-lpr
    ```
 
-2. **Create virtual environment**
+3. **Create virtual environment**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Install dependencies**
+4. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables**
+5. **Configure environment variables**
    ```bash
    cp .env.example .env
    # Edit .env with your settings
    ```
 
-5. **Set up database**
+6. **Set up database**
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
 
-6. **Create superuser (optional)**
+7. **Create superuser (optional)**
    ```bash
    python manage.py createsuperuser
    ```
 
-7. **Run development server**
+8. **Run development server**
    ```bash
    python manage.py runserver
    ```
 
-8. **Access the application**
+9. **Access the application**
    Open http://127.0.0.1:8000 in your browser
 
-## Configuration
+</details>
 
-### Environment Variables
+## ⚙️ Configuration
+
+<details>
+<summary>Click to expand</summary>
+
+### Development Environment
+
+For local development (running Django directly):
 
 Create a `.env` file based on `.env.example`:
 
@@ -96,14 +263,47 @@ UPLOAD_FILE_MAX_SIZE=10485760  # 10MB
 MAX_BATCH_SIZE=10
 ```
 
-### API Configuration
+### Docker Environment with LlamaCpp
 
-The application connects to the Qwen3-VL API at:
-- **Endpoint**: `https://your-open-api-compatible-endpoint.com/v1`
-- **Authentication**: Bearer token (API key)
-- **Model**: `qwen3-vl-4b-instruct` (configurable)
+For local LlamaCpp inference deployment:
 
-## Usage
+Create a `.env.llamacpp` file based on `.env.llamacpp.example`:
+
+```env
+# HuggingFace Token
+HF_TOKEN=hf_your_huggingface_token_here
+
+# Model Configuration
+MODEL_REPO=unsloth/Qwen3-VL-4B-Instruct-GGUF
+MODEL_FILE=Qwen3-VL-4B-Instruct-Q5_K_M.gguf
+MMPROJ_URL=https://huggingface.co/unsloth/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-BF16.gguf
+
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+
+# File Upload Settings
+UPLOAD_FILE_MAX_SIZE=10485760  # 10MB
+MAX_BATCH_SIZE=10
+
+# Database Configuration
+DATABASE_PATH=/app/data/db.sqlite3
+
+# Optional: Superuser creation
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_EMAIL=admin@example.com
+DJANGO_SUPERUSER_PASSWORD=your-secure-password
+```
+
+For detailed LlamaCpp deployment instructions, see [README-llamacpp.md](README-llamacpp.md).
+
+</details>
+
+## 📖 Usage
+
+<details>
+<summary>Click to expand</summary>
 
 ### Uploading Images
 
@@ -120,7 +320,7 @@ After processing, you'll see:
 
 - **Detection Summary**: Number of plates and OCR texts found
 - **Image Comparison**: Side-by-side view of original and processed images
-- **Detection Details**: 
+- **Detection Details**:
   - License plate coordinates and confidence
   - OCR text results with confidence scores
   - Bounding box coordinates for all detections
@@ -134,7 +334,12 @@ Access the "History" page to:
 - **Status Filter**: View by processing status
 - **Pagination**: Navigate through large numbers of uploads
 
-## API Endpoints
+</details>
+
+## 🔌 API Endpoints
+
+<details>
+<summary>Click to expand</summary>
 
 ### Web Endpoints
 
@@ -152,19 +357,6 @@ Access the "History" page to:
 - `POST /api/v1/ocr/` - Upload an image and receive OCR results synchronously
 
 ### Response Format
-
-#### Web Interface Response Format
-
-The web interface returns JSON responses for AJAX requests:
-
-```json
-{
-    "success": true,
-    "image_id": 123,
-    "message": "Image processed successfully",
-    "redirect_url": "/result/123/"
-}
-```
 
 #### REST API Response Format
 
@@ -222,117 +414,6 @@ The LPR REST API returns JSON in this format:
 }
 ```
 
-## File Structure
-
-```
-open-lpr/
-├── manage.py                    # Django management script
-├── requirements.txt              # Python dependencies
-├── .env.example                # Environment variables template
-├── .env                         # Environment variables (create from .env.example)
-├── .gitignore                   # Git ignore file
-├── .dockerignore               # Docker ignore file
-├── API_DOCUMENTATION.md        # Detailed REST API documentation
-├── README_API.md               # REST API implementation summary
-├── test_api.py                 # API testing script
-├── test_setup.py               # Test setup utilities
-├── lpr_project/               # Django project settings
-│   ├── __init__.py
-│   ├── settings.py             # Django configuration
-│   ├── urls.py                 # Project URL patterns
-│   └── wsgi.py                 # WSGI configuration
-├── lpr_app/                   # Main application
-│   ├── __init__.py
-│   ├── admin.py                # Django admin configuration
-│   ├── apps.py                 # Django app configuration
-│   ├── models.py               # Database models
-│   ├── views.py                # View functions and API endpoints
-│   ├── urls.py                 # App URL patterns
-│   ├── forms.py                # Django forms
-│   ├── services/               # Business logic
-│   │   ├── __init__.py
-│   │   ├── qwen_client.py      # Qwen3-VL API client
-│   │   ├── image_processor.py  # Image processing utilities
-│   │   └── bbox_visualizer.py  # Bounding box visualization
-│   ├── management/             # Django management commands
-│   │   ├── __init__.py
-│   │   └── commands/
-│   │       ├── __init__.py
-│   │       └── setup_project.py
-│   └── migrations/            # Database migrations
-│       ├── __init__.py
-│       └── 0001_initial.py
-├── media/                     # Uploaded images
-│   ├── uploads/               # Original images
-│   └── processed/             # Processed images
-├── templates/                 # HTML templates
-│   ├── base.html              # Base template
-│   └── lpr_app/               # App-specific templates
-│       ├── base.html
-│       ├── image_detail.html
-│       ├── image_list.html
-│       ├── results.html
-│       └── upload.html
-└── .github/                  # GitHub workflows
-    └── workflows/             # CI/CD configurations
-```
-
-## REST API
-
-The application provides a REST API for programmatic license plate recognition.
-
-### Base URL
-
-```
-http://localhost:8000/api/v1/
-```
-
-### Authentication
-
-Currently, the API does not require authentication. For production use, consider implementing API keys or token-based authentication.
-
-### Endpoints
-
-#### OCR Processing
-
-**POST** `/api/v1/ocr/`
-
-Upload an image and receive OCR results for license plate detection and text recognition.
-
-**Request:**
-- **Method**: POST
-- **Content-Type**: multipart/form-data
-- **Body**: Image file with form field name `image`
-
-**Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| image | File | Yes | Image file (JPEG, PNG, or BMP) |
-
-**File Requirements:**
-- **Supported formats**: JPEG, JPG, PNG, BMP
-- **Maximum file size**: 10MB
-- **Recommended resolution**: 1920x1080 or higher for best results
-
-**Response:**
-See the Response Format section above for detailed response structure.
-
-#### Health Check
-
-**GET** `/health/`
-
-Check the health status of the API and its dependencies.
-
-**Response:**
-```json
-{
-    "status": "healthy",
-    "api_healthy": true,
-    "database_healthy": true,
-    "timestamp": "2023-12-07T15:30:45.123456"
-}
-```
-
 ### Usage Examples
 
 #### Python Example
@@ -375,57 +456,156 @@ curl -X POST \
   http://localhost:8000/api/v1/ocr/
 ```
 
-#### JavaScript Example
+</details>
 
-```javascript
-// Using fetch API
-async function processImage(imageFile) {
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    
-    try {
-        const response = await fetch('http://localhost:8000/api/v1/ocr/', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-            console.log(`Found ${result.summary.total_plates} license plates`);
-            result.results.detections.forEach(detection => {
-                detection.ocr.forEach(ocr => {
-                    console.log(`License plate: ${ocr.text} (${ocr.confidence})`);
-                });
-            });
-        } else {
-            console.error('Processing failed:', result.error);
-        }
-    } catch (error) {
-        console.error('Request failed:', error);
-    }
-}
+## 🐳 Docker Deployment
 
-// Usage with file input
-document.getElementById('imageInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        processImage(file);
-    }
-});
+<details>
+<summary>Click to expand</summary>
+
+The project includes automated Docker image building and publishing to GitHub Container Registry (ghcr.io).
+
+### Using the Pre-built Docker Image
+
+The Docker image is automatically built and published to GitHub Container Registry when code is pushed to the main branch or when tags are created.
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/faisalthaheem/open-lpr:latest
+
+# Pull a specific version
+docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
 ```
 
-### Error Codes
+### Docker Compose Deployment
 
-| Error Code | Description |
-|------------|-------------|
-| MISSING_IMAGE | No image file provided in the request |
-| INVALID_FILE_TYPE | Uploaded file is not a supported image format |
-| FILE_TOO_LARGE | Uploaded file exceeds the 10MB size limit |
-| PROCESSING_FAILED | Image processing failed (various causes) |
-| INTERNAL_ERROR | Internal server error during processing |
+This project provides multiple Docker Compose files for different deployment scenarios. For detailed deployment instructions, see the [Quick Start](#-quick-start) section and [Docker Deployment Guide](DOCKER_DEPLOYMENT.md).
 
-### Testing
+#### Quick Reference
+
+```bash
+# For AMD GPU with Vulkan support
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+
+# For CPU-only deployment
+docker-compose -f docker-compose-llamacpp-cpu.yml up -d
+
+# For external API endpoint
+docker-compose up -d
+```
+
+For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md).
+
+### CI/CD Workflow
+
+The project includes a GitHub Actions workflow (`.github/workflows/docker-publish.yml`) that:
+
+1. **Triggers** on:
+   - Push to main/master branch
+   - Creation of version tags (v*)
+   - Pull requests to main/master
+
+2. **Builds** the Docker image for multiple architectures:
+   - linux/amd64
+   - linux/arm64
+
+3. **Publishes** to GitHub Container Registry with tags:
+   - Branch name (e.g., `main`)
+   - Semantic version tags (e.g., `v1.0.0`, `v1.0`, `v1`)
+   - `latest` tag for the main branch
+
+4. **Generates** SBOM (Software Bill of Materials) for security scanning
+
+</details>
+
+## 📁 File Structure
+
+<details>
+<summary>Click to expand</summary>
+
+```
+open-lpr/
+├── manage.py                    # Django management script
+├── requirements.txt              # Python dependencies
+├── .env.example                # Environment variables template
+├── .env                         # Environment variables (create from .env.example)
+├── .env.llamacpp.example       # LlamaCpp environment variables template
+├── .env.llamacpp               # LlamaCpp environment variables (create from .env.llamacpp.example)
+├── .gitignore                   # Git ignore file
+├── .dockerignore               # Docker ignore file
+├── API_DOCUMENTATION.md        # Detailed REST API documentation
+├── README_API.md               # REST API implementation summary
+├── README-llamacpp.md         # LlamaCpp deployment guide
+├── DOCKER_DEPLOYMENT.md        # Docker deployment guide
+├── test_api.py                 # API testing script
+├── test_setup.py               # Test setup utilities
+├── test-llamacpp-integration.py # LlamaCpp integration test script
+├── docker-compose.yml           # Standard Docker Compose configuration
+├── docker-compose-llamacpp-cpu.yml    # CPU-based LlamaCpp Docker Compose
+├── docker-compose-llamacpp-amd-vulcan.yml # AMD Vulkan GPU LlamaCpp Docker Compose
+├── docker-entrypoint.sh         # Docker entrypoint script
+├── Dockerfile                  # Docker image definition
+├── start-llamacpp-cpu.sh     # LlamaCpp CPU startup script
+├── lpr_project/               # Django project settings
+│   ├── __init__.py
+│   ├── settings.py             # Django configuration
+│   ├── urls.py                 # Project URL patterns
+│   └── wsgi.py                 # WSGI configuration
+├── lpr_app/                   # Main application
+│   ├── __init__.py
+│   ├── admin.py                # Django admin configuration
+│   ├── apps.py                 # Django app configuration
+│   ├── models.py               # Database models
+│   ├── views.py                # View functions and API endpoints
+│   ├── urls.py                 # App URL patterns
+│   ├── forms.py                # Django forms
+│   ├── services/               # Business logic
+│   │   ├── __init__.py
+│   │   ├── qwen_client.py      # Qwen3-VL API client
+│   │   ├── image_processor.py  # Image processing utilities
+│   │   └── bbox_visualizer.py  # Bounding box visualization
+│   ├── management/             # Django management commands
+│   │   ├── __init__.py
+│   │   └── commands/
+│   │       ├── __init__.py
+│   │       └── setup_project.py
+│   ├── static/                # Static files
+│   └── migrations/            # Database migrations
+│       ├── __init__.py
+│       └── 0001_initial.py
+├── media/                     # Uploaded images
+│   ├── uploads/               # Original images
+│   └── processed/             # Processed images
+├── container-data/             # Docker container data persistence
+├── container-media/            # Docker container media persistence
+├── staticfiles/               # Collected static files
+├── templates/                 # HTML templates
+│   ├── base.html              # Base template
+│   └── lpr_app/               # App-specific templates
+│       ├── base.html
+│       ├── image_detail.html
+│       ├── image_list.html
+│       ├── results.html
+│       └── upload.html
+├── docs/                      # Documentation
+│   ├── LLAMACPP_RESOURCES.md  # LlamaCpp and ROCm resources
+│   ├── open-lpr-index.png
+│   ├── open-lpr-detection-result.png
+│   ├── open-lpr-detection-details.png
+│   └── open-lpr-processed-image.png
+├── nginx/                     # Nginx configuration
+│   └── nginx.conf             # Nginx reverse proxy configuration
+├── logs/                      # Application logs
+└── .github/                  # GitHub workflows
+    └── workflows/             # CI/CD configurations
+```
+
+</details>
+
+## 🧪 Testing
+
+<details>
+<summary>Click to expand</summary>
 
 Use the provided test script to verify API functionality:
 
@@ -437,20 +617,12 @@ python test_api.py
 python test_api.py /path/to/your/image.jpg
 ```
 
-### Security Considerations
+</details>
 
-1. **File Validation**: The API validates file types and sizes to prevent malicious uploads
-2. **Error Information**: Error responses avoid exposing sensitive system information
-3. **CSRF Protection**: The endpoint is exempt from CSRF protection for API usage
-4. **No Authentication**: Currently, the API does not require authentication. Consider implementing API keys or other authentication mechanisms for production use.
+## 🔧 Development
 
-### Performance Considerations
-
-- **Processing Time**: OCR processing typically takes 1-5 seconds depending on image size and complexity
-- **Memory Usage**: Large images may require significant memory during processing
-- **Concurrent Requests**: Django's development server handles requests sequentially. Use a production server (like Gunicorn) for concurrent request handling.
-
-## Development
+<details>
+<summary>Click to expand</summary>
 
 ### Running Tests
 
@@ -481,7 +653,12 @@ python manage.py migrate
 python manage.py collectstatic --noinput
 ```
 
-## Deployment
+</details>
+
+## 🚀 Production Deployment
+
+<details>
+<summary>Click to expand</summary>
 
 ### Production Settings
 
@@ -492,156 +669,18 @@ python manage.py collectstatic --noinput
 5. **Set up media file serving** (nginx/AWS S3)
 6. **Use HTTPS** with SSL certificate
 
-### Docker Deployment
-
-The project includes automated Docker image building and publishing to GitHub Container Registry (ghcr.io).
-
-#### Using the Pre-built Docker Image
-
-The Docker image is automatically built and published to GitHub Container Registry when code is pushed to the main branch or when tags are created.
-
-```bash
-# Pull the latest image
-docker pull ghcr.io/faisalthaheem/open-lpr:latest
-
-# Pull a specific version
-docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
-```
-
-#### Docker Compose Deployment
-
-Use the provided `docker-compose.yml` file for easy deployment:
-
-```bash
-# Clone the repository
-git clone https://github.com/faisalthaheem/open-lpr.git
-cd open-lpr
-
-# Copy environment file
-cp .env.example .env
-# Edit .env with your configuration
-
-# Start the application
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f
-```
-
-#### Building Locally
-
-If you need to build the image locally:
-
-```dockerfile
-# Multi-stage Dockerfile for Open LPR Application
-# Stage 1: Base stage with Python dependencies
-FROM python:3.11-slim AS base
-
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    gosu \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create and activate virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Upgrade pip
-RUN pip install --upgrade pip
-
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# Verify gunicorn is installed
-RUN which gunicorn || (echo "Gunicorn not found in PATH" && exit 1)
-
-# Stage 2: Build stage for application code
-FROM base AS builder
-
-# Set work directory
-WORKDIR /app
-
-# Copy application code
-COPY . .
-
-# Create directories for volumes
-RUN mkdir -p /app/data /app/media /app/staticfiles
-
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
-# Stage 3: Production stage
-FROM base AS production
-
-# Create non-root user
-RUN groupadd -r django && useradd -r -g django django
-
-# Set work directory
-WORKDIR /app
-
-# Create directories with proper permissions
-RUN mkdir -p /app/data /app/media /app/staticfiles && \
-    chown -R django:django /app && \
-    chmod -R 755 /app/data /app/media /app/staticfiles
-
-# Copy application from builder stage
-COPY --from=builder --chown=django:django /app /app
-
-# Ensure PATH is set correctly for the virtual environment
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Switch to non-root user
-USER django
-
-# Expose port
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python manage.py check || exit 1
-
-# Default command
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "lpr_project.wsgi:application"]
-```
-
-#### CI/CD Workflow
-
-The project includes a GitHub Actions workflow (`.github/workflows/docker-publish.yml`) that:
-
-1. **Triggers** on:
-   - Push to main/master branch
-   - Creation of version tags (v*)
-   - Pull requests to main/master
-
-2. **Builds** the Docker image for multiple architectures:
-   - linux/amd64
-   - linux/arm64
-
-3. **Publishes** to GitHub Container Registry with tags:
-   - Branch name (e.g., `main`)
-   - Semantic version tags (e.g., `v1.0.0`, `v1.0`, `v1`)
-   - `latest` tag for the main branch
-
-4. **Generates** SBOM (Software Bill of Materials) for security scanning
-
-The workflow uses GitHub's built-in `GITHUB_TOKEN` for authentication, so no additional secrets need to be configured for basic usage.
-
 ### Environment-Specific Settings
 
 - **Development**: SQLite database, DEBUG=True
 - **Staging**: PostgreSQL, DEBUG=False, limited hosts
 - **Production**: PostgreSQL, DEBUG=False, HTTPS required
 
-## Troubleshooting
+</details>
+
+## 🐛 Troubleshooting
+
+<details>
+<summary>Click to expand</summary>
 
 ### Common Issues
 
@@ -676,22 +715,96 @@ Log levels:
 - `ERROR`: API failures and processing errors
 - `DEBUG`: Detailed debugging information
 
-## Contributing
+</details>
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+## 🤝 Contributing
 
-## License
+<details>
+<summary>Click to expand</summary>
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+We welcome contributions! Please follow these guidelines:
 
-## Support
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Make your changes**
+4. **Add tests** if applicable
+5. **Ensure all tests pass** (`python manage.py test`)
+6. **Commit your changes** (`git commit -m 'Add some amazing feature'`)
+7. **Push to the branch** (`git push origin feature/amazing-feature`)
+8. **Open a Pull Request**
+
+### Code Style
+
+- Follow PEP 8 for Python code
+- Use meaningful variable and function names
+- Add docstrings to functions and classes
+- Keep commits small and focused
+
+### Issue Reporting
+
+When reporting issues, please include:
+- Detailed description of the problem
+- Steps to reproduce
+- Expected vs. actual behavior
+- Environment details (OS, Python version, etc.)
+- Relevant logs or error messages
+
+</details>
+
+## 📄 License
+
+<details>
+<summary>Click to expand</summary>
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+</details>
+
+## 🆘 Support
+
+<details>
+<summary>Click to expand</summary>
 
 For issues and questions:
 - Check the troubleshooting section
 - Review application logs
 - Create an issue with detailed information
 - Include error messages and steps to reproduce
+
+</details>
+
+## 🙏 Acknowledgments
+
+<details>
+<summary>Click to expand</summary>
+
+- [Qwen3-VL](https://github.com/QwenLM/Qwen-VL) for the powerful vision-language model
+- [Django](https://www.djangoproject.com/) for the robust web framework
+- [Bootstrap](https://getbootstrap.com/) for the responsive UI components
+- All contributors who help improve this project
+
+</details>
+
+## 📚 Additional Documentation
+
+<details>
+<summary>Click to expand</summary>
+
+For specialized deployment scenarios and additional resources:
+
+- [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
+- [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
+- [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
+- [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
+
+</details>
+
+---
+
+<div align="center">
+
+**[⬆ Back to top](#-open-lpr---license-plate-recognition-system)**
+
+Made with ❤️ by [Open LPR Team](https://github.com/faisalthaheem/open-lpr)
+
+</div>

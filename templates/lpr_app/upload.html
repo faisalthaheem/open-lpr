@@ -166,20 +166,30 @@
                 
                 <div class="row">
                     {% for upload in recent_uploads %}
-                    <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="col-md-4 col-lg-4 mb-3">
                         <div class="card result-card h-100">
-                            {% if upload.original_image %}
-                            <img src="{{ upload.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                            {% if upload.processed_image %}
+                            <img src="{{ upload.processed_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Processed image with license plate annotations">
+                            {% elif upload.original_image %}
+                            <img src="{{ upload.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Original image">
                             {% endif %}
                             <div class="card-body">
+                                {% if upload.get_first_ocr_text %}
+                                <h6 class="card-title">{{ upload.get_first_ocr_text|truncatechars:20 }}</h6>
+                                {% else %}
                                 <h6 class="card-title">{{ upload.filename|truncatechars:20 }}</h6>
+                                {% endif %}
                                 <p class="card-text">
+                                    {% if upload.processing_timestamp %}
                                     <small class="text-muted">
-                                        <i class="bi bi-calendar me-1"></i>{{ upload.upload_timestamp|date:"M d, Y H:i" }}
-                                    </small><br>
-                                    <small class="text-muted">
-                                        <i class="bi bi-hdd me-1"></i>{{ upload.file_size_mb|default:"N/A" }} MB
+                                        <i class="bi bi-clock me-1"></i>Processed: {{ upload.processing_timestamp|date:"M d, H:i" }} UTC
                                     </small>
+                                    {% endif %}
+                                    {% if upload.get_plate_count > 0 %}
+                                    <br><small class="text-muted">
+                                        <i class="bi bi-card-text me-1"></i>{{ upload.get_plate_count }} plate{{ upload.get_plate_count|pluralize }} identified
+                                    </small>
+                                    {% endif %}
                                 </p>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge {% if upload.processing_status == 'completed' %}bg-success{% elif upload.processing_status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">
@@ -262,10 +272,10 @@
             return;
         }
 
-        // Validate file size (10MB max)
-        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        // Validate file size (250KB max)
+        const maxSize = 250 * 1024; // 250KB in bytes
         if (file.size > maxSize) {
-            alert('File size must be less than 10MB.');
+            alert('File size must be less than 250KB.');
             return;
         }
 
@@ -403,4 +413,28 @@
         });
     }
 </script>
+
+<style>
+    /* Fix for code tags in dark mode */
+    [data-theme="dark"] code {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+    }
+    
+    /* Ensure code tags in pre elements also get proper styling */
+    [data-theme="dark"] pre code {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+        padding: 0;
+        border-radius: 0;
+    }
+    
+    /* Fix for code tags in dark backgrounds */
+    [data-theme="dark"] .bg-dark code {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+    }
+</style>
 {% endblock %}

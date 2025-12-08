@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,16 +6,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}License Plate Recognition{% endblock %} - LPR Web App</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'lpr_app/images/favicon.ico' %}">
+    <link rel="icon" type="image/svg+xml" href="{% static 'lpr_app/images/favicon.svg' %}">
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom CSS -->
     <style>
+        /* CSS Variables for Light and Dark Themes */
+        :root {
+            /* Light theme colors */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --navbar-bg: #343a40;
+            --navbar-text: #ffffff;
+            --header-gradient-start: #667eea;
+            --header-gradient-end: #764ba2;
+            --upload-border: #dee2e6;
+            --upload-bg: #f8f9fa;
+            --upload-hover-bg: #e9ecef;
+            --upload-dragover-bg: #e3f2fd;
+            --upload-icon-color: #6c757d;
+            --loading-bg: rgba(0, 0, 0, 0.7);
+            --loading-content-bg: #ffffff;
+            --footer-bg: #f8f9fa;
+            --alert-warning-bg: rgba(255, 255, 255, 0.15);
+            --alert-warning-border: rgba(255, 255, 255, 0.3);
+            --alert-warning-text: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme colors with better contrast */
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2d2d2d;
+            --text-primary: #f8f9fa;
+            --text-secondary: #d1d5db;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+            --card-bg: #1a1a1a;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            --navbar-bg: #0f0f0f;
+            --navbar-text: #f8f9fa;
+            --header-gradient-start: #374151;
+            --header-gradient-end: #1f2937;
+            --upload-border: #374151;
+            --upload-bg: #1a1a1a;
+            --upload-hover-bg: #2d2d2d;
+            --upload-dragover-bg: #1e3a8a;
+            --upload-icon-color: #9ca3af;
+            --loading-bg: rgba(0, 0, 0, 0.9);
+            --loading-content-bg: #1a1a1a;
+            --footer-bg: #1a1a1a;
+            --alert-warning-bg: rgba(251, 191, 36, 0.15);
+            --alert-warning-border: rgba(251, 191, 36, 0.3);
+            --alert-warning-text: #fbbf24;
+        }
+
+        /* Apply theme variables */
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         .lpr-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
             color: white;
-            padding: 2rem 0;
+            padding: 1rem 0;
         }
         .lpr-header h1 {
             font-weight: 300;
@@ -24,31 +93,32 @@
             opacity: 0.9;
         }
         .upload-area {
-            border: 3px dashed #dee2e6;
+            border: 3px dashed var(--upload-border);
             border-radius: 10px;
             padding: 3rem 2rem;
             text-align: center;
-            background: #f8f9fa;
+            background: var(--upload-bg);
             transition: all 0.3s ease;
             cursor: pointer;
         }
         .upload-area:hover {
-            border-color: #667eea;
-            background: #e9ecef;
+            border-color: var(--header-gradient-start);
+            background: var(--upload-hover-bg);
         }
         .upload-area.dragover {
-            border-color: #667eea;
-            background: #e3f2fd;
+            border-color: var(--header-gradient-start);
+            background: var(--upload-dragover-bg);
         }
         .upload-icon {
             font-size: 4rem;
-            color: #6c757d;
+            color: var(--upload-icon-color);
             margin-bottom: 1rem;
         }
         .result-card {
             border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--card-shadow);
             transition: transform 0.2s ease;
+            background-color: var(--card-bg);
         }
         .result-card:hover {
             transform: translateY(-2px);
@@ -67,26 +137,28 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: var(--loading-bg);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 9999;
         }
         .loading-content {
-            background: white;
+            background: var(--loading-content-bg);
             padding: 2rem;
             border-radius: 10px;
             text-align: center;
+            color: var(--text-primary);
         }
         .spinner-border {
             width: 3rem;
             height: 3rem;
         }
         .footer {
-            background: #f8f9fa;
+            background: var(--footer-bg);
             padding: 2rem 0;
             margin-top: 3rem;
+            color: var(--text-muted);
         }
         .navbar-brand {
             font-weight: 500;
@@ -97,15 +169,358 @@
         .nav-link.active {
             font-weight: 600;
         }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 8px 12px;
+            cursor: pointer;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+        }
+        
+        /* Mobile adjustments for theme toggle */
+        @media (max-width: 768px) {
+            .theme-toggle {
+                top: auto;
+                bottom: 20px;
+                right: 15px;
+            }
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-toggle i {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        /* Bootstrap component overrides */
+        .navbar-dark {
+            background-color: var(--navbar-bg) !important;
+        }
+
+        .alert-warning {
+            background-color: var(--alert-warning-bg) !important;
+            border-color: var(--alert-warning-border) !important;
+            color: var(--alert-warning-text) !important;
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        .card {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        .form-control, .form-select {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: var(--bg-secondary);
+            border-color: var(--header-gradient-start);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-outline-secondary {
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table-striped > tbody > tr:nth-of-type(odd) > td {
+            background-color: var(--bg-secondary);
+        }
+
+        .pagination .page-link {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--header-gradient-start);
+            border-color: var(--header-gradient-start);
+        }
+
+        /* Bootstrap utility class overrides for dark mode */
+        [data-theme="dark"] .bg-light {
+            background-color: var(--bg-secondary) !important;
+        }
+
+        [data-theme="dark"] .bg-dark {
+            background-color: var(--navbar-bg) !important;
+        }
+
+        [data-theme="dark"] .text-dark {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .border {
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .modal-content {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .accordion-button {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .accordion-button:not(.collapsed) {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .accordion-item {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .accordion-body {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        /* Code blocks in dark mode */
+        [data-theme="dark"] code {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] pre {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        /* Alert improvements for dark mode with better contrast */
+        [data-theme="dark"] .alert-info {
+            background-color: rgba(56, 189, 248, 0.15) !important;
+            border-color: rgba(56, 189, 248, 0.4) !important;
+            color: #38bdf8 !important;
+        }
+
+        [data-theme="dark"] .alert-danger {
+            background-color: rgba(248, 113, 113, 0.15) !important;
+            border-color: rgba(248, 113, 113, 0.4) !important;
+            color: #f87171 !important;
+        }
+
+        [data-theme="dark"] .alert-success {
+            background-color: rgba(74, 222, 128, 0.15) !important;
+            border-color: rgba(74, 222, 128, 0.4) !important;
+            color: #4ade80 !important;
+        }
+
+        /* Better contrast for badges and small text */
+        [data-theme="dark"] .badge {
+            color: #000000 !important;
+        }
+
+        [data-theme="dark"] .badge.bg-primary {
+            background-color: #3b82f6 !important;
+        }
+
+        [data-theme="dark"] .badge.bg-success {
+            background-color: #22c55e !important;
+        }
+
+        [data-theme="dark"] .badge.bg-danger {
+            background-color: #ef4444 !important;
+        }
+
+        [data-theme="dark"] .badge.bg-warning {
+            background-color: #f59e0b !important;
+        }
+
+        [data-theme="dark"] .badge.bg-info {
+            background-color: #06b6d4 !important;
+        }
+
+        /* Better contrast for links */
+        [data-theme="dark"] a {
+            color: #60a5fa !important;
+        }
+
+        [data-theme="dark"] a:hover {
+            color: #93c5fd !important;
+        }
+
+        [data-theme="dark"] .text-decoration-none {
+            color: var(--text-muted) !important;
+        }
+
+        [data-theme="dark"] .text-decoration-none:hover {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Better contrast for form elements */
+        [data-theme="dark"] .form-control::placeholder {
+            color: #6b7280 !important;
+        }
+
+        [data-theme="dark"] .form-select {
+            color: var(--text-primary) !important;
+        }
+
+        /* Better contrast for table headers */
+        [data-theme="dark"] .table th {
+            color: var(--text-primary) !important;
+            font-weight: 600 !important;
+        }
+
+        /* Better contrast for card titles and section headers */
+        [data-theme="dark"] .card-title {
+            color: var(--text-primary) !important;
+            font-weight: 600 !important;
+        }
+
+        [data-theme="dark"] .card-subtitle {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3,
+        [data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6 {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .text-center h6 {
+            color: var(--text-primary) !important;
+            font-weight: 600 !important;
+        }
+
+        /* Better contrast for specific result page elements */
+        [data-theme="dark"] .result-card .card-title {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .result-card .card-text {
+            color: var(--text-secondary) !important;
+        }
+
+        [data-theme="dark"] .result-card small {
+            color: var(--text-muted) !important;
+        }
+
+        /* Better contrast for accordion headers */
+        [data-theme="dark"] .accordion-button {
+            color: var(--text-primary) !important;
+            font-weight: 500 !important;
+        }
+
+        [data-theme="dark"] .accordion-button:not(.collapsed) {
+            color: var(--text-primary) !important;
+        }
+
+        /* Better contrast for code blocks */
+        [data-theme="dark"] .bg-dark {
+            background-color: #0f0f0f !important;
+        }
+
+        [data-theme="dark"] .bg-dark code {
+            color: #e5e7eb !important;
+        }
+
+        /* Better contrast for image comparison section */
+        [data-theme="dark"] .text-center h6 {
+            color: var(--text-primary) !important;
+            font-weight: 600 !important;
+            margin-bottom: 0.5rem !important;
+        }
+
+        /* Better contrast for summary boxes */
+        [data-theme="dark"] .bg-light {
+            background-color: var(--bg-tertiary) !important;
+        }
+
+        [data-theme="dark"] .bg-light h4, [data-theme="dark"] .bg-light h5 {
+            color: var(--text-primary) !important;
+        }
+
+        [data-theme="dark"] .bg-light small {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Better contrast for buttons in dark mode */
+        [data-theme="dark"] .btn-outline-primary {
+            color: #60a5fa !important;
+            border-color: #60a5fa !important;
+        }
+
+        [data-theme="dark"] .btn-outline-primary:hover {
+            color: #1e40af !important;
+            background-color: #dbeafe !important;
+        }
+
+        [data-theme="dark"] .btn-outline-secondary {
+            color: #9ca3af !important;
+            border-color: #4b5563 !important;
+        }
+
+        [data-theme="dark"] .btn-outline-secondary:hover {
+            color: #f3f4f6 !important;
+            background-color: #4b5563 !important;
+        }
+
+        [data-theme="dark"] .btn-success {
+            background-color: #16a34a !important;
+            border-color: #16a34a !important;
+        }
+
+        /* Better contrast for file preview area */
+        [data-theme="dark"] .bg-light.rounded {
+            background-color: var(--bg-tertiary) !important;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <i class="bi bi-moon-fill" id="themeIcon"></i>
+    </button>
+
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{% url 'lpr_app:home' %}">
                 <i class="bi bi-camera-fill me-2"></i>LPR Web App
+                <small class="d-none d-md-block fs-6 fw-normal mt-1">Upload images to detect and recognize license plates using AI-powered OCR</small>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -138,14 +553,26 @@
     {% block header %}
     <header class="lpr-header">
         <div class="container text-center">
-            <h1><i class="bi bi-camera-fill me-3"></i>License Plate Recognition</h1>
-            <p class="lead mb-0">Upload images to detect and recognize license plates using AI-powered OCR</p>
+            <!-- Disclaimer -->
+            <div class="alert alert-warning alert-dismissible fade show py-3" role="alert" style="background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); color: white;">
+                <h6 class="alert-heading mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Important Disclaimer</h6>
+                <p class="mb-2 small">
+                    <strong>DEMO SYSTEM - NO LIABILITY ASSUMED:</strong> This is a demonstration application provided "as is" without any warranties or guarantees.
+                </p>
+                <p class="mb-1 small">
+                    <strong>DATA USAGE:</strong> All uploaded images will be <strong>retained</strong> and may be used for <strong>training purposes</strong> to improve our AI models.
+                </p>
+                <p class="mb-0 small">
+                    <strong>NO RESPONSIBILITY:</strong> We are not responsible for any consequences arising from the use of this system or the data processed.
+                </p>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+            </div>
         </div>
     </header>
     {% endblock %}
 
     <!-- Main Content -->
-    <main class="container my-4">
+    <main class="container my-2">
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -166,7 +593,7 @@
                 Powered by Qwen3-VL & Django
                 <span class="ms-3">
                     <i class="bi bi-github me-1"></i>
-                    <a href="https://github.com" class="text-muted text-decoration-none">GitHub</a>
+                    <a href="https://github.com/faisalthaheem/open-lpr" class="text-muted text-decoration-none">GitHub</a>
                 </span>
             </p>
         </div>
@@ -188,6 +615,43 @@
     
     <!-- Custom JavaScript -->
     <script>
+        // Theme management
+        function initTheme() {
+            // Check for saved theme preference or default to system preference
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            let theme = 'light';
+            if (savedTheme) {
+                theme = savedTheme;
+            } else if (systemPrefersDark) {
+                theme = 'dark';
+            }
+            
+            applyTheme(theme);
+        }
+
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            
+            if (theme === 'dark') {
+                html.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'bi bi-sun-fill';
+            } else {
+                html.removeAttribute('data-theme');
+                themeIcon.className = 'bi bi-moon-fill';
+            }
+            
+            localStorage.setItem('theme', theme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+        }
+
         // Loading overlay functions
         function showLoading(message = 'Processing...') {
             document.getElementById('loadingMessage').textContent = message;
@@ -239,8 +703,23 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        // Initialize tooltips
+        // Initialize tooltips and theme
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme
+            initTheme();
+            
+            // Add theme toggle event listener
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Listen for system theme changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+                // Only auto-switch if user hasn't manually set a preference
+                if (!localStorage.getItem('theme')) {
+                    applyTheme(e.matches ? 'dark' : 'light');
+                }
+            });
+            
+            // Initialize tooltips
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);

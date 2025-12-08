@@ -29,10 +29,6 @@
                                 <td>{{ uploaded_image.file_size_mb|default:"N/A" }} MB</td>
                             </tr>
                             <tr>
-                                <th>Upload Time:</th>
-                                <td>{{ uploaded_image.upload_timestamp|date:"Y-m-d H:i:s" }}</td>
-                            </tr>
-                            <tr>
                                 <th>Processing Status:</th>
                                 <td>
                                     <span class="badge {% if uploaded_image.processing_status == 'completed' %}bg-success{% elif uploaded_image.processing_status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">
@@ -292,6 +288,22 @@
         word-wrap: break-word;
         max-height: 400px;
         overflow-y: auto;
+    }
+    
+    /* Fix for code tags in dark mode */
+    [data-theme="dark"] code {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+    }
+    
+    /* Ensure code tags in pre elements also get proper styling */
+    [data-theme="dark"] pre code {
+        background-color: var(--bg-tertiary) !important;
+        color: var(--text-primary) !important;
+        padding: 0;
+        border-radius: 0;
     }
 </style>
 {% endblock %}

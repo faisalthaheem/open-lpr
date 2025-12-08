@@ -15,9 +15,11 @@
                         </h5>
                         <p class="text-muted mb-0">
                             <i class="bi bi-file-earmark me-1"></i>{{ uploaded_image.filename }}
+                            {% if uploaded_image.processing_timestamp %}
                             <span class="ms-3">
-                                <i class="bi bi-calendar me-1"></i>{{ uploaded_image.upload_timestamp|date:"M d, Y H:i" }}
+                                <i class="bi bi-clock me-1"></i>Processed: {{ uploaded_image.processing_timestamp|date:"M d, H:i" }} UTC
                             </span>
+                            {% endif %}
                         </p>
                     </div>
                     <div class="col-md-4 text-end">
@@ -300,6 +302,63 @@
     .img-fluid:hover {
         transform: scale(1.02);
         transition: transform 0.2s ease;
+    }
+    
+    /* Fix for code tags in dark mode - highest specificity */
+    [data-theme="dark"] code,
+    [data-theme="dark"] table code,
+    [data-theme="dark"] td code,
+    [data-theme="dark"] .accordion-body code,
+    [data-theme="dark"] .accordion-body td code,
+    [data-theme="dark"] .table-responsive code,
+    [data-theme="dark"] .table code,
+    [data-theme="dark"] .table td code,
+    [data-theme="dark"] .table-sm code,
+    [data-theme="dark"] .table-sm td code,
+    [data-theme="dark"] .card code,
+    [data-theme="dark"] .card-body code,
+    [data-theme="dark"] .card td code,
+    [data-theme="dark"] div code,
+    [data-theme="dark"] body code,
+    [data-theme="dark"] main code,
+    [data-theme="dark"] .container code {
+        background-color: #2d2d2d !important;
+        color: #f8f9fa !important;
+        padding: 0.2rem 0.4rem !important;
+        border-radius: 0.25rem !important;
+        border: none !important;
+    }
+    
+    /* Override any inline styles or browser defaults */
+    [data-theme="dark"] code {
+        background-color: #2d2d2d !important;
+        color: #f8f9fa !important;
+    }
+    
+    /* Most specific selector possible */
+    html[data-theme="dark"] body main div div div div div div div table tbody tr td code {
+        background-color: #2d2d2d !important;
+        color: #f8f9fa !important;
+    }
+    
+    
+    /* Table headers in dark mode */
+    [data-theme="dark"] .table th {
+        background-color: #2d2d2d !important;
+        color: #f8f9fa !important;
+    }
+    
+    /* Table cells in dark mode */
+    [data-theme="dark"] .table td {
+        background-color: #1a1a1a !important;
+        color: #f8f9fa !important;
+        border-color: #374151 !important;
+    }
+    
+    /* Table in dark mode */
+    [data-theme="dark"] .table {
+        background-color: #1a1a1a !important;
+        color: #f8f9fa !important;
     }
 </style>
 {% endblock %}

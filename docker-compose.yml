@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   lpr-app:
@@ -15,24 +15,26 @@ services:
       - ./staticfiles:/app/staticfiles
     # Run as root initially for setup, then entrypoint switches to django user
     user: "0:0"
+    env_file:
+      - .env.llamacpp
     environment:
       # Django Settings
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-me-in-production}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
-      
+
       # Qwen3-VL API Configuration
       - QWEN_API_KEY=${QWEN_API_KEY}
-      - QWEN_BASE_URL=${QWEN_BASE_URL:-https://ollama.computedsynergy.com/compatible-mode/v1}
-      - QWEN_MODEL=${QWEN_MODEL:-qwen3-vl}
-      
+      - QWEN_BASE_URL=${QWEN_BASE_URL:-https://ollama.computedsynergy.com/v1}
+      - QWEN_MODEL=${QWEN_MODEL:-qwen3-vl-4b-instructvl}
+
       # File Upload Settings
       - UPLOAD_FILE_MAX_SIZE=${UPLOAD_FILE_MAX_SIZE:-10485760}
       - MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-10}
-      
+
       # Database Configuration
       - DATABASE_PATH=/app/data/db.sqlite3
-      
+
       # Optional: Superuser creation
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-}
       - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-}
@@ -45,7 +47,17 @@ services:
       retries: 3
       start_period: 40s
     entrypoint: ["./docker-entrypoint.sh"]
-    command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "lpr_project.wsgi:application"]
+    command:
+      [
+        "gunicorn",
+        "--bind",
+        "0.0.0.0:8000",
+        "--workers",
+        "3",
+        "--timeout",
+        "120",
+        "lpr_project.wsgi:application",
+      ]
 
 volumes:
   lpr_data:

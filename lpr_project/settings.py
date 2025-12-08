@@ -13,6 +13,9 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# CSRF Trusted Origins for cross-origin requests
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -118,17 +121,17 @@ if not MEDIA_DIR.exists():
     os.makedirs(MEDIA_DIR)
 
 # File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-UPLOAD_FILE_MAX_SIZE = 10 * 1024 * 1024  # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024  # 250KB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024  # 250KB
+UPLOAD_FILE_MAX_SIZE = 250 * 1024  # 250KB
 
 # Allowed file types for upload
 ALLOWED_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'webp']
 
 # Qwen3-VL API Configuration
 QWEN_API_KEY = config('QWEN_API_KEY', default='')
-QWEN_BASE_URL = config('QWEN_BASE_URL', default='https://ollama.computedsynergy.com/compatible-mode/v1')
-QWEN_MODEL = config('QWEN_MODEL', default='qwen3-vl')
+QWEN_BASE_URL = config('QWEN_BASE_URL', default='https://ollama.computedsynergy.com/v1')
+QWEN_MODEL = config('QWEN_MODEL', default='qwen3-vl-4b-instruct')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

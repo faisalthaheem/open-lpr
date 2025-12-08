@@ -129,3 +129,6 @@ container-data/*
 
 # Static files (collected by Django)
 staticfiles/
+model_files/
+model_files_cache/
+.env.llamacpp

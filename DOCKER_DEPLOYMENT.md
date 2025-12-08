@@ -10,77 +10,139 @@ The Docker deployment includes:
 - Environment variable configuration
 - Health checks and monitoring
 - Gunicorn WSGI server for production performance (included in requirements.txt)
+- Multiple deployment options for different use cases
 
 ## Prerequisites
 
 - Docker 20.10+ installed
 - Docker Compose 2.0+ installed
 - Sufficient disk space for media files and database
-- Qwen3-VL API access (API key and endpoint)
+- For LlamaCpp deployments: HuggingFace token for model download
+- For standard deployment: Qwen3-VL API access (API key and endpoint)
 
-## Quick Start
+## Deployment Options
 
-### 1. Environment Configuration
+This project provides multiple Docker Compose files for different deployment scenarios:
 
-Create a `.env` file based on `.env.example`:
+### 1. LlamaCpp with AMD GPU (Recommended for Production)
+
+For users with AMD GPUs that support Vulkan:
 
 ```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit the environment file with your settings
+nano .env.llamacpp
+
+# Create necessary directories
+mkdir -p model_files model_files_cache container-data container-media staticfiles
+
+# Start the application with AMD Vulkan GPU support
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f
+```
+
+**Prerequisites:**
+- AMD GPU with Vulkan support
+- ROCm drivers installed
+- Sufficient GPU memory (8GB+ recommended)
+- HuggingFace token for model download
+
+### 2. LlamaCpp with CPU (Universal Compatibility)
+
+For users without compatible GPUs or for testing purposes:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit the environment file with your settings
+nano .env.llamacpp
+
+# Create necessary directories
+mkdir -p model_files model_files_cache container-data container-media staticfiles
+
+# Start the application with CPU support
+docker-compose -f docker-compose-llamacpp-cpu.yml up -d
+
+# Check the logs to ensure everything is running correctly
+docker-compose -f docker-compose-llamacpp-cpu.yml logs -f
+```
+
+**Prerequisites:**
+- Sufficient RAM (16GB+ recommended)
+- Multi-core CPU for better performance
+- HuggingFace token for model download
+
+### 3. Standard Docker with External API
+
+For users who want to use an external OpenAI-compatible API endpoint:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
 cp .env.example .env
-```
 
-Edit the `.env` file with your configuration:
+# Edit the environment file with your API settings
+nano .env
 
-```env
-# Django Settings
-SECRET_KEY=your-very-secret-key-here
-DEBUG=False
-ALLOWED_HOSTS=localhost,127.0.0.1,your-domain.com
+# Create necessary directories
+mkdir -p container-data container-media staticfiles
 
-# Qwen3-VL API Configuration
-QWEN_API_KEY=your-qwen-api-key
-QWEN_BASE_URL=https://your-open-api-compatible-endpoint.com/v1
-QWEN_MODEL=qwen3-vl-4b-instruct
-
-# File Upload Settings
-UPLOAD_FILE_MAX_SIZE=10485760  # 10MB
-MAX_BATCH_SIZE=10
-
-# Optional: Create superuser automatically
-DJANGO_SUPERUSER_USERNAME=admin
-DJANGO_SUPERUSER_EMAIL=admin@example.com
-DJANGO_SUPERUSER_PASSWORD=your-secure-password
-```
-
-### 2. Run with Docker Compose
-
-```bash
-# Pull and start the application using published image
+# Start the application
 docker-compose up -d
 
-# View logs
+# Check the logs to ensure everything is running correctly
 docker-compose logs -f
-
-# Check container status
-docker-compose ps
 ```
 
-**Note**: This uses the pre-built image `ghcr.io/faisalthaheem/open-lpr:latest` instead of building locally.
+**Prerequisites:**
+- Access to an OpenAI-compatible API endpoint
+- Valid API credentials
 
-### 3. Access the Application
+## Access the Application
 
-The application will be available at:
+Regardless of the deployment option, the application will be available at:
 - Web Interface: http://localhost:8000
 - API Endpoint: http://localhost:8000/api/v1/
 - Health Check: http://localhost:8000/health/
+
+For LlamaCpp deployments, the inference server is available at:
+- LlamaCpp Server: http://localhost:8001
+- LlamaCpp Health: http://localhost:8001/health
 
 ## Volume Structure
 
 The Docker setup uses the following volume mounts:
 
+### Standard Deployment
 ```
 ./container-data/ → /app/data/          (SQLite database)
 ./container-media/→ /app/media/         (Uploaded and processed images)
 ./staticfiles/   → /app/staticfiles/   (Collected static files)
+```
+
+### LlamaCpp Deployments
+```
+./container-data/ → /app/data/          (SQLite database)
+./container-media/→ /app/media/         (Uploaded and processed images)
+./staticfiles/   → /app/staticfiles/   (Collected static files)
+./model_files/   → /models/             (Downloaded GGUF models)
+./model_files_cache/ → /root/.cache/   (HuggingFace cache)
 ```
 
 ### Database Persistence
@@ -260,16 +322,36 @@ curl http://localhost:8000/health/
 
 ## Environment Variables Reference
 
+### Standard Deployment (.env file)
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | SECRET_KEY | django-insecure-change-me | Django secret key |
 | DEBUG | False | Django debug mode |
 | ALLOWED_HOSTS | localhost,127.0.0.1 | Allowed hosts for Django |
 | QWEN_API_KEY | - | Qwen3-VL API key (required) |
-| QWEN_BASE_URL | https://ollama.computedsynergy.com/compatible-mode/v1 | API endpoint URL |
-| QWEN_MODEL | qwen3-vl | AI model name |
+| QWEN_BASE_URL | https://ollama.computedsynergy.com/v1 | API endpoint URL |
+| QWEN_MODEL | qwen3-vl-4b-instruct | AI model name |
 | UPLOAD_FILE_MAX_SIZE | 10485760 | Maximum upload size (10MB) |
 | MAX_BATCH_SIZE | 10 | Maximum batch processing size |
+| DJANGO_SUPERUSER_USERNAME | - | Auto-create superuser username |
+| DJANGO_SUPERUSER_EMAIL | - | Auto-create superuser email |
+| DJANGO_SUPERUSER_PASSWORD | - | Auto-create superuser password |
+
+### LlamaCpp Deployment (.env.llamacpp file)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| HF_TOKEN | - | HuggingFace token for model download (required) |
+| MODEL_REPO | unsloth/Qwen3-VL-4B-Instruct-GGUF | HuggingFace model repository |
+| MODEL_FILE | Qwen3-VL-4B-Instruct-Q5_K_M.gguf | Model file name |
+| MMPROJ_URL | https://huggingface.co/unsloth/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-BF16.gguf | Multimodal project file URL |
+| SECRET_KEY | django-insecure-change-me | Django secret key |
+| DEBUG | False | Django debug mode |
+| ALLOWED_HOSTS | localhost,127.0.0.1,0.0.0.0 | Allowed hosts for Django |
+| UPLOAD_FILE_MAX_SIZE | 10485760 | Maximum upload size (10MB) |
+| MAX_BATCH_SIZE | 10 | Maximum batch processing size |
+| DATABASE_PATH | /app/data/db.sqlite3 | Database path in container |
 | DJANGO_SUPERUSER_USERNAME | - | Auto-create superuser username |
 | DJANGO_SUPERUSER_EMAIL | - | Auto-create superuser email |
 | DJANGO_SUPERUSER_PASSWORD | - | Auto-create superuser password |
@@ -318,6 +400,14 @@ server {
     }
 }
 ```
+## Additional Resources
+
+For specialized deployment scenarios:
+
+- [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
+- [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
+- [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
+
 
 ## Support
 

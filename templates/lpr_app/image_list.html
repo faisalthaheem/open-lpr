@@ -6,34 +6,34 @@
 <div class="row">
     <div class="col-lg-12">
         <!-- Search and Filter -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h5 class="card-title mb-4">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-3">
+                <h6 class="card-title mb-3">
                     <i class="bi bi-search me-2"></i>Search & Filter Images
-                </h5>
+                </h6>
                 
-                <form method="get" class="row g-3">
+                <form method="get" class="row g-2">
                     <div class="col-md-3">
-                        <label for="{{ search_form.query.id_for_label }}" class="form-label">Search</label>
+                        <label for="{{ search_form.query.id_for_label }}" class="form-label small">Search</label>
                         {{ search_form.query }}
                     </div>
                     <div class="col-md-2">
-                        <label for="{{ search_form.date_from.id_for_label }}" class="form-label">From Date</label>
+                        <label for="{{ search_form.date_from.id_for_label }}" class="form-label small">From Date</label>
                         {{ search_form.date_from }}
                     </div>
                     <div class="col-md-2">
-                        <label for="{{ search_form.date_to.id_for_label }}" class="form-label">To Date</label>
+                        <label for="{{ search_form.date_to.id_for_label }}" class="form-label small">To Date</label>
                         {{ search_form.date_to }}
                     </div>
                     <div class="col-md-2">
-                        <label for="{{ search_form.processing_status.id_for_label }}" class="form-label">Status</label>
+                        <label for="{{ search_form.processing_status.id_for_label }}" class="form-label small">Status</label>
                         {{ search_form.processing_status }}
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-funnel me-1"></i>Filter
                         </button>
-                        <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-secondary ms-2">
+                        <a href="{% url 'lpr_app:image_list' %}" class="btn btn-outline-secondary btn-sm ms-2">
                             <i class="bi bi-arrow-clockwise me-1"></i>Clear
                         </a>
                     </div>
@@ -43,38 +43,38 @@
 
         <!-- Results Summary -->
         {% if page_obj %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2">
                 <div class="row text-center">
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-primary mb-1">{{ page_obj.paginator.count }}</h4>
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-primary mb-0">{{ page_obj.paginator.count }}</h5>
                             <small class="text-muted">Total Images</small>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-success mb-1">
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-success mb-1">
                                 {{ page_obj.paginator.num_pages }}
-                            </h4>
+                            </h5>
                             <small class="text-muted">Pages</small>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-info mb-1">{{ page_obj.number }}</h4>
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-info mb-1">{{ page_obj.number }}</h5>
                             <small class="text-muted">Current Page</small>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="p-3 bg-light rounded">
-                            <h4 class="text-warning mb-1">
+                        <div class="p-2 bg-light rounded">
+                            <h5 class="text-warning mb-1">
                                 {% if search_form.query.value %}
                                     {{ search_form.query.value|length }}
                                 {% else %}
                                     All
                                 {% endif %}
-                            </h4>
+                            </h5>
                             <small class="text-muted">Filter</small>
                         </div>
                     </div>
@@ -88,22 +88,27 @@
             {% for image in page_obj %}
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card result-card h-100">
-                    {% if image.original_image %}
+                    {% if image.processed_image %}
+                    <img src="{{ image.processed_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Processed image with license plate annotations">
+                    {% elif image.original_image %}
                     <img src="{{ image.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ image.filename }}">
                     {% endif %}
                     <div class="card-body d-flex flex-column">
                         <div class="flex-grow-1">
+                            {% if image.get_first_ocr_text %}
+                            <h6 class="card-title">{{ image.get_first_ocr_text|truncatechars:25 }}</h6>
+                            {% else %}
                             <h6 class="card-title">{{ image.filename|truncatechars:25 }}</h6>
+                            {% endif %}
                             <p class="card-text">
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-calendar me-1"></i>{{ image.upload_timestamp|date:"M d, Y H:i" }}
-                                </small>
-                                <small class="text-muted d-block">
-                                    <i class="bi bi-hdd me-1"></i>{{ image.file_size_mb|default:"N/A" }} MB
-                                </small>
                                 {% if image.processing_timestamp %}
                                 <small class="text-muted d-block">
-                                    <i class="bi bi-clock me-1"></i>Processed: {{ image.processing_timestamp|date:"M d, H:i" }}
+                                    <i class="bi bi-clock me-1"></i>Processed: {{ image.processing_timestamp|date:"M d, H:i" }} UTC
+                                </small>
+                                {% endif %}
+                                {% if image.get_plate_count > 0 %}
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-card-text me-1"></i>{{ image.get_plate_count }} plate{{ image.get_plate_count|pluralize }} identified
                                 </small>
                                 {% endif %}
                             </p>
@@ -149,7 +154,7 @@
             <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}">
                         <i class="bi bi-chevron-left"></i> Previous
                     </a>
                 </li>
@@ -162,14 +167,14 @@
                 </li>
                 {% else %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">{{ num }}</a>
+                    <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}">{{ num }}</a>
                 </li>
                 {% endif %}
                 {% endfor %}
 
                 {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value|urlencode }}{% endif %}{% endfor %}">
                         Next <i class="bi bi-chevron-right"></i>
                     </a>
                 </li>

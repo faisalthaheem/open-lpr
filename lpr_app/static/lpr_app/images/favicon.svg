@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- License plate background -->
+  <rect x="4" y="12" width="24" height="12" rx="2" fill="#f0f0f0" stroke="#333" stroke-width="1"/>
+  
+  <!-- License plate text representation -->
+  <text x="16" y="20" font-family="Arial, sans-serif" font-size="6" font-weight="bold" text-anchor="middle" fill="#333">LPR</text>
+  
+  <!-- Camera/AI indicator -->
+  <circle cx="16" cy="6" r="3" fill="#4a90e2" stroke="#333" stroke-width="0.5"/>
+  <circle cx="16" cy="6" r="1.5" fill="#fff"/>
+  
+  <!-- Scanning lines to indicate AI/OCR -->
+  <line x1="6" y1="14" x2="26" y2="14" stroke="#4a90e2" stroke-width="0.5" opacity="0.7"/>
+  <line x1="6" y1="22" x2="26" y2="22" stroke="#4a90e2" stroke-width="0.5" opacity="0.7"/>
+</svg>

@@ -79,3 +79,7 @@ docker-compose*
 
 # CI/CD
 .github/
+
+.env.llamacpp
+model_files/
+model_files_cache/

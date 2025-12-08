@@ -117,9 +117,9 @@ class UploadedImage(models.Model):
         if not self.api_response:
             return None
         
+        import json
         try:
             # Parse the JSON response to extract detection results
-            import json
             if isinstance(self.api_response, str):
                 response_data = json.loads(self.api_response)
             else:
@@ -155,6 +155,42 @@ class UploadedImage(models.Model):
                         total += len(detection['ocr'])
             return total
         return 0
+    
+    def get_first_ocr_text(self):
+        """Get the first OCR text from the detection results"""
+        results = self.get_detection_results()
+        if results and 'detections' in results:
+            detections = results['detections']
+            # Handle both list and dictionary formats
+            if isinstance(detections, list):
+                # New API format: detections is a list
+                for detection in detections:
+                    if 'ocr' in detection and detection['ocr']:
+                        ocr_item = detection['ocr'][0]
+                        # Handle both new and old OCR formats
+                        if isinstance(ocr_item, dict):
+                            if 'text' in ocr_item:
+                                # New format: {'text': 'value', 'confidence': 0.95, 'coordinates': {...}}
+                                return ocr_item['text']
+                            else:
+                                # Old format: {'text_value': {'confidence': 0.95, 'coordinates': {...}}}
+                                # The text is the key itself
+                                return list(ocr_item.keys())[0] if ocr_item else None
+            elif isinstance(detections, dict):
+                # Old API format: detections is a dictionary
+                for detection in detections.values():
+                    if 'ocr' in detection and detection['ocr']:
+                        ocr_item = detection['ocr'][0]
+                        # Handle both new and old OCR formats
+                        if isinstance(ocr_item, dict):
+                            if 'text' in ocr_item:
+                                # New format: {'text': 'value', 'confidence': 0.95, 'coordinates': {...}}
+                                return ocr_item['text']
+                            else:
+                                # Old format: {'text_value': {'confidence': 0.95, 'coordinates': {...}}}
+                                # The text is the key itself
+                                return list(ocr_item.keys())[0] if ocr_item else None
+        return None
 
 
 class ProcessingLog(models.Model):
