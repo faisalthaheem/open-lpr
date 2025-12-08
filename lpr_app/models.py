@@ -166,12 +166,30 @@ class UploadedImage(models.Model):
                 # New API format: detections is a list
                 for detection in detections:
                     if 'ocr' in detection and detection['ocr']:
-                        return detection['ocr'][0]['text']
+                        ocr_item = detection['ocr'][0]
+                        # Handle both new and old OCR formats
+                        if isinstance(ocr_item, dict):
+                            if 'text' in ocr_item:
+                                # New format: {'text': 'value', 'confidence': 0.95, 'coordinates': {...}}
+                                return ocr_item['text']
+                            else:
+                                # Old format: {'text_value': {'confidence': 0.95, 'coordinates': {...}}}
+                                # The text is the key itself
+                                return list(ocr_item.keys())[0] if ocr_item else None
             elif isinstance(detections, dict):
                 # Old API format: detections is a dictionary
                 for detection in detections.values():
                     if 'ocr' in detection and detection['ocr']:
-                        return detection['ocr'][0]['text']
+                        ocr_item = detection['ocr'][0]
+                        # Handle both new and old OCR formats
+                        if isinstance(ocr_item, dict):
+                            if 'text' in ocr_item:
+                                # New format: {'text': 'value', 'confidence': 0.95, 'coordinates': {...}}
+                                return ocr_item['text']
+                            else:
+                                # Old format: {'text_value': {'confidence': 0.95, 'coordinates': {...}}}
+                                # The text is the key itself
+                                return list(ocr_item.keys())[0] if ocr_item else None
         return None
 
 
