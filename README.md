@@ -16,7 +16,7 @@
 | | | |
 |---|---|---|
 | [🚀 Live Demo](#-live-demo) | [🌟 Visual Showcase](#-visual-showcase) | [✨ Features](#-features) |
-| [🛠️ Technology Stack](#-technology-stack) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration](#️-configuration) |
+| [🛠️ Technology Stack](#%EF%B8%8F-technology-stack) | [🚀 Quick Start](#-quick-start) | [⚙️ Configuration](#%EF%B8%8F-configuration) |
 | [📖 Usage](#-usage) | [🔌 API Endpoints](#-api-endpoints) | [🐳 Docker Deployment](#-docker-deployment) |
 | [📁 File Structure](#-file-structure) | [🧪 Testing](#-testing) | [🔧 Development](#-development) |
 | [🚀 Production Deployment](#-production-deployment) | [🐛 Troubleshooting](#-troubleshooting) | [🤝 Contributing](#-contributing) |
