@@ -29,6 +29,14 @@ from .metrics import (
 
 logger = logging.getLogger(__name__)
 
+# Initialize metrics on module import
+try:
+    from .metrics import initialize_persistent_metrics
+    initialize_persistent_metrics()
+    logger.info("Metrics initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize metrics: {e}")
+
 
 def home(request):
     """

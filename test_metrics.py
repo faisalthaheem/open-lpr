@@ -11,7 +11,7 @@ def test_metrics_endpoint():
     """Test the /metrics endpoint"""
     
     # Test the metrics endpoint
-    metrics_url = "http://localhost:8000/metrics/"
+    metrics_url = "http://lpr.localhost/metrics/"
     
     print("Testing Prometheus metrics endpoint...")
     print(f"URL: {metrics_url}")
@@ -63,7 +63,7 @@ def test_metrics_endpoint():
 def test_health_endpoint():
     """Test the /health/ endpoint to ensure it updates metrics"""
     
-    health_url = "http://localhost:8000/health/"
+    health_url = "http://lpr.localhost/health/"
     
     print("\nTesting health endpoint (should update API metrics)...")
     

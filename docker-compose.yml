@@ -92,7 +92,7 @@ services:
       retries: 3
       start_period: 40s
     entrypoint: ["./docker-entrypoint.sh"]
-    command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "lpr_project.wsgi:application"]
+    command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "120", "lpr_project.wsgi:application"]
     profiles:
       - core
     labels:
