@@ -182,13 +182,27 @@ build_image() {
         docker buildx use "$BUILDER_NAME"
     fi
 
-    # Prepare build arguments
-    BUILD_ARGS=(
-        "--platform" "$PLATFORMS"
-        "--tag" "$FULL_IMAGE_NAME"
-        "--file" "./Dockerfile"
-        "."
-    )
+    # Check if building for multiple platforms locally and handle accordingly
+    if [ "$PUSH" = false ] && [[ "$PLATFORMS" == *","* ]]; then
+        print_warning "Cannot load multiple platforms locally. Building for first platform only or use --push to push to registry."
+        # Extract first platform for local build
+        FIRST_PLATFORM=$(echo "$PLATFORMS" | cut -d',' -f1)
+        BUILD_ARGS=(
+            "--platform" "$FIRST_PLATFORM"
+            "--tag" "$FULL_IMAGE_NAME"
+            "--file" "./Dockerfile"
+            "."
+        )
+        print_status "Building for platform: $FIRST_PLATFORM"
+    else
+        # Prepare build arguments for single platform or push
+        BUILD_ARGS=(
+            "--platform" "$PLATFORMS"
+            "--tag" "$FULL_IMAGE_NAME"
+            "--file" "./Dockerfile"
+            "."
+        )
+    fi
 
     # Add cache configuration
     if [ "$BUILD_CACHE" = true ]; then
@@ -212,8 +226,11 @@ build_image() {
         BUILD_ARGS+=("--push")
         print_status "Will push image to registry after build"
     else
-        BUILD_ARGS+=("--load")
-        print_status "Will load image locally"
+        # Only add --load for single platform builds
+        if [[ "$PLATFORMS" != *","* ]]; then
+            BUILD_ARGS+=("--load")
+            print_status "Will load image locally"
+        fi
     fi
 
     # Extract metadata (similar to GitHub workflow)
