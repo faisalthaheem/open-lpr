@@ -179,9 +179,7 @@ services:
       - "traefik.http.services.blackbox-exporter.loadbalancer.server.port=9115"
 
   lpr-canary:
-    build:
-      context: ./canary
-      dockerfile: Dockerfile
+    image: ghcr.io/faisalthaheem/open-lpr-canary:latest
     container_name: openlpr-canary
     ports:
       - "9100:9100"
