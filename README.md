@@ -149,9 +149,42 @@ docker-compose logs -f
 
 ### Docker Compose Files
 
-This project provides multiple Docker Compose files for different deployment scenarios:
+This project provides multiple Docker Compose deployment options:
 
-#### LlamaCpp Compose Files (Recommended for Quick Start)
+#### 🆕 New Profile-Based Docker Compose (Recommended)
+
+The main `docker-compose.yml` now uses the **merge design pattern** with profiles for flexible deployment:
+
+**Profiles Available:**
+- **core**: Core infrastructure (Traefik, OpenLPR, Prometheus, Grafana)
+- **cpu**: CPU-based LlamaCpp inference
+- **amd-vulkan**: AMD Vulkan GPU inference
+- **nvidia-cuda**: NVIDIA CUDA GPU inference
+
+**Usage Examples:**
+```bash
+# Core infrastructure + CPU inference
+docker compose --profile core --profile cpu up -d
+
+# Core infrastructure + NVIDIA inference
+docker compose --profile core --profile nvidia-cuda up -d
+
+# Core infrastructure + AMD Vulkan inference
+docker compose --profile core --profile amd-vulkan up -d
+
+# Core services only
+docker compose --profile core up -d
+```
+
+**Access Points:**
+- **OpenLPR App**: http://lpr.localhost
+- **Traefik Dashboard**: http://traefik.localhost
+- **Prometheus**: http://prometheus.localhost
+- **Grafana**: http://grafana.localhost (admin/admin)
+
+For detailed profile documentation, see [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
+
+#### Legacy LlamaCpp Compose Files (Still Available)
 
 1. **docker-compose-llamacpp-amd-vulcan.yml**
    - **Purpose**: Full local deployment with AMD GPU acceleration using Vulkan
@@ -174,7 +207,7 @@ This project provides multiple Docker Compose files for different deployment sce
 
 #### Standard Compose File
 
-3. **docker-compose.yml**
+3. **docker-compose.yml** (for external API)
    - **Purpose**: OpenLPR deployment with external API endpoint
    - **Services**: OpenLPR only
    - **Prerequisites**:
@@ -294,6 +327,18 @@ DATABASE_PATH=/app/data/db.sqlite3
 DJANGO_SUPERUSER_USERNAME=admin
 DJANGO_SUPERUSER_EMAIL=admin@example.com
 DJANGO_SUPERUSER_PASSWORD=your-secure-password
+
+# Qwen3-VL API Configuration
+QWEN_API_KEY=sk-llamacpp-local
+#when using a remote Open API compatible endpoint
+# QWEN_BASE_URL=https://your-api-endpoint.io/v1
+#When running bundled llamacpp using CPU (default)
+QWEN_BASE_URL=http://llamacpp-cpu:8000/v1
+#When running bundled llamacpp using AMD GPUs
+# QWEN_BASE_URL=http://llamacpp-amd-vulkan:8000/v1
+#When running bundled llamacpp using Nvidia GPUs
+# QWEN_BASE_URL=http://llamacpp-nvidia-cuda:8000/v1
+QWEN_MODEL=Qwen3-VL-4B-Instruct
 ```
 
 For detailed LlamaCpp deployment instructions, see [README-llamacpp.md](README-llamacpp.md).
@@ -792,12 +837,12 @@ For issues and questions:
 
 For specialized deployment scenarios and additional resources:
 
+- [🆕 Docker Profiles Guide](README-DOCKER-PROFILES.md) - New profile-based Docker Compose setup
 - [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
 - [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
 - [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
 - [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
 
-</details>
 
 ---
 

@@ -1,0 +1,55 @@
+http:
+  middlewares:
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+
+  routers:
+    lpr-app-router:
+      rule: "Host(`lpr.localhost`)"
+      service: "lpr-app"
+      entryPoints:
+        - "web"
+      middlewares:
+        - "security-headers"
+
+    prometheus-router:
+      rule: "Host(`prometheus.localhost`)"
+      service: "prometheus"
+      entryPoints:
+        - "web"
+
+    grafana-router:
+      rule: "Host(`grafana.localhost`)"
+      service: "grafana"
+      entryPoints:
+        - "web"
+      middlewares:
+        - "security-headers"
+
+    traefik-dashboard-router:
+      rule: "Host(`traefik.localhost`)"
+      service: "api@internal"
+      entryPoints:
+        - "web"
+
+  services:
+    lpr-app:
+      loadBalancer:
+        servers:
+          - url: "http://lpr-app:8000"
+
+    prometheus:
+      loadBalancer:
+        servers:
+          - url: "http://prometheus:9090"
+
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://grafana:3000"
