@@ -20,6 +20,12 @@ from .forms import ImageUploadForm, LPRSettingsForm, ImageSearchForm
 from .services.qwen_client import get_qwen_client, LPR_PROMPT, parse_lpr_response
 from .services.image_processor import ImageProcessor
 from .services.bbox_visualizer import visualize_lpr_on_image, create_side_by_side_comparison
+from .metrics import (
+    PROCESSING_DURATION, API_REQUEST_DURATION, UPLOAD_TOTAL, PROCESSING_TOTAL,
+    PLATES_DETECTED_TOTAL, OCR_TEXTS_DETECTED_TOTAL, DETECTION_CONFIDENCE,
+    IMAGES_IN_STORAGE, PROCESSING_QUEUE_SIZE, PROCESSING_ERRORS_TOTAL,
+    API_ERRORS_TOTAL, FILE_ERRORS_TOTAL, API_HEALTH_STATUS, get_metrics_response
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +91,17 @@ def upload_image(request):
             result = process_uploaded_image(uploaded_image)
             
             if result['success']:
+                UPLOAD_TOTAL.labels(status='success').inc()
+                PROCESSING_TOTAL.labels(status='completed').inc()
+                
+                # Update storage metrics
+                total_images = UploadedImage.objects.count()
+                IMAGES_IN_STORAGE.set(total_images)
+                
+                # Update queue size
+                pending_count = UploadedImage.objects.filter(processing_status='pending').count()
+                PROCESSING_QUEUE_SIZE.set(pending_count)
+                
                 return JsonResponse({
                     'success': True,
                     'image_id': uploaded_image.id,
@@ -92,6 +109,10 @@ def upload_image(request):
                     'redirect_url': reverse('lpr_app:result', kwargs={'image_id': uploaded_image.id})
                 })
             else:
+                UPLOAD_TOTAL.labels(status='failed').inc()
+                PROCESSING_TOTAL.labels(status='failed').inc()
+                PROCESSING_ERRORS_TOTAL.labels(error_type='processing_failed').inc()
+                
                 return JsonResponse({
                     'error': result['error'],
                     'message': 'Image processing failed'
@@ -104,6 +125,10 @@ def upload_image(request):
             uploaded_image.processing_status = 'failed'
             uploaded_image.error_message = str(e)
             uploaded_image.save()
+            
+            UPLOAD_TOTAL.labels(status='error').inc()
+            PROCESSING_TOTAL.labels(status='error').inc()
+            PROCESSING_ERRORS_TOTAL.labels(error_type='exception').inc()
             
             return JsonResponse({
                 'error': 'Processing failed',
@@ -128,6 +153,7 @@ def process_uploaded_image(uploaded_image: UploadedImage) -> Dict[str, Any]:
     Returns:
         Dictionary with processing result
     """
+    processing_start_time = time.time()
     try:
         # Update status to processing
         uploaded_image.processing_status = 'processing'
@@ -225,6 +251,33 @@ def process_uploaded_image(uploaded_image: UploadedImage) -> Dict[str, Any]:
             message=f'Processing completed successfully',
             duration_ms=int(duration)
         )
+        
+        # Update business metrics
+        plate_count = uploaded_image.get_plate_count()
+        ocr_count = uploaded_image.get_total_ocr_count()
+        
+        PLATES_DETECTED_TOTAL.inc(plate_count)
+        OCR_TEXTS_DETECTED_TOTAL.inc(ocr_count)
+        
+        # Update confidence gauge
+        detection_results = uploaded_image.get_detection_results()
+        if detection_results and 'detections' in detection_results:
+            confidences = []
+            for detection in detection_results['detections']:
+                if 'plate' in detection and 'confidence' in detection['plate']:
+                    confidences.append(detection['plate']['confidence'])
+                if 'ocr' in detection:
+                    for ocr_item in detection['ocr']:
+                        if isinstance(ocr_item, dict) and 'confidence' in ocr_item:
+                            confidences.append(ocr_item['confidence'])
+            
+            if confidences:
+                avg_confidence = sum(confidences) / len(confidences)
+                DETECTION_CONFIDENCE.set(avg_confidence)
+        
+        # Update processing duration metric
+        processing_duration = time.time() - processing_start_time
+        PROCESSING_DURATION.labels(status='completed').observe(processing_duration)
         
         # Clean up temporary files
         if prepared_path != image_path and os.path.exists(prepared_path):
@@ -405,8 +458,14 @@ def api_health_check(request):
     """
     try:
         # Check Qwen3-VL API
+        api_start_time = time.time()
         client = get_qwen_client()
         api_healthy = client.health_check()
+        api_duration = time.time() - api_start_time
+        
+        # Update API health status metric
+        API_HEALTH_STATUS.set(1 if api_healthy else 0)
+        API_REQUEST_DURATION.observe(api_duration)
         
         # Check database connection
         from django.db import connection
@@ -542,3 +601,15 @@ def api_ocr_upload(request):
             'error': 'Internal server error during image processing',
             'error_code': 'INTERNAL_ERROR'
         }, status=500)
+
+
+def metrics_view(request):
+    """
+    Prometheus metrics endpoint
+    """
+    try:
+        metrics_data, content_type = get_metrics_response()
+        return HttpResponse(metrics_data, content_type=content_type)
+    except Exception as e:
+        logger.error(f"Error generating metrics: {str(e)}")
+        return HttpResponse("Error generating metrics", status=500)

@@ -30,4 +30,7 @@ urlpatterns = [
     
     # REST API endpoints
     path('api/v1/ocr/', views.api_ocr_upload, name='api_ocr_upload'),
+    
+    # Prometheus metrics endpoint
+    path('metrics/', views.metrics_view, name='metrics'),
 ]
