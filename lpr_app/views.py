@@ -151,12 +151,13 @@ def upload_image(request):
         }, status=500)
 
 
-def process_uploaded_image(uploaded_image: UploadedImage) -> Dict[str, Any]:
+def process_uploaded_image(uploaded_image: UploadedImage, save_image: bool = True) -> Dict[str, Any]:
     """
     Process an uploaded image through the LPR pipeline
     
     Args:
         uploaded_image: UploadedImage instance
+        save_image: Whether to save processed images (default: True)
         
     Returns:
         Dictionary with processing result
@@ -221,34 +222,42 @@ def process_uploaded_image(uploaded_image: UploadedImage) -> Dict[str, Any]:
         if not parsed_response:
             return {'success': False, 'error': 'Failed to parse API response'}
         
-        # Visualize results
-        output_filename = f"processed_{uploaded_image.filename}"
-        output_path = os.path.join(
-            os.path.dirname(str(uploaded_image.original_image.path)),
-            output_filename
-        )
+        # Conditionally visualize and save processed images
+        output_path = None
+        comparison_path = None
         
-        success = visualize_lpr_on_image(image_path, parsed_response, output_path)
-        
-        if not success:
-            return {'success': False, 'error': 'Failed to create visualization'}
-        
-        # Create side-by-side comparison
-        comparison_filename = f"comparison_{uploaded_image.filename}"
-        comparison_path = os.path.join(
-            os.path.dirname(str(uploaded_image.original_image.path)),
-            comparison_filename
-        )
-        
-        create_side_by_side_comparison(image_path, output_path, comparison_path)
+        if save_image:
+            # Visualize results
+            output_filename = f"processed_{uploaded_image.filename}"
+            output_path = os.path.join(
+                os.path.dirname(str(uploaded_image.original_image.path)),
+                output_filename
+            )
+            
+            success = visualize_lpr_on_image(image_path, parsed_response, output_path)
+            
+            if not success:
+                return {'success': False, 'error': 'Failed to create visualization'}
+            
+            # Create side-by-side comparison
+            comparison_filename = f"comparison_{uploaded_image.filename}"
+            comparison_path = os.path.join(
+                os.path.dirname(str(uploaded_image.original_image.path)),
+                comparison_filename
+            )
+            
+            create_side_by_side_comparison(image_path, output_path, comparison_path)
         
         # Update database record
-        # Convert PosixPath to string before string operations
-        output_path_str = str(output_path)
-        uploaded_image.processed_image.name = output_path_str.replace(str(settings.MEDIA_ROOT) + '/', '')
         uploaded_image.api_response = parsed_response
         uploaded_image.processing_status = 'completed'
         uploaded_image.processing_timestamp = datetime.now()
+        
+        # Only save processed image path if we actually saved image
+        if save_image and output_path:
+            output_path_str = str(output_path)
+            uploaded_image.processed_image.name = output_path_str.replace(str(settings.MEDIA_ROOT) + '/', '')
+        
         uploaded_image.save()
         
         # Log success
@@ -513,12 +522,30 @@ def api_ocr_upload(request):
     - Method: POST
     - Content-Type: multipart/form-data
     - Form field: image (file)
+    - Optional form field: save_image (boolean, default: true)
+    
+    Canary requests can use save_image=false to skip saving processed images.
+    Canary requests must provide a configurable header for authentication.
     
     Returns:
     - JSON response with OCR results or error information
     """
     import time
     from datetime import datetime
+    
+    # Canary configuration from settings
+    canary_header_name = getattr(settings, 'CANARY_HEADER_NAME', 'X-Canary-Request')
+    canary_header_value = getattr(settings, 'CANARY_HEADER_VALUE', 'true')
+    canary_enabled = getattr(settings, 'CANARY_ENABLED', 'true').lower() == 'true'
+    
+    # Check if this is a canary request
+    header_key = f'HTTP_{canary_header_name.upper().replace("-", "_")}'
+    is_canary = (canary_enabled and 
+                 request.META.get(header_key) == canary_header_value)
+    
+    # Log canary requests for audit
+    if is_canary:
+        logger.info(f"Canary request detected from {request.META.get('REMOTE_ADDR')}")
     
     # Check if image file is provided
     if 'image' not in request.FILES:
@@ -554,6 +581,13 @@ def api_ocr_upload(request):
     try:
         start_time = time.time()
         
+        # Handle save_image parameter - only honor for canary requests
+        save_image_param = request.POST.get('save_image', 'true').lower() != 'false'
+        save_image = save_image_param if is_canary else True
+        
+        if not save_image and not is_canary:
+            logger.warning("Non-canary request attempted to use save_image=false, forcing save=True")
+        
         # Create database record
         uploaded_image = UploadedImage.objects.create(
             original_image=uploaded_file,
@@ -565,13 +599,19 @@ def api_ocr_upload(request):
         ProcessingLog.objects.create(
             uploaded_image=uploaded_image,
             status='started',
-            message='API OCR processing started'
+            message=f'API OCR processing started (save_image={save_image}, is_canary={is_canary})'
         )
         
         # Process the image
-        result = process_uploaded_image(uploaded_image)
+        result = process_uploaded_image(uploaded_image, save_image=save_image)
         
         processing_time_ms = int((time.time() - start_time) * 1000)
+        
+        # Update canary-specific metrics
+        if is_canary:
+            from .metrics import CANARY_REQUESTS_TOTAL, CANARY_PROCESSING_DURATION
+            CANARY_REQUESTS_TOTAL.labels(status='success' if result['success'] else 'failed').inc()
+            CANARY_PROCESSING_DURATION.observe(processing_time_ms / 1000.0)
         
         if result['success']:
             # Get detection results
@@ -588,18 +628,25 @@ def api_ocr_upload(request):
                     'total_plates': uploaded_image.get_plate_count(),
                     'total_ocr_texts': uploaded_image.get_total_ocr_count()
                 },
-                'processing_timestamp': uploaded_image.processing_timestamp.isoformat() if uploaded_image.processing_timestamp else None
+                'processing_timestamp': uploaded_image.processing_timestamp.isoformat() if uploaded_image.processing_timestamp else None,
+                'canary_request': is_canary,
+                'image_saved': save_image
             }
             
             return JsonResponse(response_data, status=200)
         else:
             # Processing failed
+            if is_canary:
+                from .metrics import CANARY_REQUESTS_TOTAL
+                CANARY_REQUESTS_TOTAL.labels(status='failed').inc()
+            
             return JsonResponse({
                 'success': False,
                 'error': result.get('error', 'Unknown processing error'),
                 'error_code': 'PROCESSING_FAILED',
                 'image_id': uploaded_image.id,
-                'processing_time_ms': processing_time_ms
+                'processing_time_ms': processing_time_ms,
+                'canary_request': is_canary
             }, status=500)
             
     except Exception as e:
@@ -608,10 +655,16 @@ def api_ocr_upload(request):
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         
+        # Update canary error metrics
+        if is_canary:
+            from .metrics import CANARY_REQUESTS_TOTAL
+            CANARY_REQUESTS_TOTAL.labels(status='error').inc()
+        
         return JsonResponse({
             'success': False,
             'error': 'Internal server error during image processing',
-            'error_code': 'INTERNAL_ERROR'
+            'error_code': 'INTERNAL_ERROR',
+            'canary_request': is_canary
         }, status=500)
 
 

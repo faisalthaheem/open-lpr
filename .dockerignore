@@ -83,3 +83,6 @@ docker-compose*
 .env.llamacpp
 model_files/
 model_files_cache/
+
+# Metrics
+container-metrics/

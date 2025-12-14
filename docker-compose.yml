@@ -68,7 +68,7 @@ services:
       # Django Settings
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-me-in-production}
       - DEBUG=${DEBUG:-False}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,lpr-app}
       
       # Qwen3-VL API Configuration - Updated to use local LlamaCpp service
       - QWEN_API_KEY=${QWEN_API_KEY:-sk-llamacpp-local}
@@ -84,6 +84,11 @@ services:
       
       # Metrics persistence
       - METRICS_FILE_PATH=/app/metrics/metrics_state.json
+      
+      # Canary Configuration
+      - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
+      - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}
+      - CANARY_ENABLED=${CANARY_ENABLED:-true}
       
       # Optional: Superuser creation
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-}
@@ -153,6 +158,48 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: openlpr-blackbox-exporter
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./blackbox:/config:ro
+    command:
+      - '--config.file=/config/blackbox.yml'
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    profiles:
+      - core
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.blackbox-exporter.rule=Host(`blackbox.localhost`)"
+      - "traefik.http.services.blackbox-exporter.loadbalancer.server.port=9115"
+
+  lpr-canary:
+    build:
+      context: ./canary
+      dockerfile: Dockerfile
+    container_name: openlpr-canary
+    ports:
+      - "9100:9100"
+    environment:
+      - LPR_API_URL=http://lpr.localhost/api/v1/ocr/
+      - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
+      - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}
+      - CANARY_INTERVAL=${CANARY_INTERVAL:-900}
+      - PROMETHEUS_PORT=9100
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    profiles:
+      - core
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lpr-canary.rule=Host(`canary.localhost`)"
+      - "traefik.http.services.lpr-canary.loadbalancer.server.port=9100"
 
   # Inference Services
   llamacpp-cpu:

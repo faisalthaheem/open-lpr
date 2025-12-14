@@ -124,6 +124,21 @@ FILE_ERRORS_TOTAL = Counter(
     registry=REGISTRY
 )
 
+# Canary Metrics
+CANARY_REQUESTS_TOTAL = Counter(
+    'lpr_canary_requests_total',
+    'Total number of canary requests',
+    ['status'],  # success, failed, error
+    registry=REGISTRY
+)
+
+CANARY_PROCESSING_DURATION = Histogram(
+    'lpr_canary_processing_duration_seconds',
+    'Time spent processing canary requests',
+    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 25.0, 50.0, float('inf')],
+    registry=REGISTRY
+)
+
 
 def load_metrics_from_file():
     """Load metrics values from persistent storage file"""
@@ -160,6 +175,9 @@ def save_metrics_to_file():
                 'api_health_status': API_HEALTH_STATUS._value._value,
                 'processing_queue_size': PROCESSING_QUEUE_SIZE._value._value,
                 'file_storage_size_bytes': FILE_STORAGE_SIZE_BYTES._value._value,
+                'canary_requests_success': CANARY_REQUESTS_TOTAL.labels(status='success')._value._value,
+                'canary_requests_failed': CANARY_REQUESTS_TOTAL.labels(status='failed')._value._value,
+                'canary_requests_error': CANARY_REQUESTS_TOTAL.labels(status='error')._value._value,
             }
             
             # Ensure directory exists

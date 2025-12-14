@@ -132,3 +132,6 @@ staticfiles/
 model_files/
 model_files_cache/
 .env.llamacpp
+
+# Metrics
+container-metrics/

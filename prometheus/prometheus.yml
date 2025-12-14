@@ -17,6 +17,28 @@ scrape_configs:
     metrics_path: /metrics
     scrape_interval: 15s
 
+  - job_name: 'blackbox-exporter'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://lpr-app:8000/health/
+    scrape_interval: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: 'lpr-canary'
+    static_configs:
+      - targets: ['lpr-canary:9100']
+    metrics_path: /metrics
+    scrape_interval: 15s
+
 alerting:
   alertmanagers:
     - static_configs:

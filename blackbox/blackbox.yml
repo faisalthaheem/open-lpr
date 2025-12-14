@@ -1,0 +1,14 @@
+modules:
+  http_2xx:
+    prober: http
+    timeout: 120s
+    http:
+      valid_status_codes: [200]
+
+  lpr_health_check:
+    prober: http
+    timeout: 30s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      fail_if_not_ssl: false
