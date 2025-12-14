@@ -1,0 +1,15 @@
+{
+  "upload_total_success": 47.0,
+  "upload_total_failed": 0.0,
+  "upload_total_error": 0.0,
+  "processing_total_completed": 47.0,
+  "processing_total_failed": 0.0,
+  "processing_total_error": 0.0,
+  "plates_detected_total": 46.0,
+  "ocr_texts_detected_total": 55.0,
+  "detection_accuracy": 0.9371134020618574,
+  "images_in_storage": 0.0,
+  "api_health_status": 0.0,
+  "processing_queue_size": 0.0,
+  "file_storage_size_bytes": 0.0
+}

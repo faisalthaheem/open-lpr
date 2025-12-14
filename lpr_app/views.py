@@ -260,7 +260,7 @@ def process_uploaded_image(uploaded_image: UploadedImage) -> Dict[str, Any]:
             duration_ms=int(duration)
         )
         
-        # Update business metrics
+                # Update business metrics
         plate_count = uploaded_image.get_plate_count()
         ocr_count = uploaded_image.get_total_ocr_count()
         
@@ -286,6 +286,10 @@ def process_uploaded_image(uploaded_image: UploadedImage) -> Dict[str, Any]:
         # Update processing duration metric
         processing_duration = time.time() - processing_start_time
         PROCESSING_DURATION.labels(status='completed').observe(processing_duration)
+        
+        # Immediately save metrics after processing
+        from .metrics import save_metrics_to_file
+        save_metrics_to_file()
         
         # Clean up temporary files
         if prepared_path != image_path and os.path.exists(prepared_path):

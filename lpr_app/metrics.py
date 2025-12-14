@@ -1,5 +1,5 @@
 """
-Prometheus metrics for LPR application
+Prometheus metrics for LPR application with file-based persistence
 """
 
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST, REGISTRY, CollectorRegistry
@@ -8,12 +8,19 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 import os
 import time
+import json
 import logging
+import threading
+import atexit
 
 logger = logging.getLogger(__name__)
 
 # Create a custom registry for our metrics to ensure persistence
 REGISTRY = CollectorRegistry()
+
+# File-based persistence
+METRICS_FILE_PATH = getattr(settings, 'METRICS_FILE_PATH', '/app/metrics/metrics_state.json')
+_persistence_lock = threading.Lock()
 
 # Application Performance Metrics
 PROCESSING_DURATION = Histogram(
@@ -118,35 +125,116 @@ FILE_ERRORS_TOTAL = Counter(
 )
 
 
+def load_metrics_from_file():
+    """Load metrics values from persistent storage file"""
+    try:
+        if os.path.exists(METRICS_FILE_PATH):
+            with open(METRICS_FILE_PATH, 'r') as f:
+                data = json.load(f)
+                logger.info(f"Loaded metrics from {METRICS_FILE_PATH}: {data}")
+                return data
+        else:
+            logger.info(f"No metrics file found at {METRICS_FILE_PATH}, starting fresh")
+            return {}
+    except Exception as e:
+        logger.error(f"Error loading metrics from file: {e}")
+        return {}
+
+
+def save_metrics_to_file():
+    """Save current metrics values to persistent storage file"""
+    try:
+        with _persistence_lock:
+            # Get current metric values
+            metrics_data = {
+                'upload_total_success': UPLOAD_TOTAL.labels(status='success')._value._value,
+                'upload_total_failed': UPLOAD_TOTAL.labels(status='failed')._value._value,
+                'upload_total_error': UPLOAD_TOTAL.labels(status='error')._value._value,
+                'processing_total_completed': PROCESSING_TOTAL.labels(status='completed')._value._value,
+                'processing_total_failed': PROCESSING_TOTAL.labels(status='failed')._value._value,
+                'processing_total_error': PROCESSING_TOTAL.labels(status='error')._value._value,
+                'plates_detected_total': PLATES_DETECTED_TOTAL._value._value,
+                'ocr_texts_detected_total': OCR_TEXTS_DETECTED_TOTAL._value._value,
+                'detection_accuracy': DETECTION_CONFIDENCE._value._value,
+                'images_in_storage': IMAGES_IN_STORAGE._value._value,
+                'api_health_status': API_HEALTH_STATUS._value._value,
+                'processing_queue_size': PROCESSING_QUEUE_SIZE._value._value,
+                'file_storage_size_bytes': FILE_STORAGE_SIZE_BYTES._value._value,
+            }
+            
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(METRICS_FILE_PATH), exist_ok=True)
+            
+            # Save to file
+            with open(METRICS_FILE_PATH, 'w') as f:
+                json.dump(metrics_data, f, indent=2)
+            
+            logger.info(f"Saved metrics to {METRICS_FILE_PATH}")
+            
+    except Exception as e:
+        logger.error(f"Error saving metrics to file: {e}")
+
+
 def initialize_persistent_metrics():
-    """Initialize metrics with persistent values from database"""
+    """Initialize metrics with persistent values from database and file"""
     try:
         from .models import UploadedImage, ProcessingLog
         
-        # Initialize counters with existing data
+        # Load any saved metrics values
+        saved_metrics = load_metrics_from_file()
+        
+        # Initialize counters with existing data from database (prioritize database over file)
         total_images = UploadedImage.objects.count()
         completed_images = UploadedImage.objects.filter(processing_status='completed').count()
         failed_images = UploadedImage.objects.filter(processing_status='failed').count()
         
-        # Initialize counters with historical values from database to ensure consistency
-        # This prevents metrics from resetting to 0 when workers restart
+        # For counters, prioritize database counts over saved file values
+        # Only use file values if database counts are 0 (fresh start)
+        upload_success = completed_images if completed_images > 0 else saved_metrics.get('upload_total_success', 0)
+        upload_failed = failed_images if failed_images > 0 else saved_metrics.get('upload_total_failed', 0)
+        upload_error = saved_metrics.get('upload_total_error', 0)
+        processing_completed = completed_images if completed_images > 0 else saved_metrics.get('processing_total_completed', 0)
+        processing_failed = failed_images if failed_images > 0 else saved_metrics.get('processing_total_failed', 0)
+        processing_error = saved_metrics.get('processing_total_error', 0)
         
-        # Initialize processing counters
-        if completed_images > 0:
-            for _ in range(completed_images):
-                PROCESSING_TOTAL.labels(status='completed').inc()
-        if failed_images > 0:
-            for _ in range(failed_images):
-                PROCESSING_TOTAL.labels(status='failed').inc()
+        # For business metrics, calculate from database first, fallback to file
+        total_plates = 0
+        total_ocr_texts = 0
+        total_confidence_sum = 0
+        total_confidence_count = 0
         
-        # Initialize upload counters
-        success_uploads = UploadedImage.objects.filter(processing_status__in=['completed', 'processing']).count()
-        if success_uploads > 0:
-            for _ in range(success_uploads):
-                UPLOAD_TOTAL.labels(status='success').inc()
-        if failed_images > 0:
-            for _ in range(failed_images):
-                UPLOAD_TOTAL.labels(status='failed').inc()
+        for image in UploadedImage.objects.filter(processing_status='completed'):
+            try:
+                results = image.get_detection_results()
+                if results and 'detections' in results:
+                    for detection in results['detections']:
+                        if 'plate' in detection and 'confidence' in detection['plate']:
+                            total_plates += 1
+                            total_confidence_sum += detection['plate']['confidence']
+                            total_confidence_count += 1
+                        if 'ocr' in detection:
+                            for ocr_item in detection['ocr']:
+                                if isinstance(ocr_item, dict) and 'confidence' in ocr_item:
+                                    total_ocr_texts += 1
+                                    total_confidence_sum += ocr_item['confidence']
+                                    total_confidence_count += 1
+            except Exception as e:
+                logger.warning(f"Error processing detection results for image {image.pk}: {e}")
+                continue
+        
+        # Use calculated values if available, otherwise fallback to saved file values
+        plates_detected = total_plates if total_plates > 0 else saved_metrics.get('plates_detected_total', 0)
+        ocr_texts_detected = total_ocr_texts if total_ocr_texts > 0 else saved_metrics.get('ocr_texts_detected_total', 0)
+        
+        # Set counter values directly (bypassing increment for initialization)
+        UPLOAD_TOTAL.labels(status='success')._value._value = float(upload_success)
+        UPLOAD_TOTAL.labels(status='failed')._value._value = float(upload_failed)
+        UPLOAD_TOTAL.labels(status='error')._value._value = float(upload_error)
+        PROCESSING_TOTAL.labels(status='completed')._value._value = float(processing_completed)
+        PROCESSING_TOTAL.labels(status='failed')._value._value = float(processing_failed)
+        PROCESSING_TOTAL.labels(status='error')._value._value = float(processing_error)
+        PLATES_DETECTED_TOTAL._value._value = float(plates_detected)
+        OCR_TEXTS_DETECTED_TOTAL._value._value = float(ocr_texts_detected)
         
         # Initialize business metrics from database
         total_plates = 0
@@ -170,31 +258,32 @@ def initialize_persistent_metrics():
                                     total_confidence_sum += ocr_item['confidence']
                                     total_confidence_count += 1
             except Exception as e:
-                logger.warning(f"Error processing detection results for image {image.id}: {e}")
+                logger.warning(f"Error processing detection results for image {image.pk}: {e}")
                 continue
         
-        # Set initial values for counters
-        if total_plates > 0:
-            for _ in range(total_plates):
-                PLATES_DETECTED_TOTAL.inc()
-        if total_ocr_texts > 0:
-            for _ in range(total_ocr_texts):
-                OCR_TEXTS_DETECTED_TOTAL.inc()
-        
-        # Set average confidence
-        if total_confidence_count > 0:
+        # Restore gauge values from file if available
+        detection_accuracy = saved_metrics.get('detection_accuracy', 0)
+        if total_confidence_count > 0 and detection_accuracy == 0:
             avg_confidence = total_confidence_sum / total_confidence_count
             DETECTION_CONFIDENCE.set(avg_confidence)
+        elif detection_accuracy > 0:
+            DETECTION_CONFIDENCE.set(detection_accuracy)
         
         # Set gauge values
-        IMAGES_IN_STORAGE.set(total_images)
+        images_in_storage = saved_metrics.get('images_in_storage', total_images)
+        IMAGES_IN_STORAGE.set(images_in_storage)
         
-        # Calculate queue size
-        pending_count = UploadedImage.objects.filter(processing_status='pending').count()
-        PROCESSING_QUEUE_SIZE.set(pending_count)
+        api_health_status = saved_metrics.get('api_health_status', 0)
+        API_HEALTH_STATUS.set(api_health_status)
+        
+        processing_queue_size = saved_metrics.get('processing_queue_size', 0)
+        PROCESSING_QUEUE_SIZE.set(processing_queue_size)
+        
+        file_storage_size = saved_metrics.get('file_storage_size_bytes', 0)
+        FILE_STORAGE_SIZE_BYTES.set(file_storage_size)
         
         logger.info(f"Initialized metrics with {total_images} total images, {completed_images} completed, {failed_images} failed")
-        logger.info(f"Initialized business metrics: {total_plates} plates, {total_ocr_texts} OCR texts")
+        logger.info(f"Restored counters: uploads={upload_success}, processing={processing_completed}, plates={plates_detected}")
         
     except Exception as e:
         logger.error(f"Error initializing persistent metrics: {e}")
@@ -203,7 +292,7 @@ def initialize_persistent_metrics():
 
 
 def update_system_metrics():
-    """Update system-level metrics"""
+    """Update system-level metrics and save to file"""
     try:
         # Update database connections
         DATABASE_CONNECTIONS_ACTIVE.set(len(connection.queries))
@@ -223,6 +312,9 @@ def update_system_metrics():
         except Exception:
             FILE_STORAGE_SIZE_BYTES.set(0)
             
+        # Save current state to file
+        save_metrics_to_file()
+            
     except Exception:
         # Don't let metric updates break the application
         pass
@@ -237,3 +329,7 @@ def get_metrics_response():
     metrics_data = generate_latest(REGISTRY)
     
     return metrics_data, CONTENT_TYPE_LATEST
+
+
+# Register save function to be called on exit
+atexit.register(save_metrics_to_file)

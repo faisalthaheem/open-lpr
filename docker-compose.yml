@@ -15,6 +15,8 @@ volumes:
     driver: local
   grafana_data:
     driver: local
+  lpr_metrics:
+    driver: local
 
 services:
   # Core Services
@@ -58,6 +60,8 @@ services:
       - ./container-media:/app/media
       # Static files (optional - for development)
       - ./staticfiles:/app/staticfiles
+      # Metrics persistence
+      - ./container-metrics:/app/metrics
     # Run as root initially for setup, then entrypoint switches to django user
     user: "0:0"
     environment:
@@ -77,6 +81,9 @@ services:
       
       # Database Configuration
       - DATABASE_PATH=/app/data/db.sqlite3
+      
+      # Metrics persistence
+      - METRICS_FILE_PATH=/app/metrics/metrics_state.json
       
       # Optional: Superuser creation
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-}
