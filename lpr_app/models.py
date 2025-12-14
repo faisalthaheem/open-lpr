@@ -23,6 +23,7 @@ def upload_to_processed(instance, filename):
 class UploadedImage(models.Model):
     """Model to track uploaded images and their processing results"""
     
+    id = models.AutoField(primary_key=True)
     original_image = models.ImageField(
         upload_to=upload_to_uploads,
         verbose_name="Original Image"
