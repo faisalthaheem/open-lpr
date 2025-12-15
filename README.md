@@ -73,7 +73,9 @@ Experience the license plate recognition system in action without any installati
 
 ### Docker Deployment (Recommended)
 
-The quickest way to get started is with Docker using one of the LlamaCpp compose files, which include everything needed for local inference without requiring any external API endpoints.
+The quickest way to get started is with Docker using the new profile-based compose file, which includes everything needed for local inference without requiring any external API endpoints.
+
+> **🚨 Important Notice**: Individual compose files (`docker-compose-llamacpp-*.yml`) are now deprecated. Please use the new profile-based approach with the main `docker-compose.yml` file.
 
 #### Option 1: AMD Vulkan GPU Version (Fastest Local Inference)
 For users with AMD GPUs that support Vulkan:
@@ -93,10 +95,10 @@ nano .env.llamacpp
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
 # Start the application with AMD Vulkan GPU support
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+docker compose --profile core --profile amd-vulkan up -d
 
 # Check the logs to ensure everything is running correctly
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f
+docker compose logs -f
 ```
 
 #### Option 2: CPU Version (Universal Compatibility)
@@ -117,13 +119,37 @@ nano .env.llamacpp
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
 # Start the application with CPU support
-docker-compose -f docker-compose-llamacpp-cpu.yml up -d
+docker compose --profile core --profile cpu up -d
 
 # Check the logs to ensure everything is running correctly
-docker-compose -f docker-compose-llamacpp-cpu.yml logs -f
+docker compose logs -f
 ```
 
-#### Option 3: Standard Docker (External API)
+#### Option 3: NVIDIA CUDA GPU Version
+For users with NVIDIA GPUs that support CUDA:
+
+```bash
+# Clone the repository
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Create environment file from template
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit the environment file with your settings
+nano .env.llamacpp
+
+# Create necessary directories
+mkdir -p model_files model_files_cache container-data container-media staticfiles
+
+# Start the application with NVIDIA CUDA GPU support
+docker compose --profile core --profile nvidia-cuda up -d
+
+# Check the logs to ensure everything is running correctly
+docker compose logs -f
+```
+
+#### Option 4: External API Only
 For users who want to use an external OpenAI-compatible API endpoint:
 
 ```bash
@@ -140,23 +166,23 @@ nano .env
 # Create necessary directories
 mkdir -p container-data container-media staticfiles
 
-# Start the application
-docker-compose up -d
+# Start the application (core services only)
+docker compose --profile core up -d
 
 # Check the logs to ensure everything is running correctly
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### Docker Compose Files
 
-This project provides multiple Docker Compose deployment options:
+> **🚨 Deprecation Notice**: Individual compose files (`docker-compose-llamacpp-*.yml`) are now deprecated and will be removed in a future release. Please migrate to the new profile-based approach using the main `docker-compose.yml` file.
 
-#### 🆕 New Profile-Based Docker Compose (Recommended)
+#### 🆕 Profile-Based Docker Compose (Recommended)
 
 The main `docker-compose.yml` now uses the **merge design pattern** with profiles for flexible deployment:
 
 **Profiles Available:**
-- **core**: Core infrastructure (Traefik, OpenLPR, Prometheus, Grafana)
+- **core**: Core infrastructure (Traefik, OpenLPR, Prometheus, Grafana, Blackbox Exporter, Canary)
 - **cpu**: CPU-based LlamaCpp inference
 - **amd-vulkan**: AMD Vulkan GPU inference
 - **nvidia-cuda**: NVIDIA CUDA GPU inference
@@ -172,8 +198,11 @@ docker compose --profile core --profile nvidia-cuda up -d
 # Core infrastructure + AMD Vulkan inference
 docker compose --profile core --profile amd-vulkan up -d
 
-# Core services only
+# Core services only (for external API)
 docker compose --profile core up -d
+
+# Stop all services
+docker compose down
 ```
 
 **Access Points:**
@@ -181,40 +210,26 @@ docker compose --profile core up -d
 - **Traefik Dashboard**: http://traefik.localhost
 - **Prometheus**: http://prometheus.localhost
 - **Grafana**: http://grafana.localhost (admin/admin)
+- **Blackbox Exporter**: http://blackbox.localhost
+- **Canary Service**: http://canary.localhost
 
 For detailed profile documentation, see [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
 
-#### Legacy LlamaCpp Compose Files (Still Available)
+#### Deprecated Individual Compose Files
 
-1. **docker-compose-llamacpp-amd-vulcan.yml**
-   - **Purpose**: Full local deployment with AMD GPU acceleration using Vulkan
-   - **Services**: OpenLPR + LlamaCpp server + optional Nginx
-   - **Prerequisites**:
-     - AMD GPU with Vulkan support
-     - ROCm drivers installed
-     - Sufficient GPU memory (8GB+ recommended)
-   - **Performance**: Fastest inference with GPU acceleration
-   - **Use Case**: Production deployment with AMD hardware
+> **⚠️ Deprecated**: The following compose files are deprecated and will be removed in a future release. Please migrate to the profile-based approach above.
 
-2. **docker-compose-llamacpp-cpu.yml**
-   - **Purpose**: Full local deployment using CPU for inference
-   - **Services**: OpenLPR + LlamaCpp server + optional Nginx
-   - **Prerequisites**:
-     - Sufficient RAM (16GB+ recommended)
-     - Multi-core CPU for better performance
-   - **Performance**: Slower but universal compatibility
-   - **Use Case**: Testing, development, or hardware without GPU support
+1. **docker-compose-llamacpp-amd-vulcan.yml** (Deprecated)
+   - **Replaced by**: `docker compose --profile core --profile amd-vulkan up -d`
+   - **Was**: Full local deployment with AMD GPU acceleration using Vulkan
 
-#### Standard Compose File
+2. **docker-compose-llamacpp-cpu.yml** (Deprecated)
+   - **Replaced by**: `docker compose --profile core --profile cpu up -d`
+   - **Was**: Full local deployment using CPU for inference
 
-3. **docker-compose.yml** (for external API)
-   - **Purpose**: OpenLPR deployment with external API endpoint
-   - **Services**: OpenLPR only
-   - **Prerequisites**:
-     - Access to an OpenAI-compatible API endpoint
-     - Valid API credentials
-   - **Performance**: Depends on external API
-   - **Use Case**: When using cloud-based AI services or existing inference infrastructure
+3. **docker-compose.yml** (Legacy external API mode)
+   - **Replaced by**: `docker compose --profile core up -d`
+   - **Was**: OpenLPR deployment with external API endpoint
 
 ### Manual Installation
 
@@ -524,22 +539,63 @@ docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
 
 ### Docker Compose Deployment
 
-This project provides multiple Docker Compose files for different deployment scenarios. For detailed deployment instructions, see the [Quick Start](#-quick-start) section and [Docker Deployment Guide](DOCKER_DEPLOYMENT.md).
+> **🚨 Important**: Individual compose files are now deprecated. Please use the new profile-based approach with the main `docker-compose.yml` file.
+
+This project provides a unified Docker Compose file with profiles for different deployment scenarios. For detailed deployment instructions, see the [Quick Start](#-quick-start) section and [Docker Deployment Guide](DOCKER_DEPLOYMENT.md).
 
 #### Quick Reference
 
 ```bash
-# For AMD GPU with Vulkan support
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+# Core infrastructure + CPU inference
+docker compose --profile core --profile cpu up -d
 
-# For CPU-only deployment
-docker-compose -f docker-compose-llamacpp-cpu.yml up -d
+# Core infrastructure + NVIDIA inference
+docker compose --profile core --profile nvidia-cuda up -d
 
-# For external API endpoint
-docker-compose up -d
+# Core infrastructure + AMD Vulkan inference
+docker compose --profile core --profile amd-vulkan up -d
+
+# Core services only (for external API)
+docker compose --profile core up -d
+
+# Stop all services
+docker compose down
 ```
 
-For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md).
+#### Environment Configuration
+
+For local inference deployments, copy and configure the environment file:
+
+```bash
+# Copy the example environment file
+cp .env.llamacpp.example .env.llamacpp
+
+# Edit with your settings
+nano .env.llamacpp
+```
+
+For external API deployments:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit with your API settings
+nano .env
+```
+
+#### Access Points
+
+After starting the services:
+
+- **OpenLPR Application**: http://lpr.localhost
+- **Traefik Dashboard**: http://traefik.localhost
+- **Prometheus**: http://prometheus.localhost
+- **Grafana**: http://grafana.localhost (admin/admin)
+- **Blackbox Exporter**: http://blackbox.localhost
+- **Canary Service**: http://canary.localhost
+
+For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) and [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
 
 ### CI/CD Workflow
 
@@ -581,13 +637,14 @@ open-lpr/
 ├── API_DOCUMENTATION.md        # Detailed REST API documentation
 ├── README_API.md               # REST API implementation summary
 ├── README-llamacpp.md         # LlamaCpp deployment guide
+├── README-DOCKER-PROFILES.md   # Docker profiles guide
 ├── DOCKER_DEPLOYMENT.md        # Docker deployment guide
 ├── test_api.py                 # API testing script
 ├── test_setup.py               # Test setup utilities
 ├── test-llamacpp-integration.py # LlamaCpp integration test script
-├── docker-compose.yml           # Standard Docker Compose configuration
-├── docker-compose-llamacpp-cpu.yml    # CPU-based LlamaCpp Docker Compose
-├── docker-compose-llamacpp-amd-vulcan.yml # AMD Vulkan GPU LlamaCpp Docker Compose
+├── docker-compose.yml           # Profile-based Docker Compose configuration
+├── docker-compose-llamacpp-cpu.yml    # [DEPRECATED] CPU-based LlamaCpp Docker Compose
+├── docker-compose-llamacpp-amd-vulcan.yml # [DEPRECATED] AMD Vulkan GPU LlamaCpp Docker Compose
 ├── docker-entrypoint.sh         # Docker entrypoint script
 ├── Dockerfile                  # Docker image definition
 ├── start-llamacpp-cpu.sh     # LlamaCpp CPU startup script
@@ -837,7 +894,7 @@ For issues and questions:
 
 For specialized deployment scenarios and additional resources:
 
-- [🆕 Docker Profiles Guide](README-DOCKER-PROFILES.md) - New profile-based Docker Compose setup
+- [🆕 Docker Profiles Guide](README-DOCKER-PROFILES.md) - New profile-based Docker Compose setup (Recommended)
 - [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
 - [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
 - [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
