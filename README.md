@@ -635,19 +635,24 @@ open-lpr/
 ├── .gitignore                   # Git ignore file
 ├── .dockerignore               # Docker ignore file
 ├── API_DOCUMENTATION.md        # Detailed REST API documentation
-├── README_API.md               # REST API implementation summary
-├── README-llamacpp.md         # LlamaCpp deployment guide
 ├── README-DOCKER-PROFILES.md   # Docker profiles guide
+├── README-llamacpp.md         # LlamaCpp deployment guide
 ├── DOCKER_DEPLOYMENT.md        # Docker deployment guide
+├── PROMETHEUS_METRICS.md      # Prometheus metrics documentation
+├── CHANGELOG.md               # Project changelog
+├── LICENSE.md                 # License file
 ├── test_api.py                 # API testing script
 ├── test_setup.py               # Test setup utilities
 ├── test-llamacpp-integration.py # LlamaCpp integration test script
+├── test_metrics.py             # Metrics testing script
+├── verify-monitoring-setup.sh  # Monitoring setup verification script
 ├── docker-compose.yml           # Profile-based Docker Compose configuration
 ├── docker-compose-llamacpp-cpu.yml    # [DEPRECATED] CPU-based LlamaCpp Docker Compose
 ├── docker-compose-llamacpp-amd-vulcan.yml # [DEPRECATED] AMD Vulkan GPU LlamaCpp Docker Compose
 ├── docker-entrypoint.sh         # Docker entrypoint script
 ├── Dockerfile                  # Docker image definition
 ├── start-llamacpp-cpu.sh     # LlamaCpp CPU startup script
+├── build-docker-image.sh      # Docker image build script
 ├── lpr_project/               # Django project settings
 │   ├── __init__.py
 │   ├── settings.py             # Django configuration
@@ -659,19 +664,39 @@ open-lpr/
 │   ├── apps.py                 # Django app configuration
 │   ├── models.py               # Database models
 │   ├── views.py                # View functions and API endpoints
+│   ├── views_refactored.py     # Refactored view functions
 │   ├── urls.py                 # App URL patterns
 │   ├── forms.py                # Django forms
+│   ├── metrics.py              # Application metrics
 │   ├── services/               # Business logic
 │   │   ├── __init__.py
 │   │   ├── qwen_client.py      # Qwen3-VL API client
 │   │   ├── image_processor.py  # Image processing utilities
-│   │   └── bbox_visualizer.py  # Bounding box visualization
+│   │   ├── bbox_visualizer.py  # Bounding box visualization
+│   │   ├── api_service.py      # API service layer
+│   │   ├── file_service.py     # File handling service
+│   │   └── image_processing_service.py # Image processing service
+│   ├── utils/                  # Utility functions
+│   │   ├── __init__.py
+│   │   ├── metrics_helpers.py  # Metrics helper functions
+│   │   ├── response_helpers.py # Response helper functions
+│   │   └── validators.py      # Validation utilities
+│   ├── views/                 # View modules
+│   │   ├── __init__.py
+│   │   ├── api_views.py       # API view functions
+│   │   ├── file_views.py      # File handling views
+│   │   └── web_views.py       # Web interface views
 │   ├── management/             # Django management commands
 │   │   ├── __init__.py
 │   │   └── commands/
 │   │       ├── __init__.py
-│   │       └── setup_project.py
+│   │       ├── setup_project.py
+│   │       └── inspect_image.py
 │   ├── static/                # Static files
+│   │   └── lpr_app/
+│   │       └── images/
+│   │           ├── favicon.ico
+│   │           └── favicon.svg
 │   └── migrations/            # Database migrations
 │       ├── __init__.py
 │       └── 0001_initial.py
@@ -694,12 +719,40 @@ open-lpr/
 │   ├── open-lpr-index.png
 │   ├── open-lpr-detection-result.png
 │   ├── open-lpr-detection-details.png
-│   └── open-lpr-processed-image.png
+│   ├── open-lpr-processed-image.png
+│   └── RELEASE_NOTES_v1.0.1.md
 ├── nginx/                     # Nginx configuration
-│   └── nginx.conf             # Nginx reverse proxy configuration
+│   ├── nginx.conf             # Nginx reverse proxy configuration
+│   └── ssl/                   # SSL certificates directory
+├── traefik/                   # Traefik reverse proxy configuration
+│   ├── traefik.yml            # Traefik static configuration
+│   ├── dynamic/               # Dynamic configuration directory
+│   │   └── config.yml         # Dynamic routing configuration
+│   └── ssl/                   # SSL certificates directory
+├── prometheus/                # Prometheus monitoring configuration
+│   └── prometheus.yml         # Prometheus configuration
+├── grafana/                   # Grafana visualization configuration
+│   └── provisioning/          # Auto-provisioning configuration
+│       ├── datasources/       # Data source configuration
+│       │   └── prometheus.yml
+│       └── dashboards/        # Dashboard definitions
+│           ├── dashboards.yml
+│           ├── canary/
+│           │   └── lpr-canary-dashboard.json
+│           └── default/
+│               └── lpr-app-dashboard.json
+├── blackbox/                  # Blackbox exporter configuration
+│   ├── blackbox.yml           # Blackbox probing configuration
+│   └── jeep.jpg              # Test image for blackbox probing
+├── canary/                    # Canary service for monitoring
+│   ├── canary.py             # Canary service implementation
+│   ├── Dockerfile            # Canary service Dockerfile
+│   └── jeep.jpg             # Test image for canary service
 ├── logs/                      # Application logs
-└── .github/                  # GitHub workflows
-    └── workflows/             # CI/CD configurations
+├── .github/                  # GitHub workflows
+│   └── workflows/             # CI/CD configurations
+├── plans/                     # Project planning documents
+└── vllm-rocm/                # vLLM ROCm configuration
 ```
 
 </details>
