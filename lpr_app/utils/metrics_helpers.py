@@ -53,14 +53,24 @@ class MetricsHelper:
         PROCESSING_ERRORS_TOTAL.labels(error_type=error_type).inc()
     
     @staticmethod
-    def record_api_error() -> None:
-        """Record an API error metric."""
-        API_ERRORS_TOTAL.inc()
+    def record_api_error(error_type: str = 'generic') -> None:
+        """
+        Record an API error metric.
+        
+        Args:
+            error_type: Type of API error (default: 'generic')
+        """
+        API_ERRORS_TOTAL.labels(error_type=error_type).inc()
     
     @staticmethod
-    def record_file_error() -> None:
-        """Record a file error metric."""
-        FILE_ERRORS_TOTAL.inc()
+    def record_file_error(error_type: str = 'generic') -> None:
+        """
+        Record a file error metric.
+        
+        Args:
+            error_type: Type of file error (default: 'generic')
+        """
+        FILE_ERRORS_TOTAL.labels(error_type=error_type).inc()
     
     @staticmethod
     def record_processing_duration(status: str, duration: float) -> None:

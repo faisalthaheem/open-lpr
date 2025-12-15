@@ -184,8 +184,11 @@ def metrics_view(request):
     """
     try:
         metrics_data, content_type = get_metrics_response()
-        return JsonResponse(metrics_data, content_type=content_type)
+        # metrics_data is bytes from generate_latest(), need to return as HttpResponse
+        from django.http import HttpResponse
+        return HttpResponse(metrics_data, content_type=content_type)
     except Exception as e:
         logger.error(f"Error generating metrics: {str(e)}")
         MetricsHelper.record_api_error()
-        return JsonResponse("Error generating metrics", status=500, safe=False)
+        from django.http import HttpResponse
+        return HttpResponse("Error generating metrics", status=500, content_type="text/plain")
