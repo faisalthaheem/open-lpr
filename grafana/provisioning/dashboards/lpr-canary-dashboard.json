@@ -25,7 +25,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Total number of canary requests by status",
       "fieldConfig": {
@@ -74,22 +74,22 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
-          "expr": "sum(rate(lpr_canary_script_requests_total[5m])) by (status)",
+          "expr": "sum(lpr_canary_script_requests_total) by (status)",
           "instant": true,
           "interval": "",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
       ],
-      "title": "Canary Request Rate",
+      "title": "Canary Request Count",
       "type": "piechart"
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Canary request processing duration",
       "fieldConfig": {
@@ -149,7 +149,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "histogram_quantile(0.50, rate(lpr_canary_script_duration_seconds_bucket[5m]))",
           "interval": "",
@@ -159,7 +159,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "histogram_quantile(0.95, rate(lpr_canary_script_duration_seconds_bucket[5m]))",
           "interval": "",
@@ -169,7 +169,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "histogram_quantile(0.99, rate(lpr_canary_script_duration_seconds_bucket[5m]))",
           "interval": "",
@@ -183,7 +183,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Success rate of canary requests",
       "fieldConfig": {
@@ -240,7 +240,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "rate(lpr_canary_script_requests_total{status=\"success\"}[5m]) / rate(lpr_canary_script_requests_total[5m])",
           "interval": "",
@@ -254,7 +254,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Total canary requests over time",
       "fieldConfig": {
@@ -314,7 +314,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "PBFA97CFB590B2093"
           },
           "expr": "increase(lpr_canary_script_requests_total[1h])",
           "interval": "",

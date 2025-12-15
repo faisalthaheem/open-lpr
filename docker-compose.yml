@@ -179,12 +179,14 @@ services:
       - "traefik.http.services.blackbox-exporter.loadbalancer.server.port=9115"
 
   lpr-canary:
+    env_file:
+      - .env.llamacpp
     image: ghcr.io/faisalthaheem/open-lpr-canary:latest
     container_name: openlpr-canary
     ports:
       - "9100:9100"
     environment:
-      - LPR_API_URL=http://lpr.localhost/api/v1/ocr/
+      - LPR_API_URL=${LPR_API_URL:-http://lpr.localhost/api/v1/ocr/}
       - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
       - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}
       - CANARY_INTERVAL=${CANARY_INTERVAL:-900}

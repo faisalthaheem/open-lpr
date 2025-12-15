@@ -38,6 +38,12 @@ http:
       entryPoints:
         - "web"
 
+    canary-router:
+      rule: "Host(`canary.localhost`)"
+      service: "canary"
+      entryPoints:
+        - "web"
+
   services:
     lpr-app:
       loadBalancer:
@@ -53,3 +59,8 @@ http:
       loadBalancer:
         servers:
           - url: "http://grafana:3000"
+
+    canary:
+      loadBalancer:
+        servers:
+          - url: "http://lpr-canary:9100"
