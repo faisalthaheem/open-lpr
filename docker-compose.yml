@@ -21,7 +21,7 @@ volumes:
 services:
   # Core Services
   traefik:
-    image: traefik:v3.0
+    image: traefik:latest
     container_name: openlpr-traefik
     command:
       - "--api.insecure=true"
