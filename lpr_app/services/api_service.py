@@ -50,7 +50,7 @@ class ApiService:
         return is_canary
     
     @staticmethod
-    def validate_api_request(request) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    def validate_api_request(request) -> Tuple[bool, Optional[JsonResponse]]:
         """
         Validate API request for image upload.
         
@@ -62,11 +62,11 @@ class ApiService:
         """
         # Check if image file is provided
         if 'image' not in request.FILES:
-            return False, {
+            return False, JsonResponse({
                 'success': False,
                 'error': 'No image file provided',
                 'error_code': 'MISSING_IMAGE'
-            }
+            }, status=400)
         
         uploaded_file = request.FILES['image']
         
@@ -75,20 +75,20 @@ class ApiService:
         
         allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp']
         if content_type not in allowed_types:
-            return False, {
+            return False, JsonResponse({
                 'success': False,
                 'error': f'Unsupported file type: {content_type}',
                 'error_code': 'INVALID_FILE_TYPE'
-            }
+            }, status=400)
         
         # Validate file size (max 10MB)
         max_size = 10 * 1024 * 1024  # 10MB in bytes
         if uploaded_file.size > max_size:
-            return False, {
+            return False, JsonResponse({
                 'success': False,
                 'error': f'File too large. Maximum size is 10MB',
                 'error_code': 'FILE_TOO_LARGE'
-            }
+            }, status=400)
         
         return True, None
     

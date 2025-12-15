@@ -92,9 +92,11 @@ def api_ocr_upload(request):
                 MetricsHelper.update_storage_metrics()
                 MetricsHelper.save_metrics()
                 
-                return ApiService.format_success_response(
+                response = ApiService.format_success_response(
                     result, uploaded_image, processing_time_ms, is_canary, save_image
                 )
+                logger.info(f"DEBUG: Returning success response of type: {type(response)}")
+                return response
             else:
                 MetricsHelper.record_upload_attempt('failed')
                 MetricsHelper.record_processing_attempt('failed')
@@ -103,7 +105,7 @@ def api_ocr_upload(request):
                 if is_canary:
                     MetricsHelper.record_canary_request('failed')
                 
-                return ApiService.format_error_response(
+                response = ApiService.format_error_response(
                     error_message=result.get('error', 'Unknown processing error'),
                     error_code='PROCESSING_FAILED',
                     image_id=uploaded_image.id,
@@ -111,6 +113,8 @@ def api_ocr_upload(request):
                     is_canary=is_canary,
                     status_code=500
                 )
+                logger.info(f"DEBUG: Returning error response of type: {type(response)}")
+                return response
                 
         except Exception as e:
             logger.error(f"Error in api_ocr_upload: {str(e)}")
