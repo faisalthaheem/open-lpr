@@ -163,10 +163,12 @@ def process_uploaded_image(uploaded_image: UploadedImage, save_image: bool = Tru
         Dictionary with processing result
     """
     processing_start_time = time.time()
+    logger.info(f"DEBUG: process_uploaded_image called with save_image={save_image}")
     try:
         # Update status to processing
         uploaded_image.processing_status = 'processing'
         uploaded_image.save()
+        logger.info(f"DEBUG: Status updated to processing")
         
         # Log API call start
         ProcessingLog.objects.create(
@@ -258,7 +260,44 @@ def process_uploaded_image(uploaded_image: UploadedImage, save_image: bool = Tru
             output_path_str = str(output_path)
             uploaded_image.processed_image.name = output_path_str.replace(str(settings.MEDIA_ROOT) + '/', '')
         
+        logger.info(f"DEBUG: About to save record, save_image={save_image}")
         uploaded_image.save()
+        logger.info(f"DEBUG: Record saved, checking cleanup condition")
+        
+        # For canary requests with save_image=False, clean up completely
+        logger.info(f"DEBUG: save_image={save_image}, about to check cleanup condition")
+        if not save_image:
+            logger.info(f"Cleaning up canary image {uploaded_image.id} ({uploaded_image.filename})")
+            
+            # Delete original image file
+            if uploaded_image.original_image and os.path.exists(uploaded_image.original_image.path):
+                try:
+                    os.remove(uploaded_image.original_image.path)
+                    logger.info(f"Deleted original image: {uploaded_image.original_image.path}")
+                except Exception as e:
+                    logger.error(f"Failed to delete original image: {e}")
+            else:
+                logger.warning(f"Original image file not found: {uploaded_image.original_image.path if uploaded_image.original_image else 'None'}")
+            
+            # Delete comparison image if it exists
+            if comparison_path and os.path.exists(comparison_path):
+                try:
+                    os.remove(comparison_path)
+                    logger.info(f"Deleted comparison image: {comparison_path}")
+                except Exception as e:
+                    logger.error(f"Failed to delete comparison image: {e}")
+            
+            # Delete database record
+            try:
+                image_id = uploaded_image.id  # Save ID for logging after deletion
+                uploaded_image.delete()
+                logger.info(f"Deleted database record for canary image {image_id}")
+            except Exception as e:
+                logger.error(f"Failed to delete database record: {e}")
+            
+            return {'success': True, 'message': 'Canary image processed and cleaned up'}
+        else:
+            logger.info(f"DEBUG: Not cleaning up because save_image={save_image}")
         
         # Log success
         duration = (time.time() - start_time) * 1000
@@ -536,12 +575,12 @@ def api_ocr_upload(request):
     # Canary configuration from settings
     canary_header_name = getattr(settings, 'CANARY_HEADER_NAME', 'X-Canary-Request')
     canary_header_value = getattr(settings, 'CANARY_HEADER_VALUE', 'true')
-    canary_enabled = getattr(settings, 'CANARY_ENABLED', 'true').lower() == 'true'
+    canary_enabled = str(getattr(settings, 'CANARY_ENABLED', 'true')).lower() == 'true'
     
     # Check if this is a canary request
-    header_key = f'HTTP_{canary_header_name.upper().replace("-", "_")}'
+    header_key = canary_header_name.upper().replace("-", "_")
     is_canary = (canary_enabled and 
-                 request.META.get(header_key) == canary_header_value)
+                 request.META.get(f'HTTP_{header_key}') == canary_header_value)
     
     # Log canary requests for audit
     if is_canary:
@@ -614,21 +653,44 @@ def api_ocr_upload(request):
             CANARY_PROCESSING_DURATION.observe(processing_time_ms / 1000.0)
         
         if result['success']:
-            # Get detection results
-            detection_results = uploaded_image.get_detection_results()
+            # For canary requests with cleanup, the record may be deleted
+            if is_canary and not save_image and 'message' in result and 'cleaned up' in result['message']:
+                # Canary image was processed and cleaned up
+                response_data = {
+                    'success': True,
+                    'message': result['message'],
+                    'processing_time_ms': processing_time_ms,
+                    'canary_request': is_canary,
+                    'image_saved': False,
+                    'image_id': None  # Record was deleted
+                }
+                return JsonResponse(response_data, status=200)
+            
+            # Get detection results (may be None if record was deleted for canary)
+            try:
+                detection_results = uploaded_image.get_detection_results()
+                plate_count = uploaded_image.get_plate_count()
+                ocr_count = uploaded_image.get_total_ocr_count()
+                processing_timestamp = uploaded_image.processing_timestamp.isoformat() if uploaded_image.processing_timestamp else None
+            except UploadedImage.DoesNotExist:
+                # Record was deleted (canary cleanup)
+                detection_results = None
+                plate_count = 0
+                ocr_count = 0
+                processing_timestamp = None
             
             # Prepare response data
             response_data = {
                 'success': True,
-                'image_id': uploaded_image.id,
-                'filename': uploaded_image.filename,
+                'image_id': uploaded_image.id if uploaded_image and uploaded_image.pk else None,
+                'filename': uploaded_image.filename if uploaded_image else 'deleted',
                 'processing_time_ms': processing_time_ms,
                 'results': detection_results,
                 'summary': {
-                    'total_plates': uploaded_image.get_plate_count(),
-                    'total_ocr_texts': uploaded_image.get_total_ocr_count()
+                    'total_plates': plate_count,
+                    'total_ocr_texts': ocr_count
                 },
-                'processing_timestamp': uploaded_image.processing_timestamp.isoformat() if uploaded_image.processing_timestamp else None,
+                'processing_timestamp': processing_timestamp,
                 'canary_request': is_canary,
                 'image_saved': save_image
             }

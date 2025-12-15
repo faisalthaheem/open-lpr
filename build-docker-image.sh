@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Open LPR Docker Image Build Script
-# This script builds the latest Docker image for the Open LPR application
-# Based on the GitHub workflow at .github/workflows/docker-publish.yml
+# This script builds latest Docker image for Open LPR application
+# Based on GitHub workflow at .github/workflows/docker-publish.yml
 
 set -e
 
@@ -147,6 +147,8 @@ fi
 
 # Construct full image name
 FULL_IMAGE_NAME="${REGISTRY}/${REPOSITORY_OWNER}/${IMAGE_NAME}:${TAG}"
+CANARY_IMAGE_NAME="${IMAGE_NAME}-canary"
+CANARY_FULL_IMAGE_NAME="${REGISTRY}/${REPOSITORY_OWNER}/${CANARY_IMAGE_NAME}:${TAG}"
 
 # Validate Docker installation
 if ! command -v docker &> /dev/null; then
@@ -167,8 +169,8 @@ if [ "$PUSH" = true ]; then
     fi
 fi
 
-# Main build function
-build_image() {
+# Main build function for LPR app
+build_main_image() {
     print_status "Starting Docker image build for Open LPR application..."
     print_status "Image: ${FULL_IMAGE_NAME}"
     print_status "Platforms: ${PLATFORMS}"
@@ -192,6 +194,7 @@ build_image() {
             "--tag" "$FULL_IMAGE_NAME"
             "--file" "./Dockerfile"
             "."
+            "--load"
         )
         print_status "Building for platform: $FIRST_PLATFORM"
     else
@@ -258,7 +261,7 @@ build_image() {
         "--label" "org.opencontainers.image.licenses=MIT"
     )
 
-    # Build the image
+    # Build image
     print_status "Building Docker image..."
     if [ "$VERBOSE" = true ]; then
         print_status "Build command: docker buildx build ${BUILD_ARGS[*]}"
@@ -269,6 +272,63 @@ build_image() {
     else
         print_error "Docker build failed"
         exit 1
+    fi
+}
+
+# Function to build canary image
+build_canary_image() {
+    print_status "Building canary image..."
+    print_status "Canary Image: ${CANARY_FULL_IMAGE_NAME}"
+    
+    # Build canary image using simple docker build (no need for buildx for single platform)
+    CANARY_BUILD_ARGS=(
+        "--tag" "$CANARY_FULL_IMAGE_NAME"
+        "--file" "./canary/Dockerfile"
+        "./canary"
+    )
+    
+    if [ "$NO_CACHE" = true ]; then
+        CANARY_BUILD_ARGS+=("--no-cache")
+    fi
+    
+    if [ "$VERBOSE" = true ]; then
+        CANARY_BUILD_ARGS+=("--progress" "plain")
+    fi
+    
+    # Add labels
+    CANARY_BUILD_ARGS+=(
+        "--label" "org.opencontainers.image.title=${CANARY_IMAGE_NAME}"
+        "--label" "org.opencontainers.image.description=Open LPR Canary Service - Monitoring and Health Checks"
+        "--label" "org.opencontainers.image.url=https://github.com/${REPOSITORY_OWNER}/${IMAGE_NAME}"
+        "--label" "org.opencontainers.image.source=https://github.com/${REPOSITORY_OWNER}/${IMAGE_NAME}"
+        "--label" "org.opencontainers.image.version=${TAG}"
+        "--label" "org.opencontainers.image.created=${BUILD_DATE}"
+        "--label" "org.opencontainers.image.revision=${GIT_COMMIT}"
+        "--label" "org.opencontainers.image.branch=${GIT_BRANCH}"
+        "--label" "org.opencontainers.image.licenses=MIT"
+    )
+    
+    print_status "Building canary Docker image..."
+    if [ "$VERBOSE" = true ]; then
+        print_status "Canary build command: docker build ${CANARY_BUILD_ARGS[*]}"
+    fi
+    
+    if docker build "${CANARY_BUILD_ARGS[@]}"; then
+        print_success "Canary image built successfully: ${CANARY_FULL_IMAGE_NAME}"
+    else
+        print_error "Canary build failed"
+        exit 1
+    fi
+    
+    # Push canary image if pushing is enabled
+    if [ "$PUSH" = true ]; then
+        print_status "Pushing canary image to registry..."
+        if docker push "$CANARY_FULL_IMAGE_NAME"; then
+            print_success "Canary image pushed successfully: ${CANARY_FULL_IMAGE_NAME}"
+        else
+            print_error "Canary image push failed"
+            exit 1
+        fi
     fi
 }
 
@@ -339,6 +399,29 @@ run_tests() {
     fi
 }
 
+# Function to tag local images with GHCR names for local development
+tag_local_images() {
+    if [ "$PUSH" = false ]; then
+        print_status "Tagging local images for development use..."
+        
+        # Tag main image for local use
+        LOCAL_MAIN_TAG="${IMAGE_NAME}:latest"
+        if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "${FULL_IMAGE_NAME}"; then
+            if docker tag "${FULL_IMAGE_NAME}" "${LOCAL_MAIN_TAG}"; then
+                print_success "Tagged main image locally: ${LOCAL_MAIN_TAG}"
+            fi
+        fi
+        
+        # Tag canary image for local use
+        LOCAL_CANARY_TAG="${CANARY_IMAGE_NAME}:latest"
+        if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "${CANARY_FULL_IMAGE_NAME}"; then
+            if docker tag "${CANARY_FULL_IMAGE_NAME}" "${LOCAL_CANARY_TAG}"; then
+                print_success "Tagged canary image locally: ${LOCAL_CANARY_TAG}"
+            fi
+        fi
+    fi
+}
+
 # Main execution
 main() {
     print_status "Open LPR Docker Build Script"
@@ -357,8 +440,14 @@ main() {
     print_status "  Generate SBOM: ${SBOM}"
     echo ""
     
-    # Build the image
-    build_image
+    # Build main image
+    build_main_image
+    
+    # Build canary image
+    build_canary_image
+    
+    # Tag local images for development
+    tag_local_images
     
     # Generate SBOM if requested
     generate_sbom
@@ -366,27 +455,13 @@ main() {
     # Show image information
     show_image_info
     
-    # Run basic tests
-    run_tests
+    # Run tests if image is local
+    if [ "$PUSH" = false ]; then
+        run_tests
+    fi
     
     print_success "Build process completed successfully!"
-    
-    if [ "$PUSH" = false ]; then
-        print_status "To push the image later, run:"
-        print_status "  docker push ${FULL_IMAGE_NAME}"
-    fi
-    
-    if [ "$PUSH" = true ]; then
-        print_status "Image pushed to registry: ${FULL_IMAGE_NAME}"
-    fi
 }
-
-# Check if we're in the right directory
-if [ ! -f "Dockerfile" ]; then
-    print_error "Dockerfile not found in current directory"
-    print_error "Please run this script from the Open LPR project root"
-    exit 1
-fi
 
 # Run main function
 main "$@"

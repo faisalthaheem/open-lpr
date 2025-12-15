@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Canary script for LPR API monitoring
-Posts jeep.jpg to LPR API every 15 minutes and reports results to Prometheus
+Posts jeep.jpg to LPR API every 5 seconds and reports results to Prometheus
 """
 
 import os
@@ -17,7 +17,7 @@ import base64
 LPR_API_URL = os.getenv('LPR_API_URL', 'http://lpr-app:8000/api/v1/ocr/')
 CANARY_HEADER_NAME = os.getenv('CANARY_HEADER_NAME', 'X-Canary-Request')
 CANARY_HEADER_VALUE = os.getenv('CANARY_HEADER_VALUE', 'true')
-CANARY_INTERVAL = int(os.getenv('CANARY_INTERVAL', '900'))  # 15 minutes in seconds
+CANARY_INTERVAL = int(os.getenv('CANARY_INTERVAL', '5'))  # 5 seconds in seconds
 JEEP_IMAGE_PATH = '/app/jeep.jpg'
 PROMETHEUS_PORT = int(os.getenv('PROMETHEUS_PORT', '9100'))
 
@@ -55,23 +55,27 @@ def run_canary_check():
     start_time = time.time()
     
     try:
-        # Prepare the request
+        # Prepare request
         headers = {
-            CANARY_HEADER_NAME: CANARY_HEADER_VALUE
+            CANARY_HEADER_NAME: CANARY_HEADER_VALUE,
+            'Host': 'lpr.localhost'  # Required for Traefik routing
         }
         
-        # Prepare multipart form data
+        # Prepare multipart form data - separate files and data
         files = {
-            'image': open(JEEP_IMAGE_PATH, 'rb'),
-            'save_image': (None, 'false')
+            'image': open(JEEP_IMAGE_PATH, 'rb')
+        }
+        data = {
+            'save_image': 'false'  # This saves space!
         }
         
         logger.info(f"Running canary check against {LPR_API_URL}")
         
-        # Make the request
+        # Make request
         response = requests.post(
             LPR_API_URL,
             files=files,
+            data=data,
             headers=headers,
             timeout=120
         )
