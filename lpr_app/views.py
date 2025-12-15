@@ -572,6 +572,8 @@ def api_ocr_upload(request):
     import time
     from datetime import datetime
     
+    logger.info("DEBUG: api_ocr_upload function called!")
+    
     # Canary configuration from settings
     canary_header_name = getattr(settings, 'CANARY_HEADER_NAME', 'X-Canary-Request')
     canary_header_value = getattr(settings, 'CANARY_HEADER_VALUE', 'true')
@@ -641,8 +643,12 @@ def api_ocr_upload(request):
             message=f'API OCR processing started (save_image={save_image}, is_canary={is_canary})'
         )
         
+        logger.info(f"DEBUG: About to call process_uploaded_image with save_image={save_image}, is_canary={is_canary}")
+        
         # Process the image
         result = process_uploaded_image(uploaded_image, save_image=save_image)
+        
+        logger.info(f"DEBUG: process_uploaded_image returned: {result}")
         
         processing_time_ms = int((time.time() - start_time) * 1000)
         
