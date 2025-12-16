@@ -96,6 +96,8 @@ services:
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
     networks:
       - openlpr-network
+    ports:
+      - 8000:8000
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "manage.py", "check"]
