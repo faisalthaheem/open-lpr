@@ -57,8 +57,7 @@ def run_canary_check():
     try:
         # Prepare request
         headers = {
-            CANARY_HEADER_NAME: CANARY_HEADER_VALUE,
-            'Host': 'lpr.localhost'  # Required for Traefik routing
+            CANARY_HEADER_NAME: CANARY_HEADER_VALUE
         }
         
         # Prepare multipart form data - separate files and data
