@@ -11,6 +11,8 @@
 
 *A powerful Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
 
+> **🚨 Important Stability Notice**: For production deployments, we strongly recommend using **tagged releases** instead of the mainline branch. The mainline may contain experimental features and be under active development. See the [Production Deployment](#-production-deployment) section for guidance on using stable tagged versions.
+
 ## 📑 Table of Contents
 
 | | | |
@@ -74,6 +76,8 @@ Experience the license plate recognition system in action without any installati
 ### Docker Deployment (Recommended)
 
 The quickest way to get started is with Docker using the new profile-based compose file, which includes everything needed for local inference without requiring any external API endpoints.
+
+> **🚨 Stability Notice**: For production environments, we strongly recommend using **tagged releases** instead of the mainline branch. See the [Production Deployment](#-production-deployment) section for stable version instructions.
 
 > **🚨 Important Notice**: Individual compose files (`docker-compose-llamacpp-*.yml`) are now deprecated. Please use the new profile-based approach with the main `docker-compose.yml` file.
 
@@ -241,6 +245,22 @@ For development or custom deployments:
    - Qwen3-VL API access
 
 2. **Clone the repository**
+   
+   For **production/stable deployments**, use a tagged release:
+   ```bash
+   # List available releases
+   git ls-remote --tags https://github.com/faisalthaheem/open-lpr.git
+   
+   # Clone a specific stable version (recommended for production)
+   git clone --branch v1.0.0 https://github.com/faisalthaheem/open-lpr.git
+   cd open-lpr
+   
+   # Or clone the latest stable release
+   git clone --branch $(git ls-remote --tags https://github.com/faisalthaheem/open-lpr.git | grep -v 'rc\|beta\|alpha' | tail -n1 | sed 's/.*\///') https://github.com/faisalthaheem/open-lpr.git
+   cd open-lpr
+   ```
+   
+   For **development/testing** (may be unstable):
    ```bash
    git clone https://github.com/faisalthaheem/open-lpr.git
    cd open-lpr
@@ -529,12 +549,30 @@ The project includes automated Docker image building and publishing to GitHub Co
 
 The Docker image is automatically built and published to GitHub Container Registry when code is pushed to the main branch or when tags are created.
 
+> **🚨 Production Recommendation**: For production deployments, always use **versioned tags** instead of `latest`. The `latest` tag may contain unstable features from the mainline branch.
+
+#### Production Deployment (Recommended)
+
 ```bash
-# Pull the latest image
+# Pull a specific stable version (recommended for production)
+docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
+
+# List available versions
+curl -s "https://api.github.com/repos/faisalthaheem/open-lpr/releases" | grep -o '"tag_name": "v[^"]*"' | head -10
+
+# Pull the latest stable release (excluding pre-releases)
+LATEST_STABLE=$(curl -s "https://api.github.com/repos/faisalthaheem/open-lpr/releases" | grep -o '"tag_name": "v[^"]*"' | grep -v 'rc\|beta\|alpha' | head -1 | sed 's/"tag_name": "\(.*\)"/\1/')
+docker pull ghcr.io/faisalthaheem/open-lpr:$LATEST_STABLE
+```
+
+#### Development/Testing (May be unstable)
+
+```bash
+# Pull the latest image (mainline, may be unstable)
 docker pull ghcr.io/faisalthaheem/open-lpr:latest
 
-# Pull a specific version
-docker pull ghcr.io/faisalthaheem/open-lpr:v1.0.0
+# Pull a specific pre-release version
+docker pull ghcr.io/faisalthaheem/open-lpr:v1.1.0-beta.1
 ```
 
 ### Docker Compose Deployment
@@ -815,6 +853,49 @@ python manage.py collectstatic --noinput
 <details>
 <summary>Click to expand</summary>
 
+> **🚨 Critical Production Requirement**: Always use **tagged releases** for production deployments. The mainline branch may contain experimental features and be unstable. Never use `latest` tags or main branch in production environments.
+
+### Version Selection for Production
+
+#### Option 1: Use Specific Stable Release (Recommended)
+
+```bash
+# Find the latest stable release
+curl -s "https://api.github.com/repos/faisalthaheem/open-lpr/releases" | grep -o '"tag_name": "v[^"]*"' | grep -v 'rc\|beta\|alpha' | head -1
+
+# Clone a specific stable version
+git clone --branch v1.0.0 https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+# Or checkout an existing repository to a stable version
+git fetch --tags
+git checkout v1.0.0
+```
+
+#### Option 2: Use Latest Stable Release
+
+```bash
+# Automatically get the latest stable release (excluding pre-releases)
+LATEST_STABLE=$(curl -s "https://api.github.com/repos/faisalthaheem/open-lpr/releases" | grep -o '"tag_name": "v[^"]*"' | grep -v 'rc\|beta\|alpha' | head -1 | sed 's/"tag_name": "\(.*\)"/\1/')
+git clone --branch $LATEST_STABLE https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+```
+
+#### Option 3: Docker Production Deployment with Versioned Images
+
+```bash
+# Use a specific versioned Docker image (recommended)
+VERSION=v1.0.0
+docker pull ghcr.io/faisalthaheem/open-lpr:$VERSION
+
+# Update your docker-compose.yml to use the versioned image
+sed -i "s|ghcr.io/faisalthaheem/open-lpr:latest|ghcr.io/faisalthaheem/open-lpr:$VERSION|g" docker-compose.yml
+
+# Or automatically use the latest stable release
+LATEST_STABLE=$(curl -s "https://api.github.com/repos/faisalthaheem/open-lpr/releases" | grep -o '"tag_name": "v[^"]*"' | grep -v 'rc\|beta\|alpha' | head -1 | sed 's/"tag_name": "\(.*\)"/\1/')
+docker pull ghcr.io/faisalthaheem/open-lpr:$LATEST_STABLE
+```
+
 ### Production Settings
 
 1. **Set DEBUG=False** in `.env`
@@ -823,12 +904,60 @@ python manage.py collectstatic --noinput
 4. **Configure static file serving** (nginx/AWS S3)
 5. **Set up media file serving** (nginx/AWS S3)
 6. **Use HTTPS** with SSL certificate
+7. **Pin to specific versions** (see version selection above)
+
+### Version Management Strategy
+
+#### Recommended Production Workflow
+
+1. **Select a stable version** (not `latest` or main branch)
+2. **Pin both source code and Docker images** to that version
+3. **Test thoroughly** in staging environment
+4. **Deploy to production** with pinned versions
+5. **Monitor for issues** before considering upgrades
+
+#### Version Pinning Examples
+
+**For Source Code:**
+```bash
+# In your deployment script
+VERSION=v1.0.0
+git clone --branch $VERSION https://github.com/faisalthaheem/open-lpr.git
+```
+
+**For Docker:**
+```yaml
+# In docker-compose.yml (production)
+services:
+  openlpr:
+    image: ghcr.io/faisalthaheem/open-lpr:v1.0.0  # Pinned version, not latest
+    # ... other configuration
+```
 
 ### Environment-Specific Settings
 
-- **Development**: SQLite database, DEBUG=True
-- **Staging**: PostgreSQL, DEBUG=False, limited hosts
-- **Production**: PostgreSQL, DEBUG=False, HTTPS required
+- **Development**: SQLite database, DEBUG=True, mainline branch acceptable
+- **Staging**: PostgreSQL, DEBUG=False, **use same version as production**
+- **Production**: PostgreSQL, DEBUG=False, HTTPS required, **always use tagged releases**
+
+### Upgrade Process
+
+1. **Check for new stable releases**:
+   ```bash
+   curl -s "https://api.github.com/repos/faisalthaheem/open-lpr/releases" | grep -o '"tag_name": "v[^"]*"' | grep -v 'rc\|beta\|alpha' | head -5
+   ```
+
+2. **Review release notes** for breaking changes
+
+3. **Test upgrade in staging** with the new version
+
+4. **Backup production data**
+
+5. **Deploy with pinned versions** following the version selection steps above
+
+6. **Monitor and rollback if needed**
+
+⚠️ **Warning**: Never upgrade production systems directly from `latest` tags or mainline branch. Always use specific version tags.
 
 </details>
 
