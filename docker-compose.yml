@@ -22,7 +22,7 @@ services:
   # Core Services
   traefik:
     image: traefik:latest
-    container_name: openlpr-traefik
+    container_name: traefik
     command:
       - "--api.insecure=true"
       - "--entrypoints.web.address=:80"
@@ -51,7 +51,7 @@ services:
     env_file:
       - .env.llamacpp
     image: ghcr.io/faisalthaheem/open-lpr:latest
-    container_name: open-lpr-app
+    container_name: lpr-app
     volumes:
       # SQLite database persistence
       - ./container-data:/app/data
@@ -71,7 +71,7 @@ services:
       
       # Qwen3-VL API Configuration - Updated to use local LlamaCpp service
       - QWEN_API_KEY=${QWEN_API_KEY:-sk-llamacpp-local}
-      - QWEN_BASE_URL=${QWEN_BASE_URL:-http://llamacpp:8000/v1}
+      - QWEN_BASE_URL=${QWEN_BASE_URL:-http://llamacpp-cpu:8000/v1}
       - QWEN_MODEL=${QWEN_MODEL:-gpt-4-vision-preview}  # Model alias for compatibility
       
       # File Upload Settings
@@ -115,7 +115,7 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: openlpr-prometheus
+    container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -140,7 +140,7 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: openlpr-grafana
+    container_name: grafana
     ports:
       - "3000:3000"
     environment:
@@ -162,7 +162,7 @@ services:
 
   blackbox-exporter:
     image: prom/blackbox-exporter:latest
-    container_name: openlpr-blackbox-exporter
+    container_name: blackbox-exporter
     ports:
       - "9115:9115"
     volumes:
@@ -183,11 +183,11 @@ services:
     env_file:
       - .env.llamacpp
     image: ghcr.io/faisalthaheem/open-lpr-canary:latest
-    container_name: openlpr-canary
+    container_name: lpr-canary
     ports:
       - "9100:9100"
     environment:
-      - LPR_API_URL=${LPR_API_URL:-http://lpr.localhost/api/v1/ocr/}
+      - LPR_API_URL=${LPR_API_URL:-http://lpr-app:8000/api/v1/ocr/}
       - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
       - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}
       - CANARY_INTERVAL=${CANARY_INTERVAL:-900}
@@ -207,7 +207,7 @@ services:
     env_file:
       - .env.llamacpp
     image: ghcr.io/ggml-org/llama.cpp:server
-    container_name: llamacpp-qwen3vl-cpu
+    container_name: llamacpp-cpu
     ports:
       - "8001:8000"  # Use 8001 to avoid conflict with OpenLPR on 8000
     volumes:
@@ -236,12 +236,16 @@ services:
       start_period: 40s
     profiles:
       - cpu
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.llamacpp-cpu.rule=Host(`llamacpp-cpu.localhost`)"
+      - "traefik.http.services.llamacpp-cpu.loadbalancer.server.port=8000"
 
   llamacpp-amd-vulkan:
     env_file:
       - .env.llamacpp
     image: ghcr.io/ggml-org/llama.cpp:server-vulkan
-    container_name: llamacpp-qwen3vl-amd-vulkan
+    container_name: llamacpp-amd-vulkan
     ports:
       - "8001:8000"  # Use 8001 to avoid conflict with OpenLPR on 8000
     volumes:
@@ -276,12 +280,16 @@ services:
       start_period: 40s
     profiles:
       - amd-vulkan
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.llamacpp-amd-vulkan.rule=Host(`llamacpp-amd-vulkan.localhost`)"
+      - "traefik.http.services.llamacpp-amd-vulkan.loadbalancer.server.port=8000"
 
   llamacpp-nvidia-cuda:
     env_file:
       - .env.llamacpp
     image: ghcr.io/ggml-org/llama.cpp:server-cuda
-    container_name: llamacpp-qwen3vl-nvidia-cuda
+    container_name: llamacpp-nvidia-cuda
     ports:
       - "8001:8000"  # Use 8001 to avoid conflict with OpenLPR on 8000
     volumes:
@@ -319,3 +327,7 @@ services:
       start_period: 40s
     profiles:
       - nvidia-cuda
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.llamacpp-nvidia-cuda.rule=Host(`llamacpp-nvidia-cuda.localhost`)"
+      - "traefik.http.services.llamacpp-nvidia-cuda.loadbalancer.server.port=8000"
