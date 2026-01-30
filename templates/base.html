@@ -506,6 +506,126 @@
         [data-theme="dark"] .bg-light.rounded {
             background-color: var(--bg-tertiary) !important;
         }
+
+        /* Simplified Mobile Pagination */
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding: 8px 0;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) var(--bg-secondary);
+            justify-content: center;
+        }
+
+        .pagination-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .pagination-container::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 3px;
+        }
+
+        .pagination-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .pagination-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .pagination-numbers {
+            display: flex;
+            gap: 4px;
+            flex-wrap: nowrap;
+        }
+
+        .pagination-number {
+            min-width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-number:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--header-gradient-start);
+            color: var(--text-primary);
+        }
+
+        .pagination-number.active {
+            background: var(--header-gradient-start);
+            border-color: var(--header-gradient-start);
+            color: white;
+        }
+
+        .pagination-btn {
+            min-width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--header-gradient-start);
+            color: var(--text-primary);
+        }
+
+        /* Show simplified pagination on mobile */
+        @media (max-width: 768px) {
+            .pagination-numbers {
+                display: flex;
+            }
+
+            .pagination-btn {
+                display: flex;
+            }
+
+            /* Hide desktop pagination */
+            .pagination-wrapper {
+                display: none;
+            }
+        }
+
+        /* Hide simplified pagination on desktop */
+        @media (min-width: 769px) {
+            .pagination-numbers {
+                display: none;
+            }
+
+            .pagination-btn {
+                display: none;
+            }
+
+            /* Show desktop pagination */
+            .pagination-wrapper {
+                display: block;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
