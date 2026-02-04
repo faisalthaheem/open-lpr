@@ -1,0 +1,22 @@
+# Custom Prometheus Image with OpenLPR configuration
+FROM prom/prometheus:latest
+
+# Copy prometheus configuration
+COPY prometheus/prometheus.yml /etc/prometheus/prometheus.yml
+
+# Note: Prometheus base image already runs as non-root user by default
+
+# Expose Prometheus port
+EXPOSE 9090
+
+# Health check using curl (available in base image)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:9090/-/healthy || exit 1
+
+# Run Prometheus with standard flags
+CMD ["prometheus", "--config.file=/etc/prometheus/prometheus.yml", \
+     "--storage.tsdb.path=/prometheus", \
+     "--web.console.libraries=/etc/prometheus/console_libraries", \
+     "--web.console.templates=/etc/prometheus/consoles", \
+     "--storage.tsdb.retention.time=200h", \
+     "--web.enable-lifecycle"]

@@ -1,0 +1,17 @@
+# Custom Blackbox Exporter Image with OpenLPR configuration
+FROM prom/blackbox-exporter:latest
+
+# Copy blackbox configuration
+COPY blackbox/blackbox.yml /etc/blackbox_exporter/config.yml
+
+# Note: Blackbox exporter base image already runs as non-root user by default
+
+# Expose Blackbox Exporter port
+EXPOSE 9115
+
+# Health check using curl (available in base image)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:9115/-/healthy || exit 1
+
+# Run Blackbox Exporter with custom config
+CMD ["blackbox_exporter", "--config.file=/etc/blackbox_exporter/config.yml"]

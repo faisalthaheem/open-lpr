@@ -1,0 +1,17 @@
+# Custom Grafana Image with OpenLPR provisioning configuration
+FROM grafana/grafana:latest
+
+# Copy Grafana provisioning configurations
+COPY grafana/provisioning /etc/grafana/provisioning
+
+# Note: Grafana base image already runs as non-root user (ID 472) by default
+
+# Expose Grafana port
+EXPOSE 3000
+
+# Health check using curl (available in base image)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Run Grafana
+CMD ["grafana-server"]

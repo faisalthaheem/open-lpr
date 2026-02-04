@@ -67,15 +67,26 @@ container-data/
 # Documentation
 *.md
 docs/
+plans/  # Exclude plans directory
+
+# Keep monitoring configs for custom images (not ignored)
+!prometheus/prometheus.yml
+!grafana/provisioning/
+!blackbox/blackbox.yml
 
 # Tests
 test_*.py
 tests/
 
 # Docker
-Dockerfile*
+# Exclude main Dockerfile but note that Dockerfile.* for monitoring images
+# are excluded here but used separately for building custom images
+Dockerfile
 docker-compose*
 .dockerignore
+Dockerfile.prometheus
+Dockerfile.grafana
+Dockerfile.blackbox
 
 # CI/CD
 .github/
