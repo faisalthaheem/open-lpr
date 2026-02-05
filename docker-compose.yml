@@ -31,9 +31,11 @@ services:
       - "--providers.docker.network=openlpr-network"
       - "--log.level=INFO"
       - "--accesslog=true"
+    # Ports are configurable via environment variables
+    # If TRAEFIK_HTTP_PORT is empty/not set, ports won't be exposed (useful for Coolify)
     ports:
-      - "80:80"
-      - "8080:8080"  # Traefik dashboard
+      - "${TRAEFIK_HTTP_PORT:-}:80"
+      - "${TRAEFIK_DASHBOARD_PORT:-}:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -95,8 +97,9 @@ services:
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
     networks:
       - openlpr-network
+    # Port is configurable via environment variable
     ports:
-      - 8000:8000
+      - "${LPR_APP_PORT:-8000}:8000"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "manage.py", "check"]
@@ -117,8 +120,9 @@ services:
     # Use custom image with config baked in
     image: ghcr.io/faisalthaheem/open-lpr-prometheus:latest
     container_name: prometheus
+    # Port is configurable via environment variable
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       # Only need data volume, no config mount needed
       - prometheus_data:/prometheus
@@ -136,8 +140,9 @@ services:
     # Use custom image with provisioning baked in
     image: ghcr.io/faisalthaheem/open-lpr-grafana:latest
     container_name: grafana
+    # Port is configurable via environment variable
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
@@ -159,8 +164,9 @@ services:
     # Use custom image with config baked in
     image: ghcr.io/faisalthaheem/open-lpr-blackbox:latest
     container_name: blackbox-exporter
+    # Port is configurable via environment variable
     ports:
-      - "9115:9115"
+      - "${BLACKBOX_PORT:-9115}:9115"
     networks:
       - openlpr-network
     restart: unless-stopped
@@ -176,8 +182,9 @@ services:
       - .env.llamacpp
     image: ghcr.io/faisalthaheem/open-lpr-canary:latest
     container_name: lpr-canary
+    # Port is configurable via environment variable
     ports:
-      - "9100:9100"
+      - "${CANARY_PORT:-9100}:9100"
     environment:
       - LPR_API_URL=${LPR_API_URL:-http://lpr-app:8000/api/v1/ocr/}
       - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}

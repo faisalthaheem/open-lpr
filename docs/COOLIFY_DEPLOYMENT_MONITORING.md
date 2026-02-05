@@ -74,11 +74,52 @@ The script will:
    BLACKBOX_HOST=blackbox.yourdomain.com
    CANARY_HOST=canary.yourdomain.com
    LPR_APP_HOST=lpr.yourdomain.com
+
+   # Service Ports (optional - defaults will be used if not set)
+   # NOTE: For Coolify deployment, DO NOT set TRAEFIK_HTTP_PORT to avoid port conflicts
+   # Leave these unset to use default ports, or customize if needed
+   LPR_APP_PORT=8000
+   PROMETHEUS_PORT=9090
+   GRAFANA_PORT=3000
+   BLACKBOX_PORT=9115
+   CANARY_PORT=9100
    ```
 
 3. **Deploy**
 
    Redeploy your application in Coolify. The monitoring services will start using the custom images with baked-in configurations.
+
+### Important: Traefik Configuration for Coolify
+
+**By default, Coolify provides its own reverse proxy and routing.** To avoid port conflicts:
+
+1. **DO NOT set** `TRAEFIK_HTTP_PORT` environment variable in Coolify
+2. **DO NOT set** `TRAEFIK_DASHBOARD_PORT` environment variable in Coolify
+
+When these variables are empty/not set:
+- Traefik container will start but won't expose ports (80, 8080)
+- No port conflicts with Coolify's services
+- Services are accessible directly via their assigned ports
+
+If you DO want to use Traefik (for local development or specific use cases):
+```bash
+# Only set these if NOT using Coolify
+TRAEFIK_HTTP_PORT=80
+TRAEFIK_DASHBOARD_PORT=8080
+```
+
+### Customizing Service Ports
+
+All service ports are configurable via environment variables. Use this to avoid conflicts:
+
+```bash
+# Example: Use alternative ports to avoid conflicts
+LPR_APP_PORT=8080
+PROMETHEUS_PORT=9091
+GRAFANA_PORT=3001
+BLACKBOX_PORT=9116
+CANARY_PORT=9101
+```
 
 ### Option 2: Individual Service Deployment
 
@@ -89,7 +130,7 @@ If you prefer to deploy monitoring services separately in Coolify:
 1. Create a new service in Coolify
 2. Use image: `ghcr.io/faisalthaheem/open-lpr-prometheus:latest`
 3. Set environment variables as needed
-4. Expose port 9090
+4. Expose port (default: 9090, or set `PROMETHEUS_PORT`)
 5. Add volume: `prometheus_data` mounted to `/prometheus`
 
 #### Grafana Service
@@ -100,14 +141,16 @@ If you prefer to deploy monitoring services separately in Coolify:
    - `GF_SECURITY_ADMIN_USER=admin`
    - `GF_SECURITY_ADMIN_PASSWORD=your-secure-password`
    - `GF_USERS_ALLOW_SIGN_UP=false`
-4. Expose port 3000
+   - `GRAFANA_PORT=3000` (optional, default is 3000)
+4. Expose port (default: 3000, or set `GRAFANA_PORT`)
 5. Add volume: `grafana_data` mounted to `/var/lib/grafana`
 
 #### Blackbox Exporter Service
 
 1. Create a new service in Coolify
 2. Use image: `ghcr.io/faisalthaheem/open-lpr-blackbox:latest`
-3. Expose port 9115
+3. Set environment variable `BLACKBOX_PORT=9115` (optional, default is 9115)
+4. Expose port (default: 9115, or set `BLACKBOX_PORT`)
 
 ## Configuration Changes
 
@@ -149,7 +192,9 @@ After deployment, verify that the monitoring stack is working:
 
 ### Check Prometheus
 
-1. Access Prometheus UI at `http://your-domain:9090` or `http://prometheus.localhost`
+1. Access Prometheus UI at:
+   - `http://your-domain:9090` (or configured `PROMETHEUS_PORT`)
+   - `http://prometheus.localhost` (if using Traefik)
 2. Go to Status > Targets to verify all targets are up
 3. Check that the following targets are being scraped:
    - `prometheus` (self)
@@ -159,7 +204,9 @@ After deployment, verify that the monitoring stack is working:
 
 ### Check Grafana
 
-1. Access Grafana UI at `http://your-domain:3000` or `http://grafana.localhost`
+1. Access Grafana UI at:
+   - `http://your-domain:3000` (or configured `GRAFANA_PORT`)
+   - `http://grafana.localhost` (if using Traefik)
 2. Login with credentials configured in environment variables
 3. Verify that:
    - Prometheus datasource is configured (Configuration > Data Sources)
@@ -167,7 +214,9 @@ After deployment, verify that the monitoring stack is working:
 
 ### Check Blackbox Exporter
 
-1. Access Blackbox Exporter at `http://your-domain:9115` or `http://blackbox.localhost`
+1. Access Blackbox Exporter at:
+   - `http://your-domain:9115` (or configured `BLACKBOX_PORT`)
+   - `http://blackbox.localhost` (if using Traefik)
 2. Verify the configuration is loaded
 3. Check `/metrics` endpoint for metrics
 
@@ -194,6 +243,32 @@ If Coolify cannot pull the images:
 2. Verify environment variables are set correctly
 3. Ensure volumes are created and accessible
 4. Check that ports are not already in use
+5. **If Traefik fails with "port is already allocated":**
+   - Ensure `TRAEFIK_HTTP_PORT` and `TRAEFIK_DASHBOARD_PORT` are NOT set
+   - Coolify may already be using ports 80 and 8080
+   - Traefik will work fine without exposed ports (internal routing only)
+
+### Port Conflicts
+
+If you encounter port conflicts:
+
+1. Check which ports are already in use:
+   ```bash
+   sudo netstat -tulpn | grep LISTEN
+   ```
+
+2. Use alternative ports by setting environment variables:
+   ```bash
+   LPR_APP_PORT=8080
+   PROMETHEUS_PORT=9091
+   GRAFANA_PORT=3001
+   BLACKBOX_PORT=9116
+   CANARY_PORT=9101
+   ```
+
+3. For Coolify deployments, ensure Traefik ports are NOT set:
+   - Leave `TRAEFIK_HTTP_PORT` empty
+   - Leave `TRAEFIK_DASHBOARD_PORT` empty
 
 ### Grafana Datasource Not Connecting
 
@@ -211,60 +286,18 @@ If Coolify cannot pull the images:
 
 ## CI/CD Integration
 
-To automate image building and pushing, add this to your CI/CD pipeline:
+To automate image building and pushing, use the included GitHub Actions workflow:
 
-```yaml
-# .github/workflows/build-monitoring-images.yml
-name: Build Monitoring Images
+`.github/workflows/build-monitoring-images.yml` - This workflow automatically builds and pushes all three monitoring images when:
+- Changes are pushed to `main` branch
+- Monitoring-related files are modified (prometheus/, grafana/, blackbox/, or Dockerfiles)
 
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'prometheus/**'
-      - 'grafana/**'
-      - 'blackbox/**'
-      - 'Dockerfile.prometheus'
-      - 'Dockerfile.grafana'
-      - 'Dockerfile.blackbox'
+The workflow builds images for both `linux/amd64` and `linux/arm64` architectures and supports:
+- Automatic tagging (latest, branch names, semantic versioning)
+- GitHub Container Registry authentication
+- Build caching for faster builds
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Build Prometheus image
-        run: |
-          docker build -f Dockerfile.prometheus -t ghcr.io/faisalthaheem/open-lpr-prometheus:${{ github.sha }} .
-          docker tag ghcr.io/faisalthaheem/open-lpr-prometheus:${{ github.sha }} ghcr.io/faisalthaheem/open-lpr-prometheus:latest
-          docker push ghcr.io/faisalthaheem/open-lpr-prometheus:${{ github.sha }}
-          docker push ghcr.io/faisalthaheem/open-lpr-prometheus:latest
-      
-      - name: Build Grafana image
-        run: |
-          docker build -f Dockerfile.grafana -t ghcr.io/faisalthaheem/open-lpr-grafana:${{ github.sha }} .
-          docker tag ghcr.io/faisalthaheem/open-lpr-grafana:${{ github.sha }} ghcr.io/faisalthaheem/open-lpr-grafana:latest
-          docker push ghcr.io/faisalthaheem/open-lpr-grafana:${{ github.sha }}
-          docker push ghcr.io/faisalthaheem/open-lpr-grafana:latest
-      
-      - name: Build Blackbox image
-        run: |
-          docker build -f Dockerfile.blackbox -t ghcr.io/faisalthaheem/open-lpr-blackbox:${{ github.sha }} .
-          docker tag ghcr.io/faisalthaheem/open-lpr-blackbox:${{ github.sha }} ghcr.io/faisalthaheem/open-lpr-blackbox:latest
-          docker push ghcr.io/faisalthaheem/open-lpr-blackbox:${{ github.sha }}
-          docker push ghcr.io/faisalthaheem/open-lpr-blackbox:latest
-```
+To manually trigger the workflow, go to Actions tab in GitHub and select "Build and Publish Monitoring Images" > Run workflow.
 
 ## Security Considerations
 
