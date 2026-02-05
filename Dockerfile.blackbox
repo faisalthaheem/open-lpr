@@ -14,4 +14,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:9115/-/healthy || exit 1
 
 # Run Blackbox Exporter with custom config
-CMD ["blackbox_exporter", "--config.file=/etc/blackbox_exporter/config.yml"]
+# Note: Base image already has ENTRYPOINT set to blackbox_exporter binary
+CMD ["--config.file=/etc/blackbox_exporter/config.yml"]
