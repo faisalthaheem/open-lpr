@@ -1,152 +1,247 @@
-# Docker Compose Profiles for OpenLPR
+# Docker Compose Profiles Guide
 
-This document describes the refactored Docker Compose setup using the merge design pattern with profiles.
+This document explains the different Docker Compose profiles available for deploying OpenLPR.
 
-## Profiles
+## Overview
 
-### Core Profile (`core`)
-Contains the core infrastructure services:
-- **traefik**: Reverse proxy with dashboard (http://traefik.localhost)
-- **lpr-app**: Main Django application (http://lpr.localhost)
-- **prometheus**: Monitoring system (http://prometheus.localhost)
-- **grafana**: Visualization dashboard (http://grafana.localhost)
+OpenLPR uses Docker Compose profiles to allow flexible deployment scenarios. Each profile groups related services together.
 
-### Inference Profiles
-Choose one based on your hardware:
+## Available Profiles
 
-#### CPU Profile (`cpu`)
-- **llamacpp-cpu**: CPU-based inference server
+### `core` - Core Application and Monitoring
 
-#### AMD Vulkan Profile (`amd-vulkan`)
-- **llamacpp-amd-vulkan**: AMD GPU inference with Vulkan support
+**Services included:**
+- `lpr-app` - Main OpenLPR Django application
+- `prometheus` - Metrics collection and storage
+- `grafana` - Metrics visualization and dashboards
+- `blackbox-exporter` - HTTP probe for health checking
+- `lpr-canary` - Canary tests and synthetic monitoring
 
-#### NVIDIA CUDA Profile (`nvidia-cuda`)
-- **llamacpp-nvidia-cuda**: NVIDIA GPU inference with CUDA support
+**When to use:**
+- Production deployments
+- Development with monitoring
+- When you don't need a reverse proxy
+- Coolify deployments (which provide their own routing)
 
-## Usage Examples
-
-### Start with Core Infrastructure + CPU Inference
+**Deployment:**
 ```bash
-docker-compose --profile core --profile cpu up -d
+docker compose --profile core up -d
 ```
 
-### Start with Core Infrastructure + NVIDIA Inference
+**Access points:**
+- OpenLPR: http://localhost:8000
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (default: admin/admin)
+- Blackbox Exporter: http://localhost:9115
+- Canary Metrics: http://localhost:9100/metrics
+
+**Network Communication:**
+All services in the `core` profile communicate via the `openlpr-network` bridge network, regardless of whether a reverse proxy is used. Services use internal DNS names (e.g., `lpr-app`, `prometheus`) to communicate with each other.
+
+### `proxy` - Reverse Proxy (Traefik)
+
+**Services included:**
+- `traefik` - Modern HTTP reverse proxy and load balancer
+
+**When to use:**
+- Local development with domain-based routing
+- When you need a reverse proxy but not using Coolify
+- To access services via friendly URLs (e.g., `lpr.localhost`)
+- To enable HTTPS/TLS termination
+
+**Deployment:**
 ```bash
-docker-compose --profile core --profile nvidia-cuda up -d
+# Deploy core services + proxy
+docker compose --profile core --profile proxy up -d
+
+# Or add proxy to existing core deployment
+docker compose --profile proxy up -d
 ```
 
-### Start with Core Infrastructure + AMD Vulkan Inference
+**Access points:**
+- OpenLPR: http://lpr.localhost
+- Prometheus: http://prometheus.localhost
+- Grafana: http://grafana.localhost
+- Blackbox Exporter: http://blackbox.localhost
+- Canary: http://canary.localhost
+- Traefik Dashboard: http://traefik.localhost (or `TRAEFIK_HOST`)
+
+**Note:** Traefik uses random ports by default (e.g., 32768, 32769). Set `TRAEFIK_HTTP_PORT` and `TRAEFIK_DASHBOARD_PORT` to use specific ports (e.g., 80, 8080).
+
+### `cpu` - CPU Inference
+
+**Services included:**
+- `llamacpp-cpu` - Llama.cpp server for CPU inference
+
+**When to use:**
+- Systems without GPU acceleration
+- Development and testing
+- When model inference performance is not critical
+
+**Deployment:**
 ```bash
-docker-compose --profile core --profile amd-vulkan up -d
+docker compose --profile core --profile cpu up -d
 ```
 
-### Start Only Core Services
-```bash
-docker-compose --profile core up -d
-```
+**Configuration:**
+See `.env.llamacpp` for model configuration.
 
-### Stop All Services
-```bash
-docker-compose down
-```
+### `amd-vulkan` - AMD GPU Inference
 
-## Environment Configuration
+**Services included:**
+- `llamacpp-amd-vulkan` - Llama.cpp server for AMD GPU inference (Vulkan)
 
-Copy the example environment file:
-```bash
-cp .env.llamacpp.example .env.llamacpp
-```
+**When to use:**
+- Systems with AMD GPUs supporting Vulkan
+- Production deployments requiring faster inference
 
-Edit `.env.llamacpp` with your specific configuration:
-- HuggingFace token for model downloads
-- Django settings (SECRET_KEY, DEBUG, etc.)
-- Grafana credentials
-- Model configuration
-
-## Access Points
-
-After starting the services:
-
-- **OpenLPR Application**: http://lpr.localhost
-- **Traefik Dashboard**: http://traefik.localhost
-- **Prometheus**: http://prometheus.localhost
-- **Grafana**: http://grafana.localhost (admin/admin by default)
-
-## Service Dependencies
-
-- `lpr-app` depends on a healthy inference service (when inference profiles are active)
-- All services share the `openlpr-network` for communication
-- Volumes are shared for data persistence
-
-## Monitoring
-
-The setup includes comprehensive monitoring:
-- **Prometheus** collects metrics from all services
-- **Grafana** provides visualization dashboards
-- **Traefik** provides request metrics and routing
-
-## Hardware Requirements
-
-### CPU Profile
-- Any modern CPU with sufficient RAM
-- Recommended: 8GB+ RAM for model loading
-
-### AMD Vulkan Profile
+**Requirements:**
 - AMD GPU with Vulkan support
-- Proper GPU drivers installed
-- Access to `/dev/dri` and `/dev/kfd` devices
+- GPU drivers installed
+- `/dev/kfd` and `/dev/dri` device access
 
-### NVIDIA CUDA Profile
+**Deployment:**
+```bash
+docker compose --profile core --profile amd-vulkan up -d
+```
+
+### `nvidia-cuda` - NVIDIA GPU Inference
+
+**Services included:**
+- `llamacpp-nvidia-cuda` - Llama.cpp server for NVIDIA GPU inference (CUDA)
+
+**When to use:**
+- Systems with NVIDIA GPUs
+- Production deployments requiring fastest inference
+- When using NVIDIA CUDA ecosystem
+
+**Requirements:**
 - NVIDIA GPU with CUDA support
 - NVIDIA Container Toolkit installed
-- Proper GPU drivers
+- GPU drivers installed
 
-## Development vs Production
-
-### Development
-- Uses localhost domains
-- Debug mode enabled
-- Basic authentication only
-
-### Production (TODO)
-- Configure proper domains
-- Set up SSL certificates
-- Secure authentication
-- Resource limits
-- Backup strategies
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port Conflicts**: Ensure ports 80, 8080, 3000, 9090, 8000, 8001 are available
-2. **GPU Access**: Verify GPU drivers and container runtime for GPU profiles
-3. **Permission Issues**: Check Docker socket access for Traefik
-4. **Model Downloads**: Verify HuggingFace token and network access
-
-### Health Checks
-
-All services include health checks. Monitor with:
+**Deployment:**
 ```bash
-docker-compose ps
-docker-compose logs [service-name]
+docker compose --profile core --profile nvidia-cuda up -d
 ```
 
-## Migration from Old Setup
+## Profile Combinations
 
-The old separate compose files are deprecated. To migrate:
-1. Backup existing data in `container-data` and `container-media`
-2. Update environment file format
-3. Use new profile commands to start services
-4. Verify all functionality works as expected
+### Development Setup (No Proxy)
+```bash
+docker compose --profile core up -d
+```
+Access services directly via ports.
 
-## Customization
+### Development Setup (With Proxy)
+```bash
+docker compose --profile core --profile proxy up -d
+```
+Access services via domain names.
 
-### Adding New Services
-Add services to `docker-compose.yml` with appropriate profiles and labels.
+### Production with CPU Inference
+```bash
+docker compose --profile core --profile cpu up -d
+```
 
-### Modifying Routes
-Update `traefik/dynamic/config.yml` for custom routing rules.
+### Production with NVIDIA GPU
+```bash
+docker compose --profile core --profile nvidia-cuda up -d
+```
 
-### Monitoring Configuration
-Modify `prometheus/prometheus.yml` and Grafana provisioning files for custom metrics.
+### Production with AMD GPU
+```bash
+docker compose --profile core --profile amd-vulkan up -d
+```
+
+## Environment Variables
+
+### Service Ports
+
+All service ports are configurable via environment variables:
+
+```bash
+# Core services
+LPR_APP_PORT=8000
+PROMETHEUS_PORT=9090
+GRAFANA_PORT=3000
+BLACKBOX_PORT=9115
+CANARY_PORT=9100
+
+# Proxy (only when using proxy profile)
+TRAEFIK_HTTP_PORT=80          # Leave unset for Coolify
+TRAEFIK_DASHBOARD_PORT=8080   # Leave unset for Coolify
+```
+
+### Proxy Host Names
+
+When using the `proxy` profile, you can customize domain names:
+
+```bash
+TRAEFIK_HOST=traefik.yourdomain.com
+PROMETHEUS_HOST=prometheus.yourdomain.com
+GRAFANA_HOST=grafana.yourdomain.com
+BLACKBOX_HOST=blackbox.yourdomain.com
+CANARY_HOST=canary.yourdomain.com
+LPR_APP_HOST=lpr.yourdomain.com
+```
+
+## Coolify Deployment
+
+For Coolify deployments:
+
+1. **Use the `core` profile** - don't include `proxy`
+2. **DO NOT set** `TRAEFIK_HTTP_PORT` or `TRAEFIK_DASHBOARD_PORT`
+3. Coolify provides its own reverse proxy and routing
+4. Services communicate via internal Docker network
+5. Access services via Coolify's configured domains
+
+```bash
+# Coolify deployment command
+docker compose --profile core up -d
+```
+
+## Managing Profiles
+
+### View running services
+```bash
+docker compose ps
+```
+
+### Stop specific profile
+```bash
+docker compose --profile proxy down
+```
+
+### Stop all services
+```bash
+docker compose down
+```
+
+### View logs
+```bash
+# All services
+docker compose logs -f
+
+# Specific service
+docker compose logs -f lpr-app
+
+# Specific profile
+docker compose --profile proxy logs -f
+```
+
+## Network Architecture
+
+All services are connected to the `openlpr-network` bridge network:
+
+- **Internal communication**: Services use DNS names (e.g., `http://lpr-app:8000`)
+- **External access**: Via exposed ports or proxy routing
+- **No proxy needed**: Services communicate with each other regardless of proxy profile
+
+Example internal communication:
+- Prometheus scrapes metrics from `http://lpr-app:8000/metrics`
+- Blackbox exporter probes `http://lpr-app:8000/health`
+- Canary tests `http://lpr-app:8000/api/v1/ocr/`
+- Grafana connects to `http://prometheus:9090`
+
+This internal communication works with or without the Traefik proxy enabled.

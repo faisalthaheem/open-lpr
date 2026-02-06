@@ -42,7 +42,7 @@ services:
       - openlpr-network
     restart: unless-stopped
     profiles:
-      - core
+      - proxy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.rule=${TRAEFIK_HOST:-Host(`traefik.localhost`)}"
