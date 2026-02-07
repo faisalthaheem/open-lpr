@@ -20,35 +20,6 @@ volumes:
 
 services:
   # Core Services
-  traefik:
-    image: traefik:latest
-    container_name: traefik
-    command:
-      - "--api.insecure=true"
-      - "--entrypoints.web.address=:80"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=openlpr-network"
-      - "--log.level=INFO"
-      - "--accesslog=true"
-    # Ports are configurable via environment variables
-    # If TRAEFIK_HTTP_PORT is empty/not set, ports won't be exposed (useful for Coolify)
-    ports:
-      - "${TRAEFIK_HTTP_PORT:-}:80"
-      - "${TRAEFIK_DASHBOARD_PORT:-}:8080"  # Traefik dashboard
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - openlpr-network
-    restart: unless-stopped
-    profiles:
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=${TRAEFIK_HOST:-Host(`traefik.localhost`)}"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-
   lpr-app:
     env_file:
       - .env.llamacpp
