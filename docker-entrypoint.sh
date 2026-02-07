@@ -36,6 +36,21 @@ else
     echo "Warning: Running as non-root, may not be able to set media permissions"
 fi
 
+# Check if the metrics directory exists
+if [ ! -d "/app/metrics" ]; then
+    echo "Creating metrics directory for persistent metrics storage..."
+    mkdir -p /app/metrics
+fi
+
+# Ensure proper permissions for metrics directory
+# Run as root to set permissions, then switch back
+if [ "$(id -u)" = "0" ]; then
+    chown -R django:django /app/metrics
+    chmod -R 755 /app/metrics
+else
+    echo "Warning: Running as non-root, may not be able to set metrics permissions"
+fi
+
 # Change to app directory
 cd /app
 
