@@ -1,0 +1,300 @@
+networks:
+  openlpr-network:
+    driver: bridge
+
+volumes:
+  lpr_data:
+    driver: local
+  lpr_media:
+    driver: local
+  lpr_static:
+    driver: local
+  model_files:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  lpr_metrics:
+    driver: local
+
+services:
+  # Core Services
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=openlpr-network"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    # Ports are configurable via environment variables
+    # If TRAEFIK_HTTP_PORT is empty/not set, ports won't be exposed (useful for Coolify)
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-}:80"
+      - "${TRAEFIK_DASHBOARD_PORT:-}:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    profiles:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=${TRAEFIK_HOST:-Host(`traefik.localhost`)}"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+  lpr-app:
+    env_file:
+      - .env.llamacpp
+    image: ghcr.io/faisalthaheem/open-lpr:latest
+    container_name: lpr-app
+    volumes:
+      # SQLite database persistence
+      - ./container-data:/app/data
+      # Media files persistence (uploaded and processed images)
+      - ./container-media:/app/media
+      # Static files (optional - for development)
+      - ./staticfiles:/app/staticfiles
+      # Metrics persistence
+      - ./container-metrics:/app/metrics
+    # Run as root initially for setup, then entrypoint switches to django user
+    user: "0:0"
+    environment:
+      # Django Settings
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-me-in-production}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,lpr-app}
+      
+      # Qwen3-VL API Configuration - Updated to use local LlamaCpp service
+      - QWEN_API_KEY=${QWEN_API_KEY:-sk-llamacpp-local}
+      - QWEN_BASE_URL=${QWEN_BASE_URL:-http://llamacpp-cpu:8000/v1}
+      - QWEN_MODEL=${QWEN_MODEL:-gpt-4-vision-preview}  # Model alias for compatibility
+      
+      # File Upload Settings
+      - UPLOAD_FILE_MAX_SIZE=${UPLOAD_FILE_MAX_SIZE:-10485760}
+      - MAX_BATCH_SIZE=${MAX_BATCH_SIZE:-10}
+      
+      # Database Configuration
+      - DATABASE_PATH=/app/data/db.sqlite3
+      
+      # Metrics persistence
+      - METRICS_FILE_PATH=/app/metrics/metrics_state.json
+      
+      # Canary Configuration
+      - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
+      - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}
+      - CANARY_ENABLED=${CANARY_ENABLED:-true}
+      
+      # Optional: Superuser creation
+      - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-}
+      - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-}
+      - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-}
+    networks:
+      - openlpr-network
+    # Port is configurable via environment variable
+    ports:
+      - "${LPR_APP_PORT:-8000}:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    entrypoint: ["./docker-entrypoint.sh"]
+    command: ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "120", "lpr_project.wsgi:application"]
+    profiles:
+      - core
+
+  prometheus:
+    # Use custom image with config baked in
+    image: ghcr.io/faisalthaheem/open-lpr-prometheus:latest
+    container_name: prometheus
+    # Port is configurable via environment variable
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      # Only need data volume, no config mount needed
+      - prometheus_data:/prometheus
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    profiles:
+      - core
+
+  grafana:
+    # Use custom image with provisioning baked in
+    image: ghcr.io/faisalthaheem/open-lpr-grafana:latest
+    container_name: grafana
+    # Port is configurable via environment variable
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      # Only need data volume, no provisioning mount needed
+      - grafana_data:/var/lib/grafana
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    profiles:
+      - core
+
+  blackbox-exporter:
+    # Use custom image with config baked in
+    image: ghcr.io/faisalthaheem/open-lpr-blackbox:latest
+    container_name: blackbox-exporter
+    # Port is configurable via environment variable
+    ports:
+      - "${BLACKBOX_PORT:-9115}:9115"
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    profiles:
+      - core
+
+  lpr-canary:
+    env_file:
+      - .env.llamacpp
+    image: ghcr.io/faisalthaheem/open-lpr-canary:latest
+    container_name: lpr-canary
+    # Port is configurable via environment variable
+    ports:
+      - "${CANARY_PORT:-9100}:9100"
+    environment:
+      - LPR_API_URL=${LPR_API_URL:-http://lpr-app:8000/api/v1/ocr/}
+      - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
+      - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}
+      - CANARY_INTERVAL=${CANARY_INTERVAL:-900}
+      - PROMETHEUS_PORT=9100
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    profiles:
+      - core
+
+  # Inference Services
+  llamacpp-cpu:
+    env_file:
+      - .env.llamacpp
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: llamacpp-cpu
+    ports:
+      - "8001:8000"  # Use 8001 to avoid conflict with OpenLPR on 8000
+    volumes:
+      # Model storage
+      - ./model_files:/models
+      - ./model_files_cache:/root/.cache/
+    environment:
+      # Model configuration
+      - LLAMA_ARG_MODEL=/models/${MODEL_FILE:-Qwen3-VL-4B-Instruct-Q5_K_M.gguf}
+      - LLAMA_ARG_HF_REPO=${MODEL_REPO:-unsloth/Qwen3-VL-4B-Instruct-GGUF}
+      - LLAMA_ARG_HF_FILE=${MODEL_FILE:-Qwen3-VL-4B-Instruct-Q5_K_M.gguf}
+      - LLAMA_ARG_MMPROJ_URL=${MMPROJ_URL:-https://huggingface.co/unsloth/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-BF16.gguf}
+      - HF_TOKEN=${HF_TOKEN}
+      - LLAMA_ARG_JINJA=1
+      - LLAMA_ARG_CHAT_TEMPLATE=chatml
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8000
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - cpu
+
+  llamacpp-amd-vulkan:
+    env_file:
+      - .env.llamacpp
+    image: ghcr.io/ggml-org/llama.cpp:server-vulkan
+    container_name: llamacpp-amd-vulkan
+    ports:
+      - "8001:8000"  # Use 8001 to avoid conflict with OpenLPR on 8000
+    volumes:
+      # Model storage
+      - ./model_files:/models
+      - ./model_files_cache:/root/.cache/
+    environment:
+      # Model configuration
+      - LLAMA_ARG_MODEL=/models/${MODEL_FILE:-Qwen3-VL-4B-Instruct-Q5_K_M.gguf}
+      - LLAMA_ARG_HF_REPO=${MODEL_REPO:-unsloth/Qwen3-VL-4B-Instruct-GGUF}
+      - LLAMA_ARG_HF_FILE=${MODEL_FILE:-Qwen3-VL-4B-Instruct-Q5_K_M.gguf}
+      - LLAMA_ARG_MMPROJ_URL=${MMPROJ_URL:-https://huggingface.co/unsloth/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-BF16.gguf}
+      - HF_TOKEN=${HF_TOKEN}
+      - LLAMA_ARG_JINJA=1
+      - LLAMA_ARG_CHAT_TEMPLATE=chatml
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8000
+      - LLAMA_ARG_DEVICE=vulkan0
+    networks:
+      - openlpr-network
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    security_opt:
+      - seccomp=unconfined
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - amd-vulkan
+
+  llamacpp-nvidia-cuda:
+    env_file:
+      - .env.llamacpp
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    container_name: llamacpp-nvidia-cuda
+    ports:
+      - "8001:8000"  # Use 8001 to avoid conflict with OpenLPR on 8000
+    volumes:
+      # Model storage
+      - ./model_files:/models
+      - ./model_files_cache:/root/.cache/
+    environment:
+      # Model configuration
+      - LLAMA_ARG_MODEL=/models/${MODEL_FILE:-Qwen3-VL-4B-Instruct-Q5_K_M.gguf}
+      - LLAMA_ARG_HF_REPO=${MODEL_REPO:-unsloth/Qwen3-VL-4B-Instruct-GGUF}
+      - LLAMA_ARG_HF_FILE=${MODEL_FILE:-Qwen3-VL-4B-Instruct-Q5_K_M.gguf}
+      - LLAMA_ARG_MMPROJ_URL=${MMPROJ_URL:-https://huggingface.co/unsloth/Qwen3-VL-4B-Instruct-GGUF/resolve/main/mmproj-BF16.gguf}
+      - HF_TOKEN=${HF_TOKEN}
+      - LLAMA_ARG_JINJA=1
+      - LLAMA_ARG_CHAT_TEMPLATE=chatml
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8000
+      - LLAMA_ARG_N_GPUS=1
+      - LLAMA_ARG_GPU_LAYERS=99
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    profiles:
+      - nvidia-cuda

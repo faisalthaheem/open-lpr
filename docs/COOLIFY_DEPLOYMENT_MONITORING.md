@@ -6,6 +6,26 @@ This guide explains how to deploy the OpenLPR monitoring stack (Prometheus, Graf
 
 The monitoring services use custom Docker images that include all necessary configurations, eliminating the need for file mounting from the repository. This approach works seamlessly with Coolify deployments that don't clone the git repository.
 
+## Docker Compose Files
+
+The project provides two docker-compose files for different deployment scenarios:
+
+- **`docker-compose.yaml`** - Main configuration file for Coolify deployments (no Traefik labels)
+- **`docker-compose.traefik.yaml`** - Traefik-enabled configuration for standalone deployments (includes Traefik labels)
+
+### Which File to Use?
+
+**For Coolify deployments**: Use `docker-compose.yaml`
+- Traefik labels removed to avoid conflicts with Coolify's built-in proxy
+- Services accessible directly via their assigned ports
+- Coolify handles all routing
+
+**For standalone deployments**: Use `docker-compose.traefik.yaml`
+- Includes Traefik labels for routing
+- Services accessible via host-based routing (e.g., `grafana.localhost`)
+- Requires `--profile proxy` to start Traefik
+- Example: `docker-compose -f docker-compose.traefik.yaml --profile proxy up`
+
 ## Custom Images
 
 Three custom images are available:
@@ -38,11 +58,13 @@ The script will:
 
 ## Deploying to Coolify
 
-### Option 1: Using docker-compose.yml
+### Option 1: Using docker-compose.yaml (Recommended for Coolify)
+
+**Important:** Use `docker-compose.yaml` for Coolify deployments. This file has Traefik labels removed to avoid conflicts with Coolify's built-in routing.
 
 1. **Update Coolify Deployment Configuration**
 
-   Ensure your Coolify deployment uses the custom images. The `docker-compose.yml` has been updated to use the custom images:
+   Ensure your Coolify deployment uses the custom images. The `docker-compose.yaml` has been updated to use the custom images:
 
    ```yaml
    prometheus:
