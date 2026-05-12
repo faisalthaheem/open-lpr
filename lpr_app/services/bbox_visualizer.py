@@ -18,14 +18,20 @@ class BoundingBoxVisualizer:
         'ocr': (0, 255, 0),        # Green for OCR text
         'text': (0, 0, 255),        # Blue for general text
     }
-    
-    # Default font sizes
-    FONT_SIZES = {
-        'small': 12,
-        'medium': 16,
-        'large': 20,
-    }
-    
+
+    TTF_FONT_PATHS = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+        "arial.ttf",
+        "/usr/share/fonts/truetype/ubuntu/UbuntuSans-Regular.ttf",
+    ]
+
+    def _compute_font_size(self, image_height: int) -> int:
+        return max(16, min(64, int(image_height * 0.02)))
+
     def __init__(self, image_path: str):
         """
         Initialize the visualizer with an image path
@@ -37,26 +43,32 @@ class BoundingBoxVisualizer:
         self.image = None
         self.draw = None
         self.font = None
-        
+        self.font_size = 16
+
         try:
             self.image = Image.open(image_path)
             self.draw = ImageDraw.Draw(self.image)
-            
-            # Try to load a font, fallback to default if not available
-            try:
-                self.font = ImageFont.truetype("arial.ttf", 14)
-            except (OSError, IOError):
-                try:
-                    # Try system fonts
-                    self.font = ImageFont.load_default()
-                except:
-                    self.font = None
-                    
-            logger.info(f"Initialized visualizer for image: {image_path}")
-            
+
+            self.font_size = self._compute_font_size(self.image.height)
+            self.font = self._load_font(self.font_size)
+
+            logger.info(f"Initialized visualizer for image: {image_path} (font_size={self.font_size})")
+
         except Exception as e:
             logger.error(f"Error loading image {image_path}: {str(e)}")
             raise
+
+    def _load_font(self, size: int):
+        for path in self.TTF_FONT_PATHS:
+            try:
+                return ImageFont.truetype(path, size)
+            except (OSError, IOError):
+                continue
+        logger.warning("No TrueType font found; falling back to default font")
+        try:
+            return ImageFont.load_default(size=size)
+        except TypeError:
+            return ImageFont.load_default()
     
     def draw_bounding_box(self, x1: Optional[int] = None, y1: Optional[int] = None, width: Optional[int] = None, height: Optional[int] = None,
                           x2: Optional[int] = None, y2: Optional[int] = None, color: Tuple[int, int, int] = (255, 0, 0),
@@ -102,21 +114,25 @@ class BoundingBoxVisualizer:
                 text_width = bbox[2] - bbox[0]
                 text_height = bbox[3] - bbox[1]
             except:
-                # Fallback for older PIL versions
-                text_width, text_height = self.draw.textsize(label, font=self.font) if self.font else (len(label) * 8, 16)
+                text_width, text_height = len(label) * 8, 16
             
-            # Draw background for text
-            label_y = max(0, y - text_height - 4)
+            padding = max(4, self.font_size // 4)
+            label_y = max(0, y - text_height - padding)
             self.draw.rectangle(
-                [x, label_y, x + text_width + 4, label_y + text_height + 4],
+                [x, label_y, x + text_width + padding * 2, label_y + text_height + padding * 2],
+                fill=(30, 30, 30)
+            )
+
+            color_bar_width = max(3, self.font_size // 6)
+            self.draw.rectangle(
+                [x, label_y, x + color_bar_width, label_y + text_height + padding * 2],
                 fill=color
             )
             
-            # Draw text
             self.draw.text(
-                (x + 2, label_y + 2),
+                (x + color_bar_width + padding // 2, label_y + padding),
                 label,
-                fill=(255, 255, 255),  # White text
+                fill=(255, 255, 255),
                 font=self.font
             )
     
