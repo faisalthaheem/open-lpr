@@ -14,7 +14,13 @@ from typing import Dict, Any, Optional
 from django.conf import settings
 
 from ..models import UploadedImage, ProcessingLog
-from .qwen_client import get_qwen_client, LPR_PROMPT, parse_lpr_response
+from .qwen_client import (
+    get_qwen_client, 
+    DETECTION_PROMPT, 
+    OCR_PROMPT,
+    parse_detection_response, 
+    parse_ocr_response
+)
 from .image_processor import ImageProcessor
 from .bbox_visualizer import visualize_lpr_on_image, create_side_by_side_comparison
 
@@ -27,7 +33,11 @@ class ImageProcessingService:
     @staticmethod
     def process_uploaded_image(uploaded_image: UploadedImage, save_image: bool = True) -> Dict[str, Any]:
         """
-        Process an uploaded image through the LPR pipeline.
+        Process an uploaded image through the three-phase LPR pipeline.
+        
+        Phase 1: Downscale to 256x256 → detect license plates only
+        Phase 2: Crop detected plates → batch OCR
+        Phase 3: Merge results → visualize on original image
         
         Args:
             uploaded_image: UploadedImage instance
@@ -49,19 +59,15 @@ class ImageProcessingService:
             ProcessingLog.objects.create(
                 uploaded_image=uploaded_image,
                 status='api_call',
-                message='Starting Qwen3-VL API call'
+                message='Starting Phase 1: License plate detection'
             )
             
             start_time = time.time()
             
-            # Prepare image for API
+            # Get original image path
             image_path = uploaded_image.original_image.path
-            prepared_path = ImageProcessor.prepare_image_for_api(image_path)
             
-            if not prepared_path:
-                return {'success': False, 'error': 'Failed to prepare image for API'}
-            
-            # Get image dimensions for coordinate scaling
+            # Get original image dimensions for coordinate scaling
             original_image_info = ImageProcessor.get_image_info(image_path)
             if not original_image_info:
                 return {'success': False, 'error': 'Failed to get original image info'}
@@ -69,35 +75,150 @@ class ImageProcessingService:
             original_h = original_image_info['height']
             original_w = original_image_info['width']
             
-            # Get resized image dimensions if different from original
-            resized_h = original_h
-            resized_w = original_w
-            if prepared_path != image_path:
-                resized_image_info = ImageProcessor.get_image_info(prepared_path)
-                if resized_image_info:
-                    resized_h = resized_image_info['height']
-                    resized_w = resized_image_info['width']
+            # ========== PHASE 1: License Plate Detection ==========
+            logger.info(f"PHASE 1: Detecting license plates on downscaled image")
             
-            # Encode image to base64
-            base64_image = ImageProcessor.encode_image_to_base64(prepared_path)
+            # Downscale image for detection (size derived from plate height requirements)
+            downscaled_path = ImageProcessor.downscale_for_detection(
+                image_path,
+                min_plate_height=settings.MIN_PLATE_HEIGHT,
+                plate_height_fraction=settings.PLATE_HEIGHT_FRACTION,
+            )
+            if not downscaled_path:
+                return {'success': False, 'error': 'Failed to downscale image for detection'}
             
-            if not base64_image:
-                return {'success': False, 'error': 'Failed to encode image'}
+            # Get downscaled image dimensions
+            downscaled_info = ImageProcessor.get_image_info(downscaled_path)
+            if not downscaled_info:
+                return {'success': False, 'error': 'Failed to get downscaled image info'}
+            downscaled_h = downscaled_info['height']
+            downscaled_w = downscaled_info['width']
             
-            # Call Qwen3-VL API with customized prompt
+            # Encode downscaled image to base64
+            base64_downscaled = ImageProcessor.encode_image_to_base64(downscaled_path)
+            if not base64_downscaled:
+                return {'success': False, 'error': 'Failed to encode downscaled image'}
+            
+            # Call API with detection-only prompt
             client = get_qwen_client()
-            # Customize prompt with actual filename
-            customized_prompt = LPR_PROMPT.replace('[actual filename of the image]', uploaded_image.filename)
-            api_response = client.analyze_image(base64_image, customized_prompt)
+            detection_prompt = DETECTION_PROMPT.replace('[actual filename of the image]', uploaded_image.filename)
+            detection_response = client.analyze_image(base64_downscaled, detection_prompt)
             
-            if not api_response:
-                return {'success': False, 'error': 'API call failed'}
+            if not detection_response:
+                return {'success': False, 'error': 'Phase 1 API call failed'}
             
-            # Parse response with coordinate scaling
-            parsed_response = parse_lpr_response(api_response, original_h, original_w, resized_h, resized_w)
+            # Parse detection response and scale coordinates to original image
+            detection_data = parse_detection_response(detection_response, original_h, original_w, downscaled_h, downscaled_w)
+            if not detection_data:
+                return {'success': False, 'error': 'Failed to parse Phase 1 response'}
             
-            if not parsed_response:
-                return {'success': False, 'error': 'Failed to parse API response'}
+            # Extract detections
+            detections = detection_data.get('detections', [])
+            if not detections:
+                logger.info(f"No license plates detected in image")
+                detections = []
+            
+            logger.info(f"Phase 1 complete: Detected {len(detections)} license plate(s)")
+            
+            # Clean up downscaled image
+            if downscaled_path != image_path and os.path.exists(downscaled_path):
+                os.remove(downscaled_path)
+            
+            # ========== PHASE 2: OCR on Cropped Plates ==========
+            logger.info(f"PHASE 2: Performing OCR on detected license plates")
+            
+            crop_paths = []
+            crop_offsets = []
+            
+            # Crop each detected plate with 10% padding
+            for idx, detection in enumerate(detections):
+                if 'plate' not in detection or 'coordinates' not in detection['plate']:
+                    continue
+                
+                coords = detection['plate']['coordinates']
+                x1 = int(coords['x1'])
+                y1 = int(coords['y1'])
+                x2 = int(coords['x2'])
+                y2 = int(coords['y2'])
+                
+                # Crop region with 10% padding
+                crop_result = ImageProcessor.crop_region(image_path, x1, y1, x2, y2, padding_pct=0.1)
+                if crop_result:
+                    crop_path, crop_offset_x, crop_offset_y = crop_result
+                    crop_paths.append(crop_path)
+                    crop_offsets.append((crop_offset_x, crop_offset_y))
+                    logger.info(f"Cropped plate {idx + 1}: {crop_path} at offset ({crop_offset_x}, {crop_offset_y})")
+            
+            # Perform batch OCR on all cropped plates
+            ocr_results = []
+            if crop_paths:
+                # Encode all crops to base64
+                base64_crops = []
+                for crop_path in crop_paths:
+                    base64_crop = ImageProcessor.encode_image_to_base64(crop_path)
+                    if base64_crop:
+                        base64_crops.append(base64_crop)
+                    else:
+                        base64_crops.append(None)
+                        logger.error(f"Failed to encode crop: {crop_path}")
+                
+                # Batch OCR call
+                ocr_responses = client.analyze_images_batch(base64_crops, OCR_PROMPT)
+                
+                if ocr_responses:
+                    # Parse each OCR response and scale coordinates to original image
+                    for idx, (ocr_response, (crop_offset_x, crop_offset_y)) in enumerate(zip(ocr_responses, crop_offsets)):
+                        if not ocr_response or not crop_paths[idx]:
+                            # Failed OCR for this crop, add empty OCR data
+                            detections[idx]['ocr'] = []
+                            continue
+                        
+                        # Get crop dimensions
+                        crop_info = ImageProcessor.get_image_info(crop_paths[idx])
+                        if not crop_info:
+                            logger.error(f"Failed to get crop info: {crop_paths[idx]}")
+                            detections[idx]['ocr'] = []
+                            continue
+                        
+                        crop_h = crop_info['height']
+                        crop_w = crop_info['width']
+                        
+                        # Parse OCR response and scale coordinates
+                        ocr_data = parse_ocr_response(ocr_response, crop_h, crop_w, crop_offset_x, crop_offset_y)
+                        if ocr_data:
+                            # Check if text was detected
+                            text = ocr_data.get('text', '')
+                            confidence = ocr_data.get('confidence', 0)
+                            
+                            if text and confidence > 0:
+                                detections[idx]['ocr'] = [{
+                                    'text': text,
+                                    'confidence': confidence,
+                                    'coordinates': ocr_data.get('coordinates', {})
+                                }]
+                                logger.info(f"OCR result {idx + 1}: '{text}' (confidence: {confidence:.2f})")
+                            else:
+                                detections[idx]['ocr'] = []
+                                logger.info(f"OCR result {idx + 1}: No text detected")
+                        else:
+                            detections[idx]['ocr'] = []
+                            logger.error(f"Failed to parse OCR response {idx + 1}")
+                
+                # Clean up crop files
+                for crop_path in crop_paths:
+                    if os.path.exists(crop_path):
+                        os.remove(crop_path)
+            
+            logger.info(f"Phase 2 complete: OCR processed for {len(detections)} plate(s)")
+            
+            # ========== PHASE 3: Merge and Visualize ==========
+            logger.info(f"PHASE 3: Merging results and visualizing")
+            
+            # Create merged response in expected format
+            merged_response = {
+                'filename': uploaded_image.filename,
+                'detections': detections
+            }
             
             # Conditionally visualize and save processed images
             output_path = None
@@ -111,7 +232,7 @@ class ImageProcessingService:
                     output_filename
                 )
                 
-                success = visualize_lpr_on_image(image_path, parsed_response, output_path)
+                success = visualize_lpr_on_image(image_path, merged_response, output_path)
                 
                 if not success:
                     return {'success': False, 'error': 'Failed to create visualization'}
@@ -126,7 +247,7 @@ class ImageProcessingService:
                 create_side_by_side_comparison(image_path, output_path, comparison_path)
             
             # Update database record
-            uploaded_image.api_response = parsed_response  # type: ignore[arg-type]
+            uploaded_image.api_response = merged_response  # type: ignore[arg-type]
             uploaded_image.processing_status = 'completed'
             uploaded_image.processing_timestamp = datetime.now()
             
@@ -156,10 +277,6 @@ class ImageProcessingService:
                 message=f'Processing completed successfully',
                 duration_ms=int(duration)
             )
-            
-            # Clean up temporary files
-            if prepared_path != image_path and os.path.exists(prepared_path):
-                os.remove(prepared_path)
             
             processing_duration = time.time() - processing_start_time
             

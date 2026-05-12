@@ -128,6 +128,10 @@ UPLOAD_FILE_MAX_SIZE = 250 * 1024  # 250KB
 # Allowed file types for upload
 ALLOWED_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'webp']
 
+# Detection pipeline settings
+MIN_PLATE_HEIGHT = config('MIN_PLATE_HEIGHT', default=30, cast=int)
+PLATE_HEIGHT_FRACTION = config('PLATE_HEIGHT_FRACTION', default=0.05, cast=float)
+
 # Qwen3-VL API Configuration
 QWEN_API_KEY = config('QWEN_API_KEY', default='')
 QWEN_BASE_URL = config('QWEN_BASE_URL', default='https://ollama.computedsynergy.com/v1')

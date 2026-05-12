@@ -109,9 +109,110 @@ class QwenVLClient:
         except Exception as e:
             logger.error(f"Health check failed: {str(e)}")
             return False
+    
+    def analyze_images_batch(self, base64_images: list[str], prompt: str) -> Optional[list[str]]:
+        """
+        Send multiple images with prompt to Qwen3-VL for analysis
+        
+        Args:
+            base64_images: List of base64 encoded image strings
+            prompt: Text prompt for the model
+            
+        Returns:
+            List of model response texts or None if error occurs
+        """
+        try:
+            start_time = time.time()
+            
+            results = []
+            
+            for idx, base64_image in enumerate(base64_images):
+                messages = [{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+                        },
+                        {"type": "text", "text": prompt}
+                    ]
+                }]
+                
+                logger.info(f"DEBUG: Sending batch request {idx + 1}/{len(base64_images)} to Qwen3-VL API")
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_tokens=4096,
+                    temperature=0.1
+                )
+                
+                result = response.choices[0].message.content
+                results.append(result)
+            
+            duration = (time.time() - start_time) * 1000
+            logger.info(f"Batch API call ({len(base64_images)} images) completed successfully in {duration:.2f}ms")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error in batch Qwen3-VL API call: {str(e)}")
+            return None
 
 
-# LPR prompt template for license plate recognition
+# Detection-only prompt template (Phase 1)
+DETECTION_PROMPT = """Detect license plates in the attached image and respond with a JSON document with the following structure. Analyze the actual image content and provide real detection results. DO NOT copy example data - analyze the image and provide actual results.
+
+{
+    "filename": "[actual filename of the image]",
+    "detections": [
+        {
+            "plate": {
+                "confidence": 0.95,
+                "coordinates": {
+                    "x1": 100,
+                    "y1": 200,
+                    "x2": 400,
+                    "y2": 300
+                }
+            }
+        }
+    ]
+}
+
+IMPORTANT INSTRUCTIONS:
+1. Analyze the ACTUAL image provided
+2. Detect ALL license plates in the image
+3. Do NOT extract text - only detect license plate bounding boxes
+4. Provide REAL coordinates that match the image content
+5. Use the actual filename from the image
+6. If no license plates are found, return an empty detections array: "detections": []
+7. Be precise with coordinates - they should accurately bound the license plates"""
+
+
+# OCR-only prompt template (Phase 2)
+OCR_PROMPT = """Perform OCR on the attached image and respond with a JSON document with the following structure. Analyze the actual image content and provide real results. DO NOT copy example data - analyze the image and provide actual results.
+
+{
+    "text": "[actual license plate text you detect]",
+    "confidence": 0.95,
+    "coordinates": {
+        "x1": 10,
+        "y1": 10,
+        "x2": 290,
+        "y2": 90
+    }
+}
+
+IMPORTANT INSTRUCTIONS:
+1. Analyze the ACTUAL image provided
+2. Extract the ACTUAL text from the license plate
+3. Provide REAL coordinates that bound the detected text within the image
+4. If no text is found, return an empty string for "text" and 0 for "confidence"
+5. Be precise with coordinates - they should accurately bound the text"""
+
+
+# Original combined LPR prompt (kept for backward compatibility)
 LPR_PROMPT = """Perform OCR on the attached image and respond with a JSON document with the following structure. Analyze the actual image content and provide real detection results. DO NOT copy example data - analyze the image and provide actual results.
 
 {
@@ -324,3 +425,107 @@ def scale_detection_coordinates(detection: Dict[str, Any], original_h: int, orig
                         bbox = [coords['x1'], coords['y1'], coords['x2'], coords['y2']]
                         scaled_bbox = convert_from_qwen2vl_format(bbox, original_h, original_w, resized_h, resized_w)
                         coords['x1'], coords['y1'], coords['x2'], coords['y2'] = scaled_bbox
+
+
+def parse_detection_response(response_text: str, original_h: Optional[int] = None, original_w: Optional[int] = None,
+                             resized_h: Optional[int] = None, resized_w: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """
+    Parse the detection response from Phase 1 (plate detection only, no OCR)
+    
+    Args:
+        response_text: Raw response text from the API
+        original_h: Original image height
+        original_w: Original image width
+        resized_h: Height of image sent to API (if resized)
+        resized_w: Width of image sent to API (if resized)
+        
+    Returns:
+        Parsed JSON data with scaled coordinates or None if parsing fails
+    """
+    try:
+        # Try to extract JSON from the response
+        if '```json' in response_text:
+            start = response_text.find('```json') + 7
+            end = response_text.find('```', start)
+            json_text = response_text[start:end].strip()
+        elif '```' in response_text:
+            start = response_text.find('```') + 3
+            end = response_text.find('```', start)
+            json_text = response_text[start:end].strip()
+        else:
+            json_text = response_text.strip()
+        
+        # Parse the JSON
+        parsed_data = json.loads(json_text)
+        
+        # Scale coordinates if image dimensions are provided
+        if original_h is not None and original_w is not None:
+            parsed_data = scale_coordinates_in_response(parsed_data, original_h, original_w, resized_h, resized_w)
+        
+        logger.info("Successfully parsed detection response")
+        return parsed_data
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse detection JSON response: {str(e)}")
+        logger.debug(f"Response text: {response_text}")
+        return None
+    except Exception as e:
+        logger.error(f"Error parsing detection response: {str(e)}")
+        return None
+
+
+def parse_ocr_response(response_text: str, crop_h: int, crop_w: int,
+                      crop_offset_x: int, crop_offset_y: int) -> Optional[Dict[str, Any]]:
+    """
+    Parse the OCR response from Phase 2 and scale coordinates back to original image
+    
+    Args:
+        response_text: Raw response text from the API
+        crop_h: Height of the cropped image
+        crop_w: Width of the cropped image
+        crop_offset_x: X offset of crop in original image
+        crop_offset_y: Y offset of crop in original image
+        
+    Returns:
+        Parsed OCR data with coordinates scaled to original image or None if parsing fails
+    """
+    try:
+        # Try to extract JSON from the response
+        if '```json' in response_text:
+            start = response_text.find('```json') + 7
+            end = response_text.find('```', start)
+            json_text = response_text[start:end].strip()
+        elif '```' in response_text:
+            start = response_text.find('```') + 3
+            end = response_text.find('```', start)
+            json_text = response_text[start:end].strip()
+        else:
+            json_text = response_text.strip()
+        
+        # Parse the JSON
+        parsed_data = json.loads(json_text)
+        
+        # Scale coordinates from crop space to original image space
+        if 'coordinates' in parsed_data:
+            coords = parsed_data['coordinates']
+            if all(key in coords for key in ['x1', 'y1', 'x2', 'y2']):
+                # Convert from 0-1000 range to crop dimensions
+                bbox = [coords['x1'], coords['y1'], coords['x2'], coords['y2']]
+                scaled_bbox = convert_from_qwen2vl_format(bbox, crop_h, crop_w)
+                
+                # Add crop offset to get coordinates in original image
+                coords['x1'] = scaled_bbox[0] + crop_offset_x
+                coords['y1'] = scaled_bbox[1] + crop_offset_y
+                coords['x2'] = scaled_bbox[2] + crop_offset_x
+                coords['y2'] = scaled_bbox[3] + crop_offset_y
+        
+        logger.info("Successfully parsed OCR response")
+        return parsed_data
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse OCR JSON response: {str(e)}")
+        logger.debug(f"Response text: {response_text}")
+        return None
+    except Exception as e:
+        logger.error(f"Error parsing OCR response: {str(e)}")
+        return None
