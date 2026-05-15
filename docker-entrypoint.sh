@@ -57,7 +57,7 @@ cd /app
 # Create a simple log file to ensure it exists and has right permissions
 touch /app/data/django.log 2>/dev/null || true
 if [ "$(id -u)" = "0" ]; then
-    chown django:django /app/data/django.logstatic
+    chown django:django /app/data/django.log
     chmod 644 /app/data/django.log
 fi
 
