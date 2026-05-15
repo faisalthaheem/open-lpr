@@ -244,3 +244,101 @@ class ImageProcessor:
         except Exception as e:
             logger.error(f"Error preparing image for API {image_path}: {str(e)}")
             return None
+    
+    @staticmethod
+    def downscale_for_detection(image_path: str, min_plate_height: int = 30,
+                                plate_height_fraction: float = 0.05) -> Optional[str]:
+        """
+        Downscale image for Phase 1 detection, maintaining aspect ratio.
+        
+        Scales so that a plate occupying plate_height_fraction of the image height
+        is at least min_plate_height pixels tall in the downscaled result.
+        
+        Args:
+            image_path: Path to the original image
+            min_plate_height: Minimum plate height in pixels after downscaling
+            plate_height_fraction: Assumed plate height as fraction of image height
+                (0.05 = plate is 5% of image height, conservative for small/distant plates)
+            
+        Returns:
+            Path to downscaled image or None if error occurs
+        """
+        try:
+            with Image.open(image_path) as img:
+                min_image_height = min_plate_height / plate_height_fraction
+                aspect = img.width / img.height
+                max_dimension = min_image_height * max(aspect, 1.0)
+                max_dimension = max(max_dimension, min_image_height)
+                
+                if img.width <= max_dimension and img.height <= max_dimension:
+                    return image_path
+                
+                ratio = min(max_dimension / img.width, max_dimension / img.height)
+                new_width = int(img.width * ratio)
+                new_height = int(img.height * ratio)
+                
+                logger.info(
+                    f"Downscaling image from {img.width}x{img.height} to "
+                    f"{new_width}x{new_height} for detection "
+                    f"(min_plate_height={min_plate_height}, "
+                    f"plate_height_fraction={plate_height_fraction})"
+                )
+                
+                downscaled_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                base_name, ext = os.path.splitext(image_path)
+                downscaled_path = f"{base_name}_downscale{ext}"
+                
+                downscaled_img.save(downscaled_path, quality=85)
+                
+                return downscaled_path
+                
+        except Exception as e:
+            logger.error(f"Error downscaling image {image_path}: {str(e)}")
+            return None
+    
+    @staticmethod
+    def crop_region(image_path: str, x1: int, y1: int, x2: int, y2: int, 
+                   padding_pct: float = 0.1) -> Optional[Tuple[str, int, int]]:
+        """
+        Crop a region from the image with optional padding.
+        
+        Args:
+            image_path: Path to the original image
+            x1, y1, x2, y2: Bounding box coordinates
+            padding_pct: Percentage of box size to add as padding (0.0 to 1.0)
+            
+        Returns:
+            Tuple of (crop_path, crop_offset_x, crop_offset_y) or None if error
+        """
+        try:
+            with Image.open(image_path) as img:
+                # Calculate padding
+                box_width = x2 - x1
+                box_height = y2 - y1
+                padding_x = int(box_width * padding_pct)
+                padding_y = int(box_height * padding_pct)
+                
+                # Apply padding
+                crop_x1 = max(0, x1 - padding_x)
+                crop_y1 = max(0, y1 - padding_y)
+                crop_x2 = min(img.width, x2 + padding_x)
+                crop_y2 = min(img.height, y2 + padding_y)
+                
+                logger.info(f"Cropping region: ({crop_x1},{crop_y1}) to ({crop_x2},{crop_y2}) with padding {padding_pct}")
+                
+                # Crop the image
+                cropped_img = img.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+                
+                # Generate new filename
+                base_name, ext = os.path.splitext(image_path)
+                crop_path = f"{base_name}_crop_{x1}_{y1}{ext}"
+                
+                # Save cropped image
+                cropped_img.save(crop_path, quality=95)
+                
+                return (crop_path, crop_x1, crop_y1)
+                
+        except Exception as e:
+            logger.error(f"Error cropping region from {image_path}: {str(e)}")
+            return None

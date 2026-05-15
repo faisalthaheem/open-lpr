@@ -1,7 +1,7 @@
 Django==4.2.30
-Pillow==12.1.1
+Pillow==12.2.0
 openai==1.30.1
 python-decouple==3.8
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 gunicorn==22.0.0
 prometheus-client==0.19.0
