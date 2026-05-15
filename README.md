@@ -1082,6 +1082,7 @@ For specialized deployment scenarios and additional resources:
 - [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
 - [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
 
+</details>
 
 ---
 
@@ -1092,3 +1093,7 @@ For specialized deployment scenarios and additional resources:
 Made with ❤️ by [Open LPR Team](https://github.com/faisalthaheem/open-lpr)
 
 </div>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=faisalthaheem/open-lpr&type=Date)](https://star-history.com/#faisalthaheem/open-lpr&Date)
