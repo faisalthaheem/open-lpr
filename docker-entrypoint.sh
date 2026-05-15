@@ -61,6 +61,13 @@ if [ "$(id -u)" = "0" ]; then
     chmod 644 /app/data/django.log
 fi
 
+# Create metrics state file to ensure it exists and has right permissions
+touch /app/metrics/metrics_state.json 2>/dev/null || true
+if [ "$(id -u)" = "0" ]; then
+    chown django:django /app/metrics/metrics_state.json
+    chmod 644 /app/metrics/metrics_state.json
+fi
+
 # Ensure database file has correct ownership if it exists
 # Get the database path from Django settings or use default
 DB_PATH="${DATABASE_PATH:-/app/db.sqlite3}"

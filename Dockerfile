@@ -39,7 +39,7 @@ WORKDIR /app
 COPY . .
 
 # Create directories for volumes
-RUN mkdir -p /app/data /app/media /app/staticfiles
+RUN mkdir -p /app/data /app/media /app/staticfiles /app/metrics
 
 # Collect static files
 RUN python manage.py collectstatic --noinput
@@ -54,9 +54,9 @@ RUN groupadd -r django && useradd -r -g django django
 WORKDIR /app
 
 # Create directories with proper permissions
-RUN mkdir -p /app/data /app/media /app/staticfiles && \
+RUN mkdir -p /app/data /app/media /app/staticfiles /app/metrics && \
     chown -R django:django /app && \
-    chmod -R 755 /app/data /app/media /app/staticfiles
+    chmod -R 755 /app/data /app/media /app/staticfiles /app/metrics
 
 # Copy application from builder stage
 COPY --from=builder --chown=django:django /app /app
