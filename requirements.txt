@@ -1,4 +1,4 @@
-Django==4.2.29
+Django==4.2.30
 Pillow==12.2.0
 openai==1.30.1
 python-decouple==3.8
