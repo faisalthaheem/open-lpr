@@ -27,20 +27,28 @@ class Command(BaseCommand):
             default=None,
             help='Override MAX_RETRIES for this run',
         )
+        parser.add_argument(
+            '--batch-size',
+            type=int,
+            default=None,
+            help='Override RETRY_BATCH_SIZE for this run',
+        )
 
     def handle(self, *args, **options):
         timeout_minutes = options['timeout'] or settings.PROCESSING_TIMEOUT_MINUTES
         max_retries = options['max_retries'] or settings.MAX_RETRIES
+        batch_size = options['batch_size'] or settings.RETRY_BATCH_SIZE
 
         cutoff = timezone.now() - timedelta(minutes=timeout_minutes)
 
         stuck_images = UploadedImage.objects.filter(
             processing_status__in=('processing', 'pending'),
             upload_timestamp__lt=cutoff,
-        )
+        )[:batch_size]
 
         retried = 0
         exhausted = 0
+        skipped = 0
 
         for image in stuck_images:
             if image.retry_count < max_retries:
@@ -95,8 +103,9 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(
                         f'Exhausted retries for image {image.id} ({image.filename})'
                     ))
+                else:
+                    skipped += 1
 
         self.stdout.write(self.style.SUCCESS(
-            f'Done: {retried} retried, {exhausted} exhausted, '
-            f'{stuck_images.count() - retried - exhausted} already failed'
+            f'Done: {retried} retried, {exhausted} exhausted, {skipped} already failed'
         ))

@@ -134,6 +134,7 @@ PLATE_HEIGHT_FRACTION = config('PLATE_HEIGHT_FRACTION', default=0.05, cast=float
 
 PROCESSING_TIMEOUT_MINUTES = config('PROCESSING_TIMEOUT_MINUTES', default=5, cast=int)
 MAX_RETRIES = config('MAX_RETRIES', default=2, cast=int)
+RETRY_BATCH_SIZE = config('RETRY_BATCH_SIZE', default=5, cast=int)
 
 # Qwen3-VL API Configuration
 QWEN_API_KEY = config('QWEN_API_KEY', default='')
