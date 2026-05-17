@@ -48,6 +48,12 @@
                                 <td class="text-danger">{{ uploaded_image.error_message }}</td>
                             </tr>
                             {% endif %}
+                            {% if uploaded_image.retry_count > 0 %}
+                            <tr>
+                                <th>Retry Attempts:</th>
+                                <td>{{ uploaded_image.retry_count }}/{{ uploaded_image.max_retries }}</td>
+                            </tr>
+                            {% endif %}
                         </table>
                     </div>
                     

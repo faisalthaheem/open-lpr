@@ -73,6 +73,14 @@ class UploadedImage(models.Model):
         blank=True,
         verbose_name="Error Message"
     )
+    retry_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Retry Count"
+    )
+    max_retries = models.PositiveIntegerField(
+        default=2,
+        verbose_name="Max Retries"
+    )
     
     class Meta:
         verbose_name = "Uploaded Image"
@@ -83,12 +91,12 @@ class UploadedImage(models.Model):
         return f"{self.filename} - {self.upload_timestamp.strftime('%Y-%m-%d %H:%M')}"
     
     def save(self, *args, **kwargs):
-        # Set filename and file size on first save
-        if not self.pk and self.original_image:
-            self.filename = os.path.basename(self.original_image.name)
-            # Get file size
-            if self.original_image and hasattr(self.original_image, 'size'):
-                self.file_size = self.original_image.size
+        if not self.pk:
+            if self.original_image:
+                self.filename = os.path.basename(self.original_image.name)
+                if hasattr(self.original_image, 'size'):
+                    self.file_size = self.original_image.size
+            self.max_retries = getattr(settings, 'MAX_RETRIES', 2)
         
         super().save(*args, **kwargs)
     
