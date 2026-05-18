@@ -705,6 +705,54 @@
                 display: block;
             }
         }
+
+        .fullscreen-preview {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.92);
+            cursor: pointer;
+        }
+
+        .fullscreen-preview.active {
+            display: flex;
+        }
+
+        .fullscreen-preview img {
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain;
+            cursor: default;
+        }
+
+        .fullscreen-preview-close {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 10000;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .fullscreen-preview-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -807,6 +855,14 @@
             <h5 id="loadingMessage">Processing...</h5>
             <p class="text-muted mb-0">Please wait while we analyze your image</p>
         </div>
+    </div>
+
+    <!-- Fullscreen Image Preview (hidden by default) -->
+    <div id="fullscreenPreview" class="fullscreen-preview">
+        <img id="fullscreenPreviewImg" src="" alt="Preview">
+        <button class="fullscreen-preview-close" id="fullscreenPreviewClose" title="Close">
+            <i class="bi bi-x-lg"></i>
+        </button>
     </div>
 
     <!-- Bootstrap JS -->
@@ -922,6 +978,39 @@
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+
+        function openFullscreenPreview(src) {
+            var overlay = document.getElementById('fullscreenPreview');
+            var img = document.getElementById('fullscreenPreviewImg');
+            img.src = src;
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFullscreenPreview() {
+            var overlay = document.getElementById('fullscreenPreview');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+            document.getElementById('fullscreenPreviewImg').src = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var overlay = document.getElementById('fullscreenPreview');
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    closeFullscreenPreview();
+                }
+            });
+            document.getElementById('fullscreenPreviewClose').addEventListener('click', function(e) {
+                e.stopPropagation();
+                closeFullscreenPreview();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && overlay.classList.contains('active')) {
+                    closeFullscreenPreview();
+                }
             });
         });
     </script>

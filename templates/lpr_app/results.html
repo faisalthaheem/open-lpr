@@ -249,54 +249,18 @@
         });
     });
 
-    // Image zoom functionality
-    const images = document.querySelectorAll('.img-fluid');
-    images.forEach(img => {
-        img.addEventListener('click', function() {
-            // Create modal for zoomed image
-            const modal = document.createElement('div');
-            modal.className = 'modal fade';
-            modal.innerHTML = `
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Image Preview</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body text-center">
-                            <img src="${this.src}" class="img-fluid" alt="Zoomed image">
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            const bootstrapModal = new bootstrap.Modal(modal);
-            bootstrapModal.show();
-            
-            // Clean up when modal is hidden
-            modal.addEventListener('hidden.bs.modal', () => {
-                document.body.removeChild(modal);
-            });
-        });
-        
-        // Add cursor pointer for clickable images
+    document.querySelectorAll('.img-fluid').forEach(function(img) {
         img.style.cursor = 'pointer';
-        img.title = 'Click to zoom';
+        img.title = 'Click to preview';
+        img.addEventListener('click', function() {
+            openFullscreenPreview(this.src);
+        });
     });
 </script>
 
 <style>
     .accordion-button:not(.collapsed) .bi-chevron-down {
         transform: rotate(180deg);
-    }
-    
-    .modal {
-        background-color: rgba(0, 0, 0, 0.8);
-    }
-    
-    .modal-dialog {
-        margin: 2rem auto;
     }
     
     .img-fluid:hover {

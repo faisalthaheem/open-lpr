@@ -251,7 +251,17 @@
         }).catch(err => {
             console.error('Failed to copy: ', err);
         });
-    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.card-body .img-fluid').forEach(function(img) {
+            img.style.cursor = 'pointer';
+            img.title = 'Click to preview';
+            img.addEventListener('click', function() {
+                openFullscreenPreview(this.src);
+            });
+        });
+    });
+}
 
     // Add copy button to JSON response
     document.addEventListener('DOMContentLoaded', function() {
