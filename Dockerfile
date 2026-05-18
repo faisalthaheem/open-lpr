@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     gosu \
+    fonts-noto \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment

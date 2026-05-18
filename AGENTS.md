@@ -60,6 +60,7 @@ docker compose --profile core up -d                        # External API only
 - CI: `.github/workflows/docker-publish.yml` builds multi-arch (amd64/arm64) on push to main and version tags
 - Container runs as `django` user via `gosu` (see `docker-entrypoint.sh`)
 - `docker-entrypoint.sh` runs migrate + collectstatic + optional createsuperuser on every start
+- `fonts-noto` and `fonts-noto-cjk` are installed in the Docker image for Unicode text rendering (Arabic, CJK, etc.) on bounding box visualizations
 
 ## Environment Variables
 
