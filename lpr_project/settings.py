@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_apscheduler',
     'lpr_app',
 ]
 
@@ -135,6 +136,8 @@ PLATE_HEIGHT_FRACTION = config('PLATE_HEIGHT_FRACTION', default=0.05, cast=float
 PROCESSING_TIMEOUT_MINUTES = config('PROCESSING_TIMEOUT_MINUTES', default=5, cast=int)
 MAX_RETRIES = config('MAX_RETRIES', default=2, cast=int)
 RETRY_BATCH_SIZE = config('RETRY_BATCH_SIZE', default=5, cast=int)
+RETRY_INTERVAL_MINUTES = config('RETRY_INTERVAL_MINUTES', default=5, cast=int)
+RETRY_SCHEDULER_ENABLED = config('RETRY_SCHEDULER_ENABLED', default=True, cast=bool)
 
 # Qwen3-VL API Configuration
 QWEN_API_KEY = config('QWEN_API_KEY', default='')
