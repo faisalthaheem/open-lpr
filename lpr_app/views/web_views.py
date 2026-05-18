@@ -9,10 +9,11 @@ import logging
 from typing import Dict, Any
 
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponsePermanentRedirect
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.urls import reverse
 
 from ..models import UploadedImage
 from ..forms import ImageUploadForm, ImageSearchForm
@@ -101,7 +102,7 @@ def upload_image(request):
             return ResponseHelper.success_json_response({
                 'image_id': uploaded_image.id,
                 'message': 'Image processed successfully',
-                'redirect_url': reverse('lpr_app:result', kwargs={'image_id': uploaded_image.id})
+                'redirect_url': reverse('lpr_app:image_detail', kwargs={'image_id': uploaded_image.id})
             })
         else:
             MetricsHelper.record_upload_attempt('failed')
@@ -121,26 +122,10 @@ def upload_image(request):
         return ResponseHelper.server_error_response('Upload failed')
 
 
-def result_view(request, image_id: int):
-    """
-    Display processing results for a specific image.
-    """
-    # Validate image ID
-    is_valid, error_message = FileValidator.validate_image_id(image_id)
-    if not is_valid:
-        logger.error(f"Invalid image ID in result_view: {image_id}")
-        # Return a proper error page instead of raising 404
-        return render(request, 'lpr_app/error.html', {
-            'error_message': 'Invalid image ID provided',
-            'title': 'Error'
-        })
-    
-    uploaded_image = get_object_or_404(UploadedImage, id=image_id)
-    
-    context = WebResponseHelper.get_base_context(f'Results - {uploaded_image.filename}')
-    context.update(WebResponseHelper.get_image_context(uploaded_image))
-    
-    return render(request, 'lpr_app/results.html', context)
+def result_redirect(request, image_id: int):
+    return HttpResponsePermanentRedirect(
+        reverse('lpr_app:image_detail', kwargs={'image_id': image_id})
+    )
 
 
 def image_list(request):
@@ -197,7 +182,7 @@ def image_list(request):
 
 def image_detail(request, image_id: int):
     """
-    Display detailed information about a specific image.
+    Display detailed information and results for a specific image.
     """
     # Validate image ID
     is_valid, error_message = FileValidator.validate_image_id(image_id)
@@ -210,14 +195,11 @@ def image_detail(request, image_id: int):
     
     uploaded_image = get_object_or_404(UploadedImage, id=image_id)
     
-    # Get processing logs
     processing_logs = uploaded_image.processing_logs.order_by('-timestamp')
     
     context = WebResponseHelper.get_base_context(f'Details - {uploaded_image.filename}')
-    context.update({
-        'uploaded_image': uploaded_image,
-        'processing_logs': processing_logs,
-    })
+    context.update(WebResponseHelper.get_image_context(uploaded_image))
+    context['processing_logs'] = processing_logs
     
     return render(request, 'lpr_app/image_detail.html', context)
 

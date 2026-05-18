@@ -121,7 +121,7 @@
                             
                             <div class="btn-group" role="group">
                                 {% if image.processing_status == 'completed' %}
-                                <a href="{% url 'lpr_app:result' image.id %}" class="btn btn-sm btn-outline-primary" 
+                                <a href="{% url 'lpr_app:image_detail' image.id %}" class="btn btn-sm btn-outline-primary" 
                                    title="View Results" data-bs-toggle="tooltip">
                                     <i class="bi bi-eye"></i>
                                 </a>

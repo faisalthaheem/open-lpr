@@ -114,7 +114,7 @@ class UploadedImageAdmin(admin.ModelAdmin):
         Link to view results page
         """
         if obj.processing_status == 'completed':
-            url = reverse('lpr_app:result', kwargs={'image_id': obj.id})
+            url = reverse('lpr_app:image_detail', kwargs={'image_id': obj.id})
             return format_html(
                 '<a href="{}" class="button" target="_blank">View Results</a>',
                 url

@@ -114,7 +114,7 @@ def upload_image(request):
                     'success': True,
                     'image_id': uploaded_image.id,
                     'message': 'Image processed successfully',
-                    'redirect_url': reverse('lpr_app:result', kwargs={'image_id': uploaded_image.id})
+                    'redirect_url': reverse('lpr_app:image_detail', kwargs={'image_id': uploaded_image.id})
                 })
             else:
                 UPLOAD_TOTAL.labels(status='failed').inc()
@@ -365,28 +365,6 @@ def process_uploaded_image(uploaded_image: UploadedImage, save_image: bool = Tru
         )
         
         return {'success': False, 'error': str(e)}
-
-
-def result_view(request, image_id: int):
-    """
-    Display processing results for a specific image
-    """
-    uploaded_image = get_object_or_404(UploadedImage, id=image_id)
-    
-    # Get detection results
-    detection_results = uploaded_image.get_detection_results()
-    plate_count = uploaded_image.get_plate_count()
-    ocr_count = uploaded_image.get_total_ocr_count()
-    
-    context = {
-        'uploaded_image': uploaded_image,
-        'detection_results': detection_results,
-        'plate_count': plate_count,
-        'ocr_count': ocr_count,
-        'title': f'Results - {uploaded_image.filename}'
-    }
-    
-    return render(request, 'lpr_app/results.html', context)
 
 
 def image_list(request):

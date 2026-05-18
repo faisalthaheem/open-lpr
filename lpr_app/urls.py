@@ -3,7 +3,7 @@ from . import views
 
 # Import views from their respective modules
 from .views.web_views import (
-    home, upload_image, result_view, image_list, 
+    home, upload_image, result_redirect, image_list, 
     image_detail, upload_progress
 )
 from .views.api_views import (
@@ -20,8 +20,8 @@ urlpatterns = [
     # Image upload and processing
     path('upload/', upload_image, name='upload'),
     
-    # Processing results
-    path('result/<int:image_id>/', result_view, name='result'),
+    # Processing results (redirects to image detail)
+    path('result/<int:image_id>/', result_redirect, name='result'),
     
     # Image list with search and filtering
     path('images/', image_list, name='image_list'),

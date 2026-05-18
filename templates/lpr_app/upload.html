@@ -196,7 +196,7 @@
                                         {{ upload.get_processing_status_display }}
                                     </span>
                                     {% if upload.processing_status == 'completed' %}
-                                    <a href="{% url 'lpr_app:result' upload.id %}" class="btn btn-sm btn-outline-primary">
+                                    <a href="{% url 'lpr_app:image_detail' upload.id %}" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-eye me-1"></i>View
                                     </a>
                                     {% endif %}

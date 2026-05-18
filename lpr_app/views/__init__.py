@@ -15,7 +15,7 @@ __all__ = [
     # Web views
     'home',
     'upload_image',
-    'result_view',
+    'result_redirect',
     'image_list',
     'image_detail',
     
