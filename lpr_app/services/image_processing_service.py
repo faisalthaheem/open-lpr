@@ -55,8 +55,17 @@ class ImageProcessingService:
             uploaded_image.save()
             logger.info(f"DEBUG: Status updated to processing")
             
+            # Update the "started" log with queue time (upload → processing start)
+            started_log = ProcessingLog.objects.filter(
+                uploaded_image=uploaded_image, status='started'
+            ).first()
+            if started_log and not started_log.duration_ms:
+                queue_ms = int((time.time() - uploaded_image.upload_timestamp.timestamp()) * 1000)
+                started_log.duration_ms = queue_ms
+                started_log.save(update_fields=['duration_ms'])
+            
             # Log API call start
-            ProcessingLog.objects.create(
+            api_call_log = ProcessingLog.objects.create(
                 uploaded_image=uploaded_image,
                 status='api_call',
                 message='Starting Phase 1: License plate detection'
@@ -119,6 +128,9 @@ class ImageProcessingService:
                 detections = []
             
             logger.info(f"Phase 1 complete: Detected {len(detections)} license plate(s)")
+            
+            api_call_log.duration_ms = int((time.time() - start_time) * 1000)
+            api_call_log.save(update_fields=['duration_ms'])
             
             # Clean up downscaled image
             if downscaled_path != image_path and os.path.exists(downscaled_path):

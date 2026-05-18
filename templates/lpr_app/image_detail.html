@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load duration_format %}
 
 {% block title %}Details - {{ uploaded_image.filename }}{% endblock %}
 
@@ -194,11 +195,7 @@
                                 <td>{{ log.message }}</td>
                                 <td>
                                     {% if log.duration_ms %}
-                                        {% if log.duration_ms < 1000 %}
-                                            {{ log.duration_ms }}ms
-                                        {% else %}
-                                            {{ log.duration_ms|floatformat:2 }}s
-                                        {% endif %}
+                                        {{ log.duration_ms|format_duration }}
                                     {% else %}
                                         -
                                     {% endif %}
