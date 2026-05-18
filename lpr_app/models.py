@@ -1,23 +1,25 @@
 import os
+import uuid
+
 from django.db import models
 from django.core.files.storage import default_storage
 from django.conf import settings
 
 
+def _guid_filename(filename):
+    return f'{uuid.uuid4().hex[:8]}_{filename}'
+
+
 def upload_to_uploads(instance, filename):
-    """Generate upload path for original images"""
-    # Create directory structure: uploads/YYYY/MM/DD/
     from datetime import datetime
     now = datetime.now()
-    return f'uploads/{now.year}/{now.month:02d}/{now.day:02d}/{filename}'
+    return f'uploads/{now.year}/{now.month:02d}/{now.day:02d}/{_guid_filename(filename)}'
 
 
 def upload_to_processed(instance, filename):
-    """Generate upload path for processed images"""
-    # Create directory structure: processed/YYYY/MM/DD/
     from datetime import datetime
     now = datetime.now()
-    return f'processed/{now.year}/{now.month:02d}/{now.day:02d}/{filename}'
+    return f'processed/{now.year}/{now.month:02d}/{now.day:02d}/{_guid_filename(filename)}'
 
 
 class UploadedImage(models.Model):

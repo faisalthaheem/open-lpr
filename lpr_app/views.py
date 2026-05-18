@@ -230,7 +230,8 @@ def process_uploaded_image(uploaded_image: UploadedImage, save_image: bool = Tru
         
         if save_image:
             # Visualize results
-            output_filename = f"processed_{uploaded_image.filename}"
+            on_disk_basename = os.path.basename(uploaded_image.original_image.name)
+            output_filename = f"processed_{on_disk_basename}"
             output_path = os.path.join(
                 os.path.dirname(str(uploaded_image.original_image.path)),
                 output_filename
@@ -242,7 +243,7 @@ def process_uploaded_image(uploaded_image: UploadedImage, save_image: bool = Tru
                 return {'success': False, 'error': 'Failed to create visualization'}
             
             # Create side-by-side comparison
-            comparison_filename = f"comparison_{uploaded_image.filename}"
+            comparison_filename = f"comparison_{on_disk_basename}"
             comparison_path = os.path.join(
                 os.path.dirname(str(uploaded_image.original_image.path)),
                 comparison_filename
