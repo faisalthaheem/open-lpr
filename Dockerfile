@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     gosu \
     fonts-noto \
     fonts-noto-cjk \
+    libraqm0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment

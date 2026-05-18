@@ -21,8 +21,7 @@ class BoundingBoxVisualizer:
 
     TTF_FONT_PATHS = [
         "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/truetype/noto-cjk/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/noto/NotoSans-Regular.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "/usr/share/fonts/TTF/DejaVuSans.ttf",
@@ -30,6 +29,18 @@ class BoundingBoxVisualizer:
         "arial.ttf",
         "/usr/share/fonts/truetype/ubuntu/UbuntuSans-Regular.ttf",
     ]
+
+    SCRIPT_FONTS = {
+        'arabic': [
+            "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+            "/usr/share/fonts/noto/NotoSansArabic-Regular.ttf",
+        ],
+        'cjk': [
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+        ],
+    }
 
     def _compute_font_size(self, image_height: int) -> int:
         return max(16, min(64, int(image_height * 0.02)))
@@ -46,6 +57,7 @@ class BoundingBoxVisualizer:
         self.draw = None
         self.font = None
         self.font_size = 16
+        self._font_cache = {}
 
         try:
             self.image = Image.open(image_path)
@@ -60,6 +72,24 @@ class BoundingBoxVisualizer:
             logger.error(f"Error loading image {image_path}: {str(e)}")
             raise
 
+    @staticmethod
+    def _detect_script(text: str) -> str:
+        for char in text:
+            cp = ord(char)
+            if (0x0600 <= cp <= 0x06FF or 0x0750 <= cp <= 0x077F
+                    or 0xFB50 <= cp <= 0xFDFF or 0xFE70 <= cp <= 0xFEFF):
+                return 'arabic'
+            if (0x2E80 <= cp <= 0x9FFF or 0xAC00 <= cp <= 0xD7AF
+                    or 0x3040 <= cp <= 0x30FF or 0x3400 <= cp <= 0x4DBF):
+                return 'cjk'
+            if 0x0E00 <= cp <= 0x0E7F:
+                return 'thai'
+            if 0x0900 <= cp <= 0x097F:
+                return 'devanagari'
+            if 0x0590 <= cp <= 0x05FF or 0xFB1D <= cp <= 0xFB4F:
+                return 'hebrew'
+        return 'latin'
+
     def _load_font(self, size: int):
         for path in self.TTF_FONT_PATHS:
             try:
@@ -71,6 +101,29 @@ class BoundingBoxVisualizer:
             return ImageFont.load_default(size=size)
         except TypeError:
             return ImageFont.load_default()
+
+    def _load_font_for_text(self, text: str) -> ImageFont.FreeTypeFont:
+        script = self._detect_script(text)
+        if script == 'latin':
+            return self.font
+
+        cache_key = (script, self.font_size)
+        if cache_key in self._font_cache:
+            return self._font_cache[cache_key]
+
+        paths = self.SCRIPT_FONTS.get(script, [])
+        for path in paths:
+            try:
+                font = ImageFont.truetype(path, self.font_size)
+                self._font_cache[cache_key] = font
+                logger.debug(f"Loaded {script} font: {path}")
+                return font
+            except (OSError, IOError):
+                continue
+
+        logger.warning(f"No {script} font found, falling back to default")
+        self._font_cache[cache_key] = self.font
+        return self.font
     
     def draw_bounding_box(self, x1: Optional[int] = None, y1: Optional[int] = None, width: Optional[int] = None, height: Optional[int] = None,
                           x2: Optional[int] = None, y2: Optional[int] = None, color: Tuple[int, int, int] = (255, 0, 0),
@@ -109,10 +162,11 @@ class BoundingBoxVisualizer:
         )
         
         # Draw label if provided
-        if label and self.font:
+        if label:
+            font = self._load_font_for_text(label)
             # Calculate text size
             try:
-                bbox = self.draw.textbbox((0, 0), label, font=self.font)
+                bbox = self.draw.textbbox((0, 0), label, font=font)
                 text_width = bbox[2] - bbox[0]
                 text_height = bbox[3] - bbox[1]
             except:
@@ -135,7 +189,7 @@ class BoundingBoxVisualizer:
                 (x + color_bar_width + padding // 2, label_y + padding),
                 label,
                 fill=(255, 255, 255),
-                font=self.font
+                font=font
             )
     
     def draw_plate_detection(self, plate_data: Dict[str, Any]) -> None:
