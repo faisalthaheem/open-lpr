@@ -41,11 +41,6 @@
 
                 <div class="row">
                     <div class="col-md-6">
-                        <h6>Original Image</h6>
-                        {% if uploaded_image.original_image %}
-                        <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm mb-3" alt="{{ uploaded_image.filename }}">
-                        {% endif %}
-
                         <table class="table table-sm">
                             <tr>
                                 <th>Filename:</th>
@@ -85,21 +80,7 @@
                     </div>
 
                     <div class="col-md-6">
-                        {% if uploaded_image.processed_image %}
-                        <h6>Processed Image</h6>
-                        <img src="{{ uploaded_image.processed_image.url }}" class="img-fluid rounded shadow-sm mb-3" alt="Processed {{ uploaded_image.filename }}">
-
-                        <div class="d-grid gap-2">
-                            <a href="{{ uploaded_image.original_image.url }}" download="{{ uploaded_image.filename }}"
-                               class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-download me-1"></i>Download Original
-                            </a>
-                            <a href="{{ uploaded_image.processed_image.url }}" download="processed_{{ uploaded_image.filename }}"
-                               class="btn btn-success btn-sm">
-                                <i class="bi bi-download me-1"></i>Download Processed
-                            </a>
-                        </div>
-                        {% else %}
+                        {% if not uploaded_image.processed_image %}
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
                             No processed image available.
@@ -117,9 +98,7 @@
             </div>
         </div>
 
-        {% if uploaded_image.processing_status == 'completed' and detection_results %}
-
-        <!-- Image Comparison -->
+        <!-- Images -->
         {% if uploaded_image.processed_image %}
         <div class="card shadow-sm mb-4">
             <div class="card-body">
@@ -136,9 +115,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <h6 class="text-center mb-2">Processed Image</h6>
-                        {% if uploaded_image.processed_image %}
                         <img src="{{ uploaded_image.processed_image.url }}" class="img-fluid rounded shadow-sm" alt="Processed">
-                        {% endif %}
                     </div>
                 </div>
 
@@ -154,7 +131,28 @@
                 </div>
             </div>
         </div>
+        {% elif uploaded_image.original_image %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="card-title mb-3">
+                    <i class="bi bi-image me-2"></i>Original Image
+                </h6>
+
+                <div class="text-center">
+                    <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm" alt="Original">
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="{{ uploaded_image.original_image.url }}" download="{{ uploaded_image.filename }}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-download me-1"></i>Download Original
+                    </a>
+                </div>
+            </div>
+        </div>
         {% endif %}
+
+        {% if uploaded_image.processing_status == 'completed' and detection_results %}
 
         <!-- Detection Summary -->
         <div class="card shadow-sm mb-4">
