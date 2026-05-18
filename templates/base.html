@@ -249,10 +249,22 @@
 
         .table {
             color: var(--text-primary);
+            --bs-table-bg: transparent;
         }
 
         .table-striped > tbody > tr:nth-of-type(odd) > td {
             background-color: var(--bg-secondary);
+        }
+
+        [data-theme="dark"] .table > :not(caption) > * > * {
+            background-color: transparent;
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .table thead th {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
         }
 
         .pagination .page-link {
@@ -402,6 +414,7 @@
         [data-theme="dark"] .table th {
             color: var(--text-primary) !important;
             font-weight: 600 !important;
+            background-color: var(--bg-tertiary) !important;
         }
 
         /* Better contrast for card titles and section headers */
