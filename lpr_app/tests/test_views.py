@@ -417,3 +417,45 @@ class UploadRedirectURLTest(TestCase):
         self.assertIn("redirect_url", data)
         self.assertIn("/image/", data["redirect_url"])
         self.assertNotIn("/result/", data["redirect_url"])
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_views_media/")
+class HomePageTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_home_page_returns_200(self):
+        response = self.client.get(reverse("lpr_app:home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "lpr_app/upload.html")
+
+    def test_home_page_has_fullscreen_preview_js(self):
+        response = self.client.get(reverse("lpr_app:home"))
+        content = response.content.decode()
+        self.assertIn("openFullscreenPreview", content)
+        self.assertIn("result-card", content)
+        self.assertIn("Click to preview", content)
+
+    def test_home_page_shows_recent_uploads(self):
+        image = UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="recent.jpg",
+            processing_status="completed",
+            api_response={"detections": []},
+        )
+        response = self.client.get(reverse("lpr_app:home"))
+        content = response.content.decode()
+        self.assertIn("Recent Uploads", content)
+        self.assertIn(image.filename, content)
+
+    def test_home_page_recent_uploads_link_to_detail(self):
+        image = UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="home.jpg",
+            processing_status="completed",
+        )
+        response = self.client.get(reverse("lpr_app:home"))
+        content = response.content.decode()
+        detail_url = reverse("lpr_app:image_detail", kwargs={"image_id": image.id})
+        self.assertIn(detail_url, content)
+        self.assertNotIn(f"/result/{image.id}/", content)

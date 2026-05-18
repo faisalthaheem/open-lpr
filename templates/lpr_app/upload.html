@@ -412,6 +412,16 @@
             }, 2000);
         });
     }
+
+    document.querySelectorAll('.result-card .card-img-top').forEach(function(img) {
+        img.style.cursor = 'pointer';
+        img.title = 'Click to preview';
+        img.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openFullscreenPreview(this.src);
+        });
+    });
 </script>
 
 <style>
