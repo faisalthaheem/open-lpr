@@ -55,70 +55,6 @@ class ImageUploadForm(forms.Form):
             field.widget.attrs.update({'class': 'form-control'})
 
 
-
-class LPRSettingsForm(forms.Form):
-    """
-    Form for configuring LPR processing settings
-    """
-    
-    CONFIDENCE_THRESHOLD_CHOICES = [
-        (0.5, 'Low (0.5)'),
-        (0.7, 'Medium (0.7)'),
-        (0.8, 'High (0.8)'),
-        (0.9, 'Very High (0.9)'),
-    ]
-    
-    confidence_threshold = forms.ChoiceField(
-        label='Confidence Threshold',
-        choices=CONFIDENCE_THRESHOLD_CHOICES,
-        initial=0.7,
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        help_text='Minimum confidence level for detections'
-    )
-    
-    include_ocr = forms.BooleanField(
-        label='Include OCR Results',
-        initial=True,
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        help_text='Include OCR text detection along with license plate detection'
-    )
-    
-    create_comparison = forms.BooleanField(
-        label='Create Comparison Image',
-        initial=True,
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        help_text='Create side-by-side comparison of original and processed images'
-    )
-    
-    output_format = forms.ChoiceField(
-        label='Output Format',
-        choices=[
-            ('jpeg', 'JPEG'),
-            ('png', 'PNG'),
-        ],
-        initial='jpeg',
-        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
-        help_text='Format for processed images'
-    )
-    
-    def __init__(self, *args, **kwargs):
-        """
-        Initialize form with additional attributes
-        """
-        super().__init__(*args, **kwargs)
-        
-        # Add CSS classes and attributes
-        for field_name, field in self.fields.items():
-            if isinstance(self.fields[field_name].widget, forms.CheckboxInput):
-                self.fields[field_name].widget.attrs.update({'class': 'form-check-input'})
-            elif isinstance(self.fields[field_name].widget, forms.RadioSelect):
-                self.fields[field_name].widget.attrs.update({'class': 'form-check-input'})
-            else:
-                self.fields[field_name].widget.attrs.update({'class': 'form-select'})
-
-
 class ImageSearchForm(forms.Form):
     """
     Form for searching uploaded images
@@ -173,11 +109,13 @@ class ImageSearchForm(forms.Form):
     )
     
     def __init__(self, *args, **kwargs):
-        """
-        Initialize form with additional attributes
-        """
         super().__init__(*args, **kwargs)
-        
-        # Add CSS classes
+
         for field_name, field in self.fields.items():
-            self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+            widget = self.fields[field_name].widget
+            if isinstance(widget, forms.Select):
+                widget.attrs.update({'class': 'form-select'})
+            elif isinstance(widget, forms.CheckboxInput):
+                widget.attrs.update({'class': 'form-check-input'})
+            else:
+                widget.attrs.update({'class': 'form-control'})

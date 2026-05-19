@@ -6,7 +6,7 @@ web-based user interactions.
 """
 
 import logging
-from typing import Dict, Any
+from django.conf import settings as django_settings
 
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponsePermanentRedirect
@@ -43,6 +43,9 @@ def home(request):
         'upload_form': upload_form,
         'search_form': search_form,
         'recent_uploads': recent_uploads,
+        'settings': {
+            'UPLOAD_FILE_MAX_SIZE': django_settings.UPLOAD_FILE_MAX_SIZE,
+        },
     })
     
     return render(request, 'lpr_app/upload.html', context)
@@ -190,7 +193,7 @@ def image_detail(request, image_id: int):
         logger.error(f"Invalid image ID in image_detail: {image_id}")
         return render(request, 'lpr_app/error.html', {
             'error_message': 'Invalid image ID provided',
-            'title': 'Error'
+            'error_title': 'Error'
         })
     
     uploaded_image = get_object_or_404(UploadedImage, id=image_id)

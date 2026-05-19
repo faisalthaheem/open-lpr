@@ -753,6 +753,11 @@
         .fullscreen-preview-close:hover {
             background: rgba(255, 255, 255, 0.3);
         }
+
+        .card-img-fixed {
+            height: 200px;
+            object-fit: cover;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -942,7 +947,7 @@
             `;
             
             // Insert at the top of the container
-            const container = document.querySelector('main .container');
+            const container = document.querySelector('main.container');
             container.insertAdjacentHTML('afterbegin', alertHtml);
             
             // Scroll to top
@@ -981,12 +986,14 @@
             });
         });
 
-        function openFullscreenPreview(src) {
+        function openFullscreenPreview(src, altText) {
             var overlay = document.getElementById('fullscreenPreview');
             var img = document.getElementById('fullscreenPreviewImg');
             img.src = src;
+            img.alt = altText || 'Full size preview';
             overlay.classList.add('active');
             document.body.style.overflow = 'hidden';
+            document.getElementById('fullscreenPreviewClose').focus();
         }
 
         function closeFullscreenPreview() {
@@ -1011,6 +1018,22 @@
                 if (e.key === 'Escape' && overlay.classList.contains('active')) {
                     closeFullscreenPreview();
                 }
+            });
+
+            document.querySelectorAll('[data-preview]').forEach(function(el) {
+                el.setAttribute('tabindex', '0');
+                el.setAttribute('role', 'button');
+                if (!el.getAttribute('aria-label')) {
+                    el.setAttribute('aria-label', 'Preview image');
+                }
+                el.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        var src = el.getAttribute('data-preview');
+                        var alt = el.getAttribute('data-preview-alt') || 'Full size preview';
+                        openFullscreenPreview(src, alt);
+                    }
+                });
             });
         });
     </script>

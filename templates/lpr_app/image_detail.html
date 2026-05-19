@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load duration_format %}
+{% load json_format %}
 
 {% block title %}Details - {{ uploaded_image.filename }}{% endblock %}
 
@@ -15,10 +16,13 @@
                             <i class="bi bi-file-earmark me-2"></i>{{ uploaded_image.filename }}
                         </h5>
                         <p class="text-muted mb-0">
-                            <i class="bi bi-file-earmark me-1"></i>{{ uploaded_image.filename }}
                             {% if uploaded_image.processing_timestamp %}
-                            <span class="ms-3">
+                            <span>
                                 <i class="bi bi-clock me-1"></i>Processed: {{ uploaded_image.processing_timestamp|date:"M d, H:i" }} UTC
+                            </span>
+                            {% else %}
+                            <span>
+                                <i class="bi bi-clock me-1"></i>Uploaded: {{ uploaded_image.upload_timestamp|date:"M d, H:i" }} UTC
                             </span>
                             {% endif %}
                         </p>
@@ -110,12 +114,12 @@
                     <div class="col-md-6 mb-3">
                         <h6 class="text-center mb-2">Original Image</h6>
                         {% if uploaded_image.original_image %}
-                        <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm" alt="Original">
+                        <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm" alt="Original uploaded image for {{ uploaded_image.filename }}">
                         {% endif %}
                     </div>
                     <div class="col-md-6 mb-3">
                         <h6 class="text-center mb-2">Processed Image</h6>
-                        <img src="{{ uploaded_image.processed_image.url }}" class="img-fluid rounded shadow-sm" alt="Processed">
+                        <img src="{{ uploaded_image.processed_image.url }}" class="img-fluid rounded shadow-sm" alt="Processed image with detected license plate bounding boxes for {{ uploaded_image.filename }}">
                     </div>
                 </div>
 
@@ -139,7 +143,7 @@
                 </h6>
 
                 <div class="text-center">
-                    <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm" alt="Original">
+                    <img src="{{ uploaded_image.original_image.url }}" class="img-fluid rounded shadow-sm" alt="Original uploaded image for {{ uploaded_image.filename }}">
                 </div>
 
                 <div class="text-center mt-3">
@@ -338,7 +342,7 @@
                         <div id="collapseApi" class="accordion-collapse collapse"
                              aria-labelledby="headingApi" data-bs-parent="#apiResponseAccordion">
                             <div class="accordion-body">
-                                <pre class="bg-light p-3 rounded"><code>{{ uploaded_image.api_response|pprint }}</code></pre>
+                                <pre class="bg-light p-3 rounded"><code>{{ uploaded_image.api_response|json_format }}</code></pre>
                             </div>
                         </div>
                     </div>
@@ -412,28 +416,12 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Accordion chevron toggle
-        document.querySelectorAll('.accordion-button').forEach(function(button) {
-            button.addEventListener('click', function() {
-                var icon = this.querySelector('i.bi-chevron-down, i.bi-chevron-up');
-                if (icon) {
-                    if (icon.classList.contains('bi-chevron-down')) {
-                        icon.classList.remove('bi-chevron-down');
-                        icon.classList.add('bi-chevron-up');
-                    } else {
-                        icon.classList.remove('bi-chevron-up');
-                        icon.classList.add('bi-chevron-down');
-                    }
-                }
-            });
-        });
-
         // Fullscreen preview on all images
         document.querySelectorAll('.img-fluid').forEach(function(img) {
             img.style.cursor = 'pointer';
             img.title = 'Click to preview';
             img.addEventListener('click', function() {
-                openFullscreenPreview(this.src);
+                openFullscreenPreview(this.src, this.alt || 'Full size preview');
             });
         });
 
@@ -477,20 +465,6 @@
         word-wrap: break-word;
         max-height: 400px;
         overflow-y: auto;
-    }
-
-    [data-theme="dark"] code {
-        background-color: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-        padding: 0.2rem 0.4rem;
-        border-radius: 0.25rem;
-    }
-
-    [data-theme="dark"] pre code {
-        background-color: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-        padding: 0;
-        border-radius: 0;
     }
 
     [data-theme="dark"] .table th {

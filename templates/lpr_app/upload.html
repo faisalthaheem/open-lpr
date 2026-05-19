@@ -12,7 +12,7 @@
                     <i class="bi bi-cloud-upload me-2"></i>Upload Image for License Plate Recognition
                 </h5>
                 
-                <form id="uploadForm" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <form id="uploadForm" method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     <!-- Drag and Drop Area -->
@@ -169,9 +169,9 @@
                     <div class="col-md-4 col-lg-4 mb-3">
                         <div class="card result-card h-100">
                             {% if upload.processed_image %}
-                            <img src="{{ upload.processed_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Processed image with license plate annotations">
+                            <img src="{{ upload.processed_image.url }}" class="card-img-top card-img-fixed" alt="Processed image for {{ upload.filename }}" loading="lazy" data-preview="{{ upload.processed_image.url }}" data-preview-alt="Full size preview of processed {{ upload.filename }}">
                             {% elif upload.original_image %}
-                            <img src="{{ upload.original_image.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="Original image">
+                            <img src="{{ upload.original_image.url }}" class="card-img-top card-img-fixed" alt="Original image for {{ upload.filename }}" loading="lazy" data-preview="{{ upload.original_image.url }}" data-preview-alt="Full size preview of {{ upload.filename }}">
                             {% endif %}
                             <div class="card-body">
                                 {% if upload.get_first_ocr_text %}
@@ -212,6 +212,14 @@
                         <i class="bi bi-images me-1"></i>View All Images
                     </a>
                 </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-clock-history text-muted" style="font-size: 2rem;"></i>
+                <h6 class="mt-2 mb-1">No recent uploads</h6>
+                <p class="text-muted mb-0">Your recent uploads will appear here after processing.</p>
             </div>
         </div>
         {% endif %}
@@ -273,7 +281,7 @@
         }
 
         // Validate file size (250KB max)
-        const maxSize = 250 * 1024; // 250KB in bytes
+        const maxSize = {{ settings.UPLOAD_FILE_MAX_SIZE }};
         if (file.size > maxSize) {
             alert('File size must be less than 250KB.');
             return;
@@ -349,25 +357,6 @@
         });
     });
 
-    // Form validation
-    (function () {
-        'use strict';
-        
-        // Fetch all the forms we want to apply custom Bootstrap validation styles to
-        const forms = document.querySelectorAll('.needs-validation');
-        
-        // Loop over them and prevent submission
-        Array.prototype.slice.call(forms).forEach(function (form) {
-            form.addEventListener('submit', function (event) {
-                if (!form.checkValidity()) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add('was-validated');
-            }, false);
-        });
-    })();
-
     // Copy API example to clipboard
     function copyApiExample() {
         const curlCommand = `curl -X POST \\
@@ -419,32 +408,9 @@
         img.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            openFullscreenPreview(this.src);
+            openFullscreenPreview(this.src, this.getAttribute('data-preview-alt') || 'Full size preview');
         });
     });
 </script>
 
-<style>
-    /* Fix for code tags in dark mode */
-    [data-theme="dark"] code {
-        background-color: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-        padding: 0.2rem 0.4rem;
-        border-radius: 0.25rem;
-    }
-    
-    /* Ensure code tags in pre elements also get proper styling */
-    [data-theme="dark"] pre code {
-        background-color: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-        padding: 0;
-        border-radius: 0;
-    }
-    
-    /* Fix for code tags in dark backgrounds */
-    [data-theme="dark"] .bg-dark code {
-        background-color: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-    }
-</style>
 {% endblock %}

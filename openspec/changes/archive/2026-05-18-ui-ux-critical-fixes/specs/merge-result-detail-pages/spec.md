@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Unified image detail page
 
@@ -43,43 +43,6 @@ The Detection Details and Detection Summary cards SHALL only display when proces
 - **WHEN** a user expands or collapses a detection accordion item
 - **THEN** the chevron icon SHALL rotate via CSS `transform: rotate(180deg)` with no JavaScript class manipulation
 
-### Requirement: Result URL redirect
-
-The system SHALL redirect requests to `/result/<image_id>/` to `/image/<image_id>/` with a 301 (permanent) HTTP redirect.
-
-#### Scenario: Old result URL redirects
-- **WHEN** a user navigates to `/result/<image_id>/`
-- **THEN** the system responds with a 301 redirect to `/image/<image_id>/`
-
-#### Scenario: Old result URL with nonexistent image
-- **WHEN** a user navigates to `/result/99999/` and no image with that ID exists
-- **THEN** the redirect still occurs (the detail view handles the 404)
-
-### Requirement: URL reference migration
-
-All references to the `lpr_app:result` URL name SHALL be replaced with `lpr_app:image_detail`. This includes:
-- `lpr_app/views/web_views.py` — upload redirect URL
-- `lpr_app/views.py` — upload redirect URL
-- `templates/lpr_app/upload.html` — "View Results" links
-- `templates/lpr_app/image_list.html` — "View Results" links
-- `lpr_app/admin.py` — admin view-on-site link
-
-#### Scenario: Upload redirects to detail page
-- **WHEN** an image upload completes successfully via the web interface
-- **THEN** the JavaScript redirect URL uses `lpr_app:image_detail` instead of `lpr_app:result`
-
-#### Scenario: Image list links to detail page
-- **WHEN** a user clicks "View Results" on an image in the list page
-- **THEN** the link navigates to `/image/<image_id>/` (not `/result/<image_id>/`)
-
-### Requirement: Unified dark mode CSS
-
-The merged template SHALL use CSS custom properties (`var(--bg-tertiary)`, `var(--text-primary)`, etc.) for all dark-mode styling, not hardcoded hex colors.
-
-#### Scenario: Dark mode code and pre elements
-- **WHEN** the page is viewed in dark mode
-- **THEN** all `<code>`, `<pre>`, `<table>`, and `<td>` elements use CSS custom properties for background and text colors
-
 ### Requirement: Consolidated JavaScript
 
 The merged template SHALL include all JavaScript functionality in a single `extra_js` block:
@@ -95,10 +58,3 @@ The accordion chevron toggle JavaScript SHALL be removed — CSS `transform` han
 #### Scenario: Fullscreen image preview
 - **WHEN** a user clicks any image in the detail page
 - **THEN** the fullscreen preview overlay opens (using the shared `openFullscreenPreview()` from `base.html`)
-
-## REMOVED Requirements
-
-### Requirement: Separate results page
-
-**Reason**: The Results page is merged into the unified Image Detail page.
-**Migration**: All `/result/<id>/` links redirect to `/image/<id>/` via 301 permanent redirect.

@@ -342,7 +342,7 @@ class ImageDetailViewTest(TestCase):
         content = response.content.decode()
         self.assertNotIn("/result/", content)
 
-    def test_accordion_chevron_js_present(self):
+    def test_accordion_chevron_css_handled(self):
         image = UploadedImage.objects.create(
             original_image=_make_image_file(),
             filename="accord.jpg",
@@ -354,7 +354,7 @@ class ImageDetailViewTest(TestCase):
         )
         content = response.content.decode()
         self.assertIn("bi-chevron-down", content)
-        self.assertIn("bi-chevron-up", content)
+        self.assertIn("rotate(180deg)", content)
 
 
 @override_settings(MEDIA_ROOT="/tmp/test_lpr_views_media/")
@@ -459,3 +459,110 @@ class HomePageTest(TestCase):
         detail_url = reverse("lpr_app:image_detail", kwargs={"image_id": image.id})
         self.assertIn(detail_url, content)
         self.assertNotIn(f"/result/{image.id}/", content)
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_views_media/")
+class ErrorPageTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_error_page_renders_for_invalid_image_id(self):
+        response = self.client.get("/image/0/")
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "lpr_app/error.html")
+        content = response.content.decode()
+        self.assertIn("Go Back", content)
+
+    def test_error_page_has_go_back_link(self):
+        response = self.client.get("/image/0/")
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Go Back", content)
+        self.assertIn("Home", content)
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_views_media/")
+class ImageSearchFormTest(TestCase):
+    def test_processing_status_uses_form_select_class(self):
+        from ..forms import ImageSearchForm
+        form = ImageSearchForm()
+        widget = form.fields["processing_status"].widget
+        self.assertIn("form-select", widget.attrs.get("class", ""))
+        self.assertNotIn("form-control", widget.attrs.get("class", ""))
+
+    def test_text_fields_use_form_control_class(self):
+        from ..forms import ImageSearchForm
+        form = ImageSearchForm()
+        widget = form.fields["query"].widget
+        self.assertIn("form-control", widget.attrs.get("class", ""))
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_views_media/")
+class UploadPageEmptyStateTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_empty_state_shown_when_no_uploads(self):
+        response = self.client.get(reverse("lpr_app:home"))
+        content = response.content.decode()
+        self.assertIn("No recent uploads", content)
+        self.assertIn("Your recent uploads will appear here", content)
+
+    def test_recent_uploads_shown_instead_of_empty_state(self):
+        image = UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="recent.jpg",
+            processing_status="completed",
+        )
+        response = self.client.get(reverse("lpr_app:home"))
+        content = response.content.decode()
+        self.assertIn("Recent Uploads", content)
+        self.assertNotIn("No recent uploads", content)
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_views_media/")
+class UploadPageSettingsContextTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_upload_page_has_max_file_size_context(self):
+        response = self.client.get(reverse("lpr_app:home"))
+        self.assertEqual(response.status_code, 200)
+        ctx = response.context
+        self.assertIn("settings", ctx)
+        self.assertIn("UPLOAD_FILE_MAX_SIZE", ctx["settings"])
+
+    def test_upload_page_max_size_in_js(self):
+        response = self.client.get(reverse("lpr_app:home"))
+        content = response.content.decode()
+        self.assertIn("maxSize", content)
+        self.assertNotIn("250 * 1024", content)
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_views_media/")
+class WindowedPaginationTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        from PIL import Image
+        for i in range(60):
+            buf = io.BytesIO()
+            Image.new("RGB", (10, 10), "red").save(buf, format="JPEG")
+            buf.seek(0)
+            UploadedImage.objects.create(
+                original_image=SimpleUploadedFile(
+                    f"img{i}.jpg", buf.read(), content_type="image/jpeg"
+                ),
+                filename=f"img{i}.jpg",
+                processing_status="completed",
+            )
+
+    def test_pagination_shows_bounded_window(self):
+        response = self.client.get(reverse("lpr_app:image_list"), {"page": "3"})
+        content = response.content.decode()
+        self.assertIn("page-item", content)
+
+    def test_pagination_includes_partial(self):
+        response = self.client.get(reverse("lpr_app:image_list"), {"page": "2"})
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("pagination-wrapper", content)
