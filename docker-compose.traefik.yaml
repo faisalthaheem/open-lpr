@@ -113,8 +113,29 @@ services:
       - core
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.lpr-app.rule=${LPR_APP_HOST:-Host(`lpr.localhost`)}"
+      - "traefik.http.routers.lpr-app.rule=${LPR_APP_HOST:-Host(`lpr.localhost`)} && (PathPrefix(`/api/`) || PathPrefix(`/media/`) || PathPrefix(`/health/`) || PathPrefix(`/metrics/`))"
+      - "traefik.http.routers.lpr-app.priority=100"
       - "traefik.http.services.lpr-app.loadbalancer.server.port=8000"
+
+  spa:
+    image: ghcr.io/faisalthaheem/open-lpr-spa:latest
+    container_name: spa
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    profiles:
+      - core
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.spa.rule=${SPA_HOST:-Host(`lpr.localhost`)}"
+      - "traefik.http.routers.spa.priority=1"
+      - "traefik.http.services.spa.loadbalancer.server.port=3000"
 
   prometheus:
     # Use custom image with config baked in

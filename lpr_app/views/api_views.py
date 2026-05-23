@@ -2,19 +2,24 @@
 API views for LPR application.
 
 This module contains views for handling API requests and responses
-including OCR processing, health checks, and metrics.
+including OCR processing, health checks, metrics, and image listing.
 """
 
 import logging
 import time
 from datetime import datetime
 
+from django.conf import settings as django_settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
+from django.db.models import Q
 
+from ..models import UploadedImage
 from ..services.api_service import ApiService
 from ..services.image_processing_service import ImageProcessingService
+from ..services.file_service import FileService
 from ..services.qwen_client import get_qwen_client
 from ..metrics import get_metrics_response
 from ..utils.metrics_helpers import MetricsHelper, PerformanceTracker
@@ -188,7 +193,6 @@ def metrics_view(request):
     """
     try:
         metrics_data, content_type = get_metrics_response()
-        # metrics_data is bytes from generate_latest(), need to return as HttpResponse
         from django.http import HttpResponse
         return HttpResponse(metrics_data, content_type=content_type)
     except Exception as e:
@@ -196,3 +200,110 @@ def metrics_view(request):
         MetricsHelper.record_api_error()
         from django.http import HttpResponse
         return HttpResponse("Error generating metrics", status=500, content_type="text/plain")
+
+
+def _serialize_image_summary(img):
+    return {
+        'id': img.id,
+        'filename': img.filename,
+        'processing_status': img.processing_status,
+        'upload_timestamp': img.upload_timestamp.isoformat() if img.upload_timestamp else None,
+        'processing_timestamp': img.processing_timestamp.isoformat() if img.processing_timestamp else None,
+        'original_image_url': img.original_image_url,
+        'processed_image_url': img.processed_image_url,
+        'file_size': img.file_size,
+    }
+
+
+@require_http_methods(["GET"])
+def api_image_list(request):
+    queryset = UploadedImage.objects.all()
+
+    query = request.GET.get('query')
+    if query:
+        queryset = queryset.filter(filename__icontains=query)
+
+    date_from = request.GET.get('date_from')
+    if date_from:
+        queryset = queryset.filter(upload_timestamp__date__gte=date_from)
+
+    date_to = request.GET.get('date_to')
+    if date_to:
+        queryset = queryset.filter(upload_timestamp__date__lte=date_to)
+
+    status = request.GET.get('status')
+    if status:
+        queryset = queryset.filter(processing_status=status)
+
+    queryset = queryset.order_by('-upload_timestamp')
+
+    page_size = min(int(request.GET.get('page_size', 12)), 100)
+    page_number = int(request.GET.get('page', 1))
+
+    paginator = Paginator(queryset, page_size)
+    page = paginator.get_page(page_number)
+
+    base_url = request.build_absolute_uri(request.path)
+    next_url = None
+    if page.has_next():
+        next_url = f"{base_url}?page={page.next_page_number()}&page_size={page_size}"
+    prev_url = None
+    if page.has_previous():
+        prev_url = f"{base_url}?page={page.previous_page_number()}&page_size={page_size}"
+
+    return JsonResponse({
+        'count': paginator.count,
+        'next': next_url,
+        'previous': prev_url,
+        'results': [_serialize_image_summary(img) for img in page],
+    })
+
+
+@require_http_methods(["GET"])
+def api_image_detail(request, image_id):
+    try:
+        img = UploadedImage.objects.get(id=image_id)
+    except UploadedImage.DoesNotExist:
+        return JsonResponse({'error': 'Image not found'}, status=404)
+
+    processing_logs = [
+        {
+            'status': log.status,
+            'message': log.message,
+            'timestamp': log.timestamp.isoformat() if log.timestamp else None,
+            'duration_ms': log.duration_ms,
+        }
+        for log in img.processing_logs.order_by('-timestamp')
+    ]
+
+    return JsonResponse({
+        'id': img.id,
+        'filename': img.filename,
+        'processing_status': img.processing_status,
+        'upload_timestamp': img.upload_timestamp.isoformat() if img.upload_timestamp else None,
+        'processing_timestamp': img.processing_timestamp.isoformat() if img.processing_timestamp else None,
+        'original_image_url': img.original_image_url,
+        'processed_image_url': img.processed_image_url,
+        'file_size': img.file_size,
+        'error_message': img.error_message,
+        'detections': img.get_detection_results(),
+        'processing_logs': processing_logs,
+        'api_response': img.api_response,
+    })
+
+
+@require_http_methods(["GET"])
+def api_download_image(request, image_id, image_type):
+    try:
+        return FileService.download_image(image_id, image_type)
+    except Exception as e:
+        logger.error(f"Error in api_download_image: {str(e)}")
+        return JsonResponse({'error': 'File not found'}, status=404)
+
+
+@require_http_methods(["GET"])
+def api_config(request):
+    return JsonResponse({
+        'max_upload_bytes': django_settings.UPLOAD_FILE_MAX_SIZE,
+        'processing_timeout_minutes': django_settings.PROCESSING_TIMEOUT_MINUTES,
+    })

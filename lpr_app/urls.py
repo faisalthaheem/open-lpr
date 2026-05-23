@@ -7,7 +7,9 @@ from .views.web_views import (
     image_detail, upload_progress
 )
 from .views.api_views import (
-    api_health_check, api_ocr_upload, metrics_view
+    api_health_check, api_ocr_upload, metrics_view,
+    api_image_list, api_image_detail, api_download_image,
+    api_config
 )
 from .views.file_views import download_image
 
@@ -40,6 +42,10 @@ urlpatterns = [
     
     # REST API endpoints
     path('api/v1/ocr/', api_ocr_upload, name='api_ocr_upload'),
+    path('api/v1/images/', api_image_list, name='api_image_list'),
+    path('api/v1/images/<int:image_id>/', api_image_detail, name='api_image_detail'),
+    path('api/v1/download/<int:image_id>/<str:image_type>/', api_download_image, name='api_download_image'),
+    path('api/v1/config/', api_config, name='api_config'),
     
     # Prometheus metrics endpoint
     path('metrics/', metrics_view, name='metrics'),

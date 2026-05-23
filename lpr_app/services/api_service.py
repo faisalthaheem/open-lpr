@@ -81,12 +81,13 @@ class ApiService:
                 'error_code': 'INVALID_FILE_TYPE'
             }, status=400)
         
-        # Validate file size (max 10MB)
-        max_size = 10 * 1024 * 1024  # 10MB in bytes
+        max_size = settings.UPLOAD_FILE_MAX_SIZE
         if uploaded_file.size > max_size:
+            max_display = max_size / (1024 * 1024) if max_size >= 1024 * 1024 else max_size / 1024
+            unit = 'MB' if max_size >= 1024 * 1024 else 'KB'
             return False, JsonResponse({
                 'success': False,
-                'error': f'File too large. Maximum size is 10MB',
+                'error': f'File too large. Maximum size is {max_display:.1f}{unit}',
                 'error_code': 'FILE_TOO_LARGE'
             }, status=400)
         

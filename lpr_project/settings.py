@@ -25,12 +25,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_apscheduler',
+    'corsheaders',
     'lpr_app',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -124,7 +126,7 @@ if not MEDIA_DIR.exists():
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024  # 250KB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024  # 250KB
-UPLOAD_FILE_MAX_SIZE = 250 * 1024  # 250KB
+UPLOAD_FILE_MAX_SIZE = config('UPLOAD_FILE_MAX_SIZE', default=1048576, cast=int)
 
 # Allowed file types for upload
 ALLOWED_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'webp']
@@ -132,6 +134,8 @@ ALLOWED_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'webp']
 # Detection pipeline settings
 MIN_PLATE_HEIGHT = config('MIN_PLATE_HEIGHT', default=30, cast=int)
 PLATE_HEIGHT_FRACTION = config('PLATE_HEIGHT_FRACTION', default=0.05, cast=float)
+
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 
 OCR_CROP_PADDING_PX = config('OCR_CROP_PADDING_PX', default=25, cast=int)
 

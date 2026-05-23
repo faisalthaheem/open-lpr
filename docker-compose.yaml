@@ -83,6 +83,23 @@ services:
     profiles:
       - core
 
+  spa:
+    image: ghcr.io/faisalthaheem/open-lpr-spa:latest
+    container_name: spa
+    ports:
+      - "${SPA_PORT:-3000}:3000"
+    networks:
+      - openlpr-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    profiles:
+      - core
+
   prometheus:
     # Use custom image with config baked in
     image: ghcr.io/faisalthaheem/open-lpr-prometheus:latest
