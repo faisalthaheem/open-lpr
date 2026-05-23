@@ -133,6 +133,8 @@ ALLOWED_IMAGE_TYPES = ['jpeg', 'jpg', 'png', 'webp']
 MIN_PLATE_HEIGHT = config('MIN_PLATE_HEIGHT', default=30, cast=int)
 PLATE_HEIGHT_FRACTION = config('PLATE_HEIGHT_FRACTION', default=0.05, cast=float)
 
+OCR_CROP_PADDING_PX = config('OCR_CROP_PADDING_PX', default=25, cast=int)
+
 PROCESSING_TIMEOUT_MINUTES = config('PROCESSING_TIMEOUT_MINUTES', default=5, cast=int)
 MAX_RETRIES = config('MAX_RETRIES', default=2, cast=int)
 RETRY_BATCH_SIZE = config('RETRY_BATCH_SIZE', default=5, cast=int)

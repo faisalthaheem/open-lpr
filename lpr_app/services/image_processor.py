@@ -299,42 +299,55 @@ class ImageProcessor:
     
     @staticmethod
     def crop_region(image_path: str, x1: int, y1: int, x2: int, y2: int, 
-                   padding_pct: float = 0.1) -> Optional[Tuple[str, int, int]]:
+                   padding_pct: float = 0.1,
+                   padding_px: Optional[int] = None) -> Optional[Tuple[str, int, int]]:
         """
         Crop a region from the image with optional padding.
         
         Args:
             image_path: Path to the original image
             x1, y1, x2, y2: Bounding box coordinates
-            padding_pct: Percentage of box size to add as padding (0.0 to 1.0)
+            padding_pct: Percentage of box size to add as padding (0.0 to 1.0).
+                         Ignored when padding_px is provided.
+            padding_px: Fixed pixel padding to add to each side. When provided,
+                        takes precedence over padding_pct. Each side is independently
+                        clamped to image boundaries.
             
         Returns:
             Tuple of (crop_path, crop_offset_x, crop_offset_y) or None if error
         """
         try:
             with Image.open(image_path) as img:
-                # Calculate padding
-                box_width = x2 - x1
-                box_height = y2 - y1
-                padding_x = int(box_width * padding_pct)
-                padding_y = int(box_height * padding_pct)
+                if padding_px is not None:
+                    padding_left = min(padding_px, x1)
+                    padding_top = min(padding_px, y1)
+                    padding_right = min(padding_px, img.width - x2)
+                    padding_bottom = min(padding_px, img.height - y2)
+                    
+                    crop_x1 = x1 - padding_left
+                    crop_y1 = y1 - padding_top
+                    crop_x2 = x2 + padding_right
+                    crop_y2 = y2 + padding_bottom
+                    
+                    logger.info(f"Cropping region: ({crop_x1},{crop_y1}) to ({crop_x2},{crop_y2}) with {padding_px}px padding")
+                else:
+                    box_width = x2 - x1
+                    box_height = y2 - y1
+                    padding_x = int(box_width * padding_pct)
+                    padding_y = int(box_height * padding_pct)
+                    
+                    crop_x1 = max(0, x1 - padding_x)
+                    crop_y1 = max(0, y1 - padding_y)
+                    crop_x2 = min(img.width, x2 + padding_x)
+                    crop_y2 = min(img.height, y2 + padding_y)
+                    
+                    logger.info(f"Cropping region: ({crop_x1},{crop_y1}) to ({crop_x2},{crop_y2}) with padding {padding_pct}")
                 
-                # Apply padding
-                crop_x1 = max(0, x1 - padding_x)
-                crop_y1 = max(0, y1 - padding_y)
-                crop_x2 = min(img.width, x2 + padding_x)
-                crop_y2 = min(img.height, y2 + padding_y)
-                
-                logger.info(f"Cropping region: ({crop_x1},{crop_y1}) to ({crop_x2},{crop_y2}) with padding {padding_pct}")
-                
-                # Crop the image
                 cropped_img = img.crop((crop_x1, crop_y1, crop_x2, crop_y2))
                 
-                # Generate new filename
                 base_name, ext = os.path.splitext(image_path)
                 crop_path = f"{base_name}_crop_{x1}_{y1}{ext}"
                 
-                # Save cropped image
                 cropped_img.save(crop_path, quality=95)
                 
                 return (crop_path, crop_x1, crop_y1)

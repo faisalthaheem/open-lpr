@@ -142,7 +142,8 @@ class ImageProcessingService:
             crop_paths = []
             crop_offsets = []
             
-            # Crop each detected plate with 10% padding
+            # Crop each detected plate with configured pixel padding
+            ocr_padding_px = settings.OCR_CROP_PADDING_PX
             for idx, detection in enumerate(detections):
                 if 'plate' not in detection or 'coordinates' not in detection['plate']:
                     continue
@@ -153,8 +154,7 @@ class ImageProcessingService:
                 x2 = int(coords['x2'])
                 y2 = int(coords['y2'])
                 
-                # Crop region with 10% padding
-                crop_result = ImageProcessor.crop_region(image_path, x1, y1, x2, y2, padding_pct=0.1)
+                crop_result = ImageProcessor.crop_region(image_path, x1, y1, x2, y2, padding_px=ocr_padding_px)
                 if crop_result:
                     crop_path, crop_offset_x, crop_offset_y = crop_result
                     crop_paths.append(crop_path)
