@@ -38,10 +38,10 @@ Experience the license plate recognition system in action without any installati
 
 | Feature | Preview |
 |---------|---------|
-| **Main Interface** | <img src="docs/open-lpr-index.png" alt="Open LPR Main Interface" width="400"> |
-| **Detection Results** | <img src="docs/open-lpr-detection-result.png" alt="Detection Results" width="400"> |
-| **Detection Details** | <img src="docs/open-lpr-detection-details.png" alt="Detection Details" width="400"> |
-| **Processed Image** | <img src="docs/open-lpr-processed-image.png" alt="Processed Image with Bounding Boxes" width="400"> |
+| **Upload Interface** | <img src="docs/open-lpr-index.png" alt="Upload page with drag & drop, REST API docs, and recent uploads" width="400"> |
+| **Detection Results** | <img src="docs/open-lpr-detection-result.png" alt="Side-by-side original and processed image comparison" width="400"> |
+| **Detection Details** | <img src="docs/open-lpr-detection-details.png" alt="Full detection details with bounding box coordinates and OCR results" width="400"> |
+| **Processed Image** | <img src="docs/open-lpr-processed-image.png" alt="Processed image with detected license plate bounding boxes" width="400"> |
 
 ## ✨ Features
 
@@ -390,8 +390,8 @@ For detailed LlamaCpp deployment instructions, see [README-llamacpp.md](README-l
 1. **Drag & Drop**: Simply drag an image file onto the upload area
 2. **Click to Browse**: Click the upload area to select a file
 3. **File Validation**:
-   - Supported formats: JPEG, PNG, BMP
-   - Maximum size: 10MB
+   - Supported formats: JPEG, PNG, WEBP
+   - Maximum size: configurable (default 1MB dev / 10MB Docker)
 4. **Processing**: Click "Analyze License Plates" to start detection
 
 ### Viewing Results
@@ -974,8 +974,8 @@ services:
    - Check network connectivity
 
 2. **Image Upload Failed**
-   - Verify file format (JPEG/PNG/BMP only)
-   - Check file size (< 10MB)
+   - Verify file format (JPEG/PNG/WEBP only)
+   - Check file size (within configured limit)
    - Ensure media directory permissions
 
 3. **Processing Errors**
