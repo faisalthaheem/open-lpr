@@ -762,9 +762,6 @@ open-lpr/
 │   ├── open-lpr-detection-details.png
 │   ├── open-lpr-processed-image.png
 │   └── RELEASE_NOTES_v1.0.1.md
-├── nginx/                     # Nginx configuration
-│   ├── nginx.conf             # Nginx reverse proxy configuration
-│   └── ssl/                   # SSL certificates directory
 ├── traefik/                   # Traefik reverse proxy configuration
 │   ├── traefik.yml            # Traefik static configuration
 │   ├── dynamic/               # Dynamic configuration directory
@@ -904,8 +901,8 @@ docker pull ghcr.io/faisalthaheem/open-lpr:$LATEST_STABLE
 1. **Set DEBUG=False** in `.env`
 2. **Configure ALLOWED_HOSTS** with your domain
 3. **Set up production database** (PostgreSQL recommended)
-4. **Configure static file serving** (nginx/AWS S3)
-5. **Set up media file serving** (nginx/AWS S3)
+4. **Configure static file serving** (Traefik/AWS S3)
+5. **Set up media file serving** (Traefik/AWS S3)
 6. **Use HTTPS** with SSL certificate
 7. **Pin to specific versions** (see version selection above)
 
