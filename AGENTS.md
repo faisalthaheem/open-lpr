@@ -73,9 +73,9 @@ Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 - `MEDIA_PATH` — Media storage (default: `./media`, Docker: `./container-media`)
 - `UPLOAD_FILE_MAX_SIZE` — Default 250KB in settings.py (10MB in Docker compose)
 
-### SPA Frontend (build-time, set during `docker build`)
+### SPA Frontend (runtime via Docker environment)
 
-- `NEXT_PUBLIC_API_BASE_URL` — Backend API URL (default: empty = relative paths, works behind shared reverse proxy)
+- `BACKEND_API_URL` — Backend API URL (default: empty = relative paths, works behind shared reverse proxy). Docker Compose default: `http://lpr-app:8000`
 - `NEXT_PUBLIC_UPLOAD_TIMEOUT` — Upload timeout in ms (default: 120000)
 
 ## Conventions

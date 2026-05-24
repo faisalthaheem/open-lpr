@@ -14,11 +14,21 @@ export default function ImageDetailClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ src: string; alt: string } | null>(null);
+  const [originalUrl, setOriginalUrl] = useState<string>('');
+  const [processedUrl, setProcessedUrl] = useState<string>('');
+  const [downloadOriginalUrl, setDownloadOriginalUrl] = useState<string>('');
+  const [downloadProcessedUrl, setDownloadProcessedUrl] = useState<string>('');
 
   useEffect(() => {
     if (!id) return;
     getImage(id)
-      .then(setImage)
+      .then((img) => {
+        setImage(img);
+        if (img.original_image_url) getImageUrl(img.original_image_url).then(setOriginalUrl);
+        if (img.processed_image_url) getImageUrl(img.processed_image_url).then(setProcessedUrl);
+        getDownloadUrl(img.id, 'original').then(setDownloadOriginalUrl);
+        getDownloadUrl(img.id, 'processed').then(setDownloadProcessedUrl);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
@@ -66,19 +76,19 @@ export default function ImageDetailClient() {
         <div>
           <h2 className="text-lg font-medium mb-2">Original</h2>
           <div className="bg-gray-100 dark:bg-[#1a1a1a] rounded-lg overflow-hidden">
-            {image.original_image_url ? (
+            {originalUrl ? (
               <img
-                src={getImageUrl(image.original_image_url)}
+                src={originalUrl}
                 alt="Original"
                 className="w-full h-auto cursor-zoom-in"
-                onClick={() => setPreview({ src: getImageUrl(image.original_image_url), alt: 'Original' })}
+                onClick={() => setPreview({ src: originalUrl, alt: 'Original' })}
               />
             ) : (
               <div className="p-12 text-center text-gray-400">No image</div>
             )}
           </div>
           <a
-            href={getDownloadUrl(image.id, 'original')}
+            href={downloadOriginalUrl}
             className="inline-block mt-2 px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-[#2d2d2d] transition-colors"
           >
             Download Original
@@ -87,12 +97,12 @@ export default function ImageDetailClient() {
         <div>
           <h2 className="text-lg font-medium mb-2">Processed</h2>
           <div className="bg-gray-100 dark:bg-[#1a1a1a] rounded-lg overflow-hidden">
-            {image.processed_image_url ? (
+            {processedUrl ? (
               <img
-                src={getImageUrl(image.processed_image_url)}
+                src={processedUrl}
                 alt="Processed"
                 className="w-full h-auto cursor-zoom-in"
-                onClick={() => setPreview({ src: getImageUrl(image.processed_image_url), alt: 'Processed' })}
+                onClick={() => setPreview({ src: processedUrl, alt: 'Processed' })}
               />
             ) : (
               <div className="p-12 text-center text-gray-400">No processed image</div>
@@ -100,7 +110,7 @@ export default function ImageDetailClient() {
           </div>
           {image.processed_image_url && (
             <a
-              href={getDownloadUrl(image.id, 'processed')}
+              href={downloadProcessedUrl}
               className="inline-block mt-2 px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-[#2d2d2d] transition-colors"
             >
               Download Processed

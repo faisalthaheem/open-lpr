@@ -86,6 +86,8 @@ services:
   spa:
     image: ghcr.io/faisalthaheem/open-lpr-spa:latest
     container_name: spa
+    environment:
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://lpr-app:8000}
     ports:
       - "${SPA_PORT:-3000}:3000"
     networks:

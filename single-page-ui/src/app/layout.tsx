@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import DisclaimerBanner from "./disclaimer-banner";
+import AppInitializer from "@/components/AppInitializer";
 
 export const metadata: Metadata = {
   title: "License Plate Recognition",
@@ -45,7 +46,7 @@ export default function RootLayout({
                   <a href="/images" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
                     Images
                   </a>
-                  <a href={`${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/health/`} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
+                  <a href="/health" target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
                     Health
                   </a>
                 </div>
@@ -83,7 +84,7 @@ export default function RootLayout({
               <a href="/images" className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
                 Images
               </a>
-              <a href={`${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/health/`} target="_blank" rel="noopener noreferrer" className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
+              <a href="/health" target="_blank" rel="noopener noreferrer" className="block px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors">
                 Health
               </a>
             </div>
@@ -93,7 +94,9 @@ export default function RootLayout({
         <DisclaimerBanner />
 
         <main className="flex-1">
-          {children}
+          <AppInitializer>
+            {children}
+          </AppInitializer>
         </main>
 
         <footer className="bg-gray-100 dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-700 mt-12">

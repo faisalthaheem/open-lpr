@@ -413,7 +413,7 @@ def main():
     }
     spa_env = {
         "PORT": str(args.spa_port),
-        "NEXT_PUBLIC_API_BASE_URL": f"http://localhost:{args.backend_port}",
+        "BACKEND_API_URL": f"http://localhost:{args.backend_port}",
     }
 
     print(f"Starting backend: {' '.join(backend_cmd)}")

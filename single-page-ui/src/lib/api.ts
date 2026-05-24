@@ -1,14 +1,46 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 const UPLOAD_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_UPLOAD_TIMEOUT || '120000', 10);
 
 export { UPLOAD_TIMEOUT_MS };
+
+let _apiBase: string | null = null;
+let _initPromise: Promise<string> | null = null;
+
+async function fetchApiBase(): Promise<string> {
+  try {
+    const res = await fetch('/api/config');
+    if (res.ok) {
+      const data = await res.json();
+      return data.apiBaseUrl ?? '';
+    }
+  } catch {}
+  return '';
+}
+
+export function initConfig(): Promise<string> {
+  if (_apiBase !== null) return Promise.resolve(_apiBase);
+  if (!_initPromise) {
+    _initPromise = fetchApiBase().then((base) => {
+      _apiBase = base;
+      return base;
+    });
+  }
+  return _initPromise;
+}
+
+export async function getApiBase(): Promise<string> {
+  if (_apiBase !== null) return _apiBase;
+  return initConfig();
+}
+
+export let configReady: Promise<void> = initConfig().then(() => {});
 
 let _maxUploadBytes: number | null = null;
 
 export async function getMaxUploadBytes(): Promise<number> {
   if (_maxUploadBytes !== null) return _maxUploadBytes;
   try {
-    const res = await fetch(`${API_BASE}/api/v1/config/`);
+    const base = await getApiBase();
+    const res = await fetch(`${base}/api/v1/config/`);
     if (res.ok) {
       const data = await res.json();
       _maxUploadBytes = data.max_upload_bytes as number;
@@ -27,7 +59,8 @@ export async function uploadImage(file: File, maxBytes: number): Promise<any> {
   const timeoutId = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
   try {
-    const res = await fetch(`${API_BASE}/api/v1/ocr/`, {
+    const base = await getApiBase();
+    const res = await fetch(`${base}/api/v1/ocr/`, {
       method: 'POST',
       body: formData,
       signal: controller.signal,
@@ -79,7 +112,8 @@ export async function getImages(params?: {
     });
   }
 
-  const url = `${API_BASE}/api/v1/images/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+  const base = await getApiBase();
+  const url = `${base}/api/v1/images/${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('Failed to fetch images');
   return res.json();
@@ -98,19 +132,22 @@ export interface ImageDetail extends ImageSummary {
 }
 
 export async function getImage(id: number): Promise<ImageDetail> {
-  const res = await fetch(`${API_BASE}/api/v1/images/${id}/`);
+  const base = await getApiBase();
+  const res = await fetch(`${base}/api/v1/images/${id}/`);
   if (!res.ok) throw new Error('Image not found');
   return res.json();
 }
 
-export function getDownloadUrl(id: number, type: 'original' | 'processed'): string {
-  return `${API_BASE}/api/v1/download/${id}/${type}/`;
+export async function getDownloadUrl(id: number, type: 'original' | 'processed'): Promise<string> {
+  const base = await getApiBase();
+  return `${base}/api/v1/download/${id}/${type}/`;
 }
 
-export function getImageUrl(path: string | null): string {
+export async function getImageUrl(path: string | null): Promise<string> {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  return `${API_BASE}${path}`;
+  const base = await getApiBase();
+  return `${base}${path}`;
 }
 
 export function formatBytes(bytes: number): string {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ImageSummary, getImageUrl } from '@/lib/api';
 import FullscreenPreview from './FullscreenPreview';
@@ -14,13 +14,16 @@ const statusColors: Record<string, string> = {
 
 export default function ImageCard({ image }: { image: ImageSummary }) {
   const [preview, setPreview] = useState<string | null>(null);
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
   const date = image.upload_timestamp ? new Date(image.upload_timestamp).toLocaleString() : '';
   const statusClass = statusColors[image.processing_status] || 'bg-gray-100 text-gray-800';
-  const imgSrc = image.processed_image_url
-    ? getImageUrl(image.processed_image_url)
-    : image.original_image_url
-      ? getImageUrl(image.original_image_url)
-      : null;
+
+  useEffect(() => {
+    const path = image.processed_image_url || image.original_image_url;
+    if (path) {
+      getImageUrl(path).then(setImgSrc);
+    }
+  }, [image.processed_image_url, image.original_image_url]);
 
   return (
     <>

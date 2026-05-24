@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-05-24
+
+### Added
+- Runtime backend API configuration via `BACKEND_API_URL` environment variable (no rebuild needed)
+- `/api/config` server-side endpoint that returns the backend URL to the SPA client
+- `/health` route on SPA that redirects to the Django backend health endpoint
+- `AppInitializer` component with spinner during config loading and error/retry state on failure
+
+### Changed
+- SPA now resolves backend API URL at runtime instead of build time
+- `spa-dev.py` uses `BACKEND_API_URL` instead of `NEXT_PUBLIC_API_BASE_URL`
+- Docker Compose SPA service passes `BACKEND_API_URL` via `environment:`
+- `getImageUrl` and `getDownloadUrl` are now async (runtime-resolved base URL)
+- Recent uploads on home page use shared `ImageCard` component
+- Health nav link uses `/health` (SPA proxy) instead of direct backend URL
+- Removed `NEXT_PUBLIC_API_BASE_URL` build arg from SPA Dockerfile (replaced by runtime `BACKEND_API_URL`)
+
+### Removed
+- Dead `NEXT_PUBLIC_MAX_UPLOAD_SIZE` build arg from SPA Dockerfile
+
 ## [1.2.3] - 2026-05-24
 
 ### Added
