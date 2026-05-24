@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-05-24
+
+### Added
+- SPA frontend env vars (`NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_UPLOAD_TIMEOUT`) to `.env.example` and `.env.llamacpp.example`
+- SPA vars documented in AGENTS.md Environment Variables section
+- Conventions section in AGENTS.md: env var documentation requirement, no `build:` in compose files
+
+### Changed
+- Docker image convention documented in AGENTS.md: all images built by CI, compose only references GHCR
+
+### Removed
+- Dead `NEXT_PUBLIC_MAX_UPLOAD_SIZE` build arg from SPA Dockerfile (max upload size fetched at runtime via `/api/v1/config/`)
+
 ## [1.2.2] - 2026-05-24
 
 ### Changed
