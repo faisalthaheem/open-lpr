@@ -69,6 +69,7 @@ Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 
 - `QWEN_API_KEY`, `QWEN_BASE_URL`, `QWEN_MODEL` — AI model connection
 - `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` — Django core
+- `CORS_ALLOWED_ORIGINS` — Comma-separated frontend origins allowed to access the API (default: `http://localhost:3000`)
 - `DATABASE_PATH` — SQLite path (default: project root `db.sqlite3`)
 - `MEDIA_PATH` — Media storage (default: `./media`, Docker: `./container-media`)
 - `UPLOAD_FILE_MAX_SIZE` — Default 250KB in settings.py (10MB in Docker compose)

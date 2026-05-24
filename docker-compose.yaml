@@ -41,6 +41,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-me-in-production}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,lpr-app}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       
       # Qwen3-VL API Configuration - Updated to use local LlamaCpp service
       - QWEN_API_KEY=${QWEN_API_KEY:-sk-llamacpp-local}
