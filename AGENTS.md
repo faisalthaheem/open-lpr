@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Django 4.2 web app for license plate recognition using Qwen3-VL vision-language model via an OpenAI-compatible API. Python 3.8+, SQLite by default.
+Django 5.2 LTS web app for license plate recognition using Qwen3-VL vision-language model via an OpenAI-compatible API. Python 3.10+, SQLite by default.
 
 ## Commands
 

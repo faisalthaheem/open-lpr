@@ -63,8 +63,8 @@ Experience the license plate recognition system in action without any installati
 
 | Backend | AI Model | Frontend | Database | Deployment |
 |---------|----------|----------|----------|------------|
-| ![Django](https://img.shields.io/badge/Django-4.2.7-092E20?style=flat-square&logo=django) | ![Qwen3-VL](https://img.shields.io/badge/Qwen3--VL-4B--instruct-FF6B35?style=flat-square) | ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?style=flat-square&logo=bootstrap) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
-| ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python) | ![OpenAI API](https://img.shields.io/badge/OpenAI%20Compatible-412991?style=flat-square&logo=openai) | ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
+| ![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django) | ![Qwen3-VL](https://img.shields.io/badge/Qwen3--VL-4B--instruct-FF6B35?style=flat-square) | ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?style=flat-square&logo=bootstrap) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
+| ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python) | ![OpenAI API](https://img.shields.io/badge/OpenAI%20Compatible-412991?style=flat-square&logo=openai) | ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
 
 </div>
 
@@ -240,7 +240,7 @@ For detailed profile documentation, see [README-DOCKER-PROFILES.md](README-DOCKE
 For development or custom deployments:
 
 1. **Prerequisites**
-   - Python 3.8+
+   - Python 3.10+
    - pip package manager
    - Qwen3-VL API access
 

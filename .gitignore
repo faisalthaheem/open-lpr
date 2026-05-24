@@ -138,3 +138,5 @@ container-metrics/
 
 #ai generated plans
 plans/*
+
+.playwright-mcp/*
