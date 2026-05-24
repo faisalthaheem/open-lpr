@@ -22,8 +22,7 @@ There is no linter, formatter, or typecheck configured.
 - **`lpr_project/`** — Django project config (`settings.py`, `urls.py`, `wsgi.py`)
 - **`lpr_app/`** — The sole Django app containing all business logic
   - `models.py` — `UploadedImage` and `ProcessingLog` models
-  - `views.py` — Legacy monolithic views (still referenced by `urls.py` import)
-  - `views/` — Refactored view subpackage: `web_views.py`, `api_views.py`, `file_views.py`
+  - `views/` — API-only view subpackage: `api_views.py`, `file_views.py`
   - `services/` — Business logic layer
     - `qwen_client.py` — OpenAI-compatible client for Qwen3-VL, prompt templates, coordinate conversion
     - `image_processor.py` / `image_processing_service.py` — Image handling
@@ -31,6 +30,7 @@ There is no linter, formatter, or typecheck configured.
     - `api_service.py`, `file_service.py` — Service layer
   - `utils/` — Helpers: `validators.py`, `response_helpers.py`, `metrics_helpers.py`
   - `management/commands/` — `setup_project`, `inspect_image`
+- **`single-page-ui/`** — Next.js 16 SPA frontend (React 19, Tailwind CSS 4, Storybook 10)
 - **`canary/`** — Separate canary monitoring service (its own Dockerfile)
 - **`blackbox/`** — Blackbox exporter config for Prometheus probing
 
@@ -42,7 +42,7 @@ There is no linter, formatter, or typecheck configured.
 - Detection uses a two-phase pipeline: Phase 1 detects plate bounding boxes, Phase 2 runs OCR on cropped regions. Prompts are in `qwen_client.py`.
 - Bounding box coordinates arrive in Qwen2VL 0-1000 normalized range and must be converted via `convert_from_qwen2vl_format()`.
 - `UploadedImage` media is organized into `uploads/YYYY/MM/DD/` and `processed/YYYY/MM/DD/` subdirectories.
-- `views.py` (monolithic) and `views/` (subpackage) both exist. `urls.py` imports from the subpackage.
+- Django serves API-only (no templates, no web UI). The frontend is a separate Next.js SPA in `single-page-ui/`.
 - `upload_to` path helpers in `models.py` generate date-partitioned upload paths.
 
 ## Docker

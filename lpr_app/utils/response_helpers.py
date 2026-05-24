@@ -149,47 +149,6 @@ class ResponseHelper:
         )
 
 
-class WebResponseHelper:
-    """Utility class for web-specific response helpers."""
-    
-    @staticmethod
-    def get_base_context(title: str = 'License Plate Recognition') -> Dict[str, Any]:
-        """
-        Get base context for web templates.
-        
-        Args:
-            title: Page title
-            
-        Returns:
-            Dictionary with base context data
-        """
-        from django.conf import settings
-        
-        return {
-            'title': title,
-            'settings': settings,
-        }
-    
-    @staticmethod
-    def get_image_context(uploaded_image) -> Dict[str, Any]:
-        """
-        Get context data for an image template.
-        
-        Args:
-            uploaded_image: UploadedImage instance
-            
-        Returns:
-            Dictionary with image context data
-        """
-        return {
-            'uploaded_image': uploaded_image,
-            'detection_results': uploaded_image.get_detection_results(),
-            'plate_count': uploaded_image.get_plate_count(),
-            'ocr_count': uploaded_image.get_total_ocr_count(),
-            'first_ocr_text': uploaded_image.get_first_ocr_text(),
-        }
-
-
 class ApiPaginationHelper:
     """Utility class for API pagination responses."""
     

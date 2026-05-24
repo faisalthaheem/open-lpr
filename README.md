@@ -9,7 +9,7 @@
 [![GitHub Container Registry](https://img.shields.io/badge/ghcr.io-open--lpr-blue?style=flat-square)](https://github.com/faisalthaheem/open-lpr/pkgs/container/open-lpr)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-*A powerful Django-based web application that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
+*A powerful Django-based web application with a Next.js SPA frontend that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
 
 > **🚨 Important Stability Notice**: For production deployments, we strongly recommend using **tagged releases** instead of the mainline branch. The mainline may contain experimental features and be under active development. See the [Production Deployment](#-production-deployment) section for guidance on using stable tagged versions.
 
@@ -53,8 +53,11 @@ Experience the license plate recognition system in action without any installati
 - 🔄 **Side-by-Side Comparison**: View original and processed images together
 - 🔎 **Search & Filter**: Browse and search through processing history
 - 📱 **Responsive Design**: Works on desktop, tablet, and mobile devices
+- 🌙 **Dark Mode**: Full light/dark theme support with system preference detection
 - 🐳 **Docker Support**: Easy deployment with Docker and Docker Compose
 - 🔌 **REST API**: Full API for programmatic access
+- ⚛️ **Next.js SPA**: Modern React-based single-page application with Tailwind CSS
+- 📖 **Storybook**: Component development environment with stories for all UI components
 
 
 ## 🛠️ Technology Stack
@@ -63,8 +66,8 @@ Experience the license plate recognition system in action without any installati
 
 | Backend | AI Model | Frontend | Database | Deployment |
 |---------|----------|----------|----------|------------|
-| ![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django) | ![Qwen3-VL](https://img.shields.io/badge/Qwen3--VL-4B--instruct-FF6B35?style=flat-square) | ![Bootstrap](https://img.shields.io/badge/Bootstrap-5-7952B3?style=flat-square&logo=bootstrap) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
-| ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python) | ![OpenAI API](https://img.shields.io/badge/OpenAI%20Compatible-412991?style=flat-square&logo=openai) | ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
+| ![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django) | ![Qwen3-VL](https://img.shields.io/badge/Qwen3--VL-4B--instruct-FF6B35?style=flat-square) | ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
+| ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python) | ![OpenAI API](https://img.shields.io/badge/OpenAI%20Compatible-412991?style=flat-square&logo=openai) | ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
 
 </div>
 
@@ -421,20 +424,14 @@ Access the "History" page to:
 <details>
 <summary>Click to expand</summary>
 
-### Web Endpoints
-
-- `GET /` - Home page with upload form
-- `POST /upload/` - Upload and process image
-- `GET /result/<int:image_id>/` - View processing results for a specific image
-- `GET /images/` - Browse image history with search and filtering
-- `GET /image/<int:image_id>/` - View detailed information about a specific image
-- `POST /progress/` - Check processing status (AJAX endpoint)
-- `GET /download/<int:image_id>/<str:image_type>/` - Download original or processed images
-- `GET /health/` - API health check endpoint
-
 ### REST API Endpoints
 
 - `POST /api/v1/ocr/` - Upload an image and receive OCR results synchronously
+- `GET /api/v1/images/` - List images with pagination and filtering
+- `GET /api/v1/images/<int:image_id>/` - Get detailed information about a specific image
+- `GET /api/v1/download/<int:image_id>/<str:image_type>/` - Download original or processed images
+- `GET /api/v1/config/` - Get application configuration (max upload size, timeout)
+- `GET /metrics/` - Prometheus metrics endpoint
 
 ### Response Format
 
@@ -701,10 +698,9 @@ open-lpr/
 │   ├── admin.py                # Django admin configuration
 │   ├── apps.py                 # Django app configuration
 │   ├── models.py               # Database models
-│   ├── views.py                # View functions and API endpoints
-│   ├── views_refactored.py     # Refactored view functions
+│   ├── views.py                # Legacy monolithic views (still imported by urls.py)
 │   ├── urls.py                 # App URL patterns
-│   ├── forms.py                # Django forms
+│   ├── urls.py                 # App URL patterns
 │   ├── metrics.py              # Application metrics
 │   ├── services/               # Business logic
 │   │   ├── __init__.py
@@ -738,21 +734,28 @@ open-lpr/
 │   └── migrations/            # Database migrations
 │       ├── __init__.py
 │       └── 0001_initial.py
+├── single-page-ui/            # Next.js SPA frontend
+│   ├── package.json           # Node.js dependencies
+│   ├── next.config.ts         # Next.js configuration
+│   ├── .storybook/            # Storybook configuration
+│   ├── src/
+│   │   ├── app/               # Next.js App Router pages
+│   │   │   ├── layout.tsx     # Root layout with nav and footer
+│   │   │   ├── page.tsx       # Home page with upload
+│   │   │   ├── disclaimer-banner.tsx  # Disclaimer client component
+│   │   │   ├── image/[id]/    # Image detail page
+│   │   │   └── images/        # Image history page
+│   │   ├── components/        # Reusable React components + stories
+│   │   ├── hooks/             # Custom React hooks
+│   │   └── lib/               # API client and mock data
+│   └── vitest.config.ts       # Vitest/Storybook test configuration
 ├── media/                     # Uploaded images
 │   ├── uploads/               # Original images
 │   └── processed/             # Processed images
 ├── container-data/             # Docker container data persistence
 ├── container-media/            # Docker container media persistence
 ├── staticfiles/               # Collected static files
-├── templates/                 # HTML templates
-│   ├── base.html              # Base template
-│   └── lpr_app/               # App-specific templates
-│       ├── base.html
-│       ├── image_detail.html
-│       ├── image_list.html
-│       ├── results.html
-│       └── upload.html
-├── docs/                      # Documentation
+├── media/                     # Uploaded images
 │   ├── LLAMACPP_RESOURCES.md  # LlamaCpp and ROCm resources
 │   ├── open-lpr-index.png
 │   ├── open-lpr-detection-result.png
@@ -1064,7 +1067,9 @@ For issues and questions:
 
 - [Qwen3-VL](https://github.com/QwenLM/Qwen-VL) for the powerful vision-language model
 - [Django](https://www.djangoproject.com/) for the robust web framework
-- [Bootstrap](https://getbootstrap.com/) for the responsive UI components
+- [Next.js](https://nextjs.org/) for the React-based SPA frontend
+- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
+- [Storybook](https://storybook.js.org/) for component development
 - All contributors who help improve this project
 
 </details>
