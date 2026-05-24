@@ -88,13 +88,14 @@ services:
     container_name: spa
     environment:
       - BACKEND_API_URL=${BACKEND_API_URL:-http://lpr-app:8000}
+      - PORT=${SPA_PORT:-3000}
     ports:
-      - "${SPA_PORT:-3000}:3000"
+      - "${SPA_PORT:-3000}:${SPA_PORT:-3000}"
     networks:
       - openlpr-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider --quiet http://localhost:3000 || exit 1"]
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost:${SPA_PORT:-3000} || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
