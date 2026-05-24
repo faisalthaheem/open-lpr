@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-24
+
+### Added
+- Next.js 16 SPA frontend with React 19 and Tailwind CSS 4
+- Storybook 10 with component stories for all UI components
+- Dark mode support with system preference detection in SPA
+- REST API endpoints: `/api/v1/images/`, `/api/v1/images/<id>/`, `/api/v1/download/<id>/<type>/`, `/api/v1/config/`
+- CORS support via `django-cors-headers` for SPA cross-origin requests
+- Configurable fixed-pixel padding for OCR crop regions
+- Disclaimer banner in SPA with no-liability and data usage notice
+- SPA pages: Home (upload), Images (history with search/filter/pagination), Image Detail (detection results, logs, raw API response)
+
+### Changed
+- **Breaking**: Django backend is now API-only — all server-rendered templates removed
+- Django upgraded from 4.2.30 to 5.2 LTS (supported through April 2028)
+- Python minimum version raised from 3.8+ to 3.10+
+- Frontend migrated from Bootstrap 5 / Django templates to Next.js SPA
+- Removed all Django HTML templates, forms, template tags, and web views
+- Removed legacy monolithic `views.py` and `views_refactored.py`
+- Removed `nginx/` directory (Traefik is the active reverse proxy)
+- File upload accepts WEBP in addition to JPEG and PNG
+- README updated: tech stack badges, API endpoints, file structure, acknowledgments
+- AGENTS.md updated to reflect API-only Django + Next.js SPA architecture
+
+### Fixed
+- Hydration mismatch in Next.js SPA disclaimer banner (extracted to `"use client"` component)
+- `.gitignore` `lib/` pattern fixed to `/lib/` (was matching `single-page-ui/src/lib/`)
+
+### Removed
+- `templates/` directory (all HTML templates)
+- `lpr_app/forms.py` (Django forms — only used by removed web views)
+- `lpr_app/templatetags/` (template tag libraries)
+- `lpr_app/views/web_views.py` (template-rendering views)
+- `lpr_app/views.py` (legacy monolithic views)
+- `lpr_app/views_refactored.py` (unused leftover)
+- `lpr_app/utils/response_helpers.py` `WebResponseHelper` class
+- `nginx/` directory (unused — Traefik is the active reverse proxy)
+
 ## [1.1.0] - 2026-05-15
 
 ### Added
@@ -35,8 +73,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Django upgraded from 4.2.7 to 4.2.30
 - Pillow upgraded from 10.1.0 to 12.2.0
 - Gunicorn upgraded from 21.2.0 to 22.0.0
-- python-dotenv upgraded to 1.2.2
-- License changed to Apache 2.0
 - Maximum image upload size reduced from 10MB to 250KB for optimized processing
 - Homepage updated to show 9 processed images with annotations
 - UI condensed for better screen utilization
