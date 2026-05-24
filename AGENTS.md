@@ -57,6 +57,7 @@ docker compose --profile core up -d                        # External API only
 ```
 
 - Images published to `ghcr.io/faisalthaheem/open-lpr`
+- **All Docker images are built and published by GitHub Actions CI.** Docker Compose files (`docker-compose.yaml`) only reference pre-built images from GHCR — never use `build:` directives in compose files.
 - CI: `.github/workflows/docker-publish.yml` builds multi-arch (amd64/arm64) on push to main and version tags
 - Container runs as `django` user via `gosu` (see `docker-entrypoint.sh`)
 - `docker-entrypoint.sh` runs migrate + collectstatic + optional createsuperuser on every start
@@ -71,3 +72,13 @@ Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 - `DATABASE_PATH` — SQLite path (default: project root `db.sqlite3`)
 - `MEDIA_PATH` — Media storage (default: `./media`, Docker: `./container-media`)
 - `UPLOAD_FILE_MAX_SIZE` — Default 250KB in settings.py (10MB in Docker compose)
+
+### SPA Frontend (build-time, set during `docker build`)
+
+- `NEXT_PUBLIC_API_BASE_URL` — Backend API URL (default: empty = relative paths, works behind shared reverse proxy)
+- `NEXT_PUBLIC_UPLOAD_TIMEOUT` — Upload timeout in ms (default: 120000)
+
+## Conventions
+
+- **Environment variables**: When adding new environment variables, add them to `.env.example`, `.env.llamacpp.example`, and any relevant Docker Compose files. Document them in this file under Environment Variables.
+- **Docker images**: All images are built and published by GitHub Actions CI. Never add `build:` directives to Docker Compose files — always reference pre-built images from GHCR.
