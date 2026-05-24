@@ -29,7 +29,7 @@
 
 ## 🚀 Live Demo
 
-Try the live demo of Open LPR at: **[https://rest-openlpr.computedsynergy.com/](https://rest-openlpr.computedsynergy.com/)**
+Try the live demo of Open LPR at: **[https://openlpr.computedsynergy.com/](https://openlpr.computedsynergy.com/)**
 
 Experience the license plate recognition system in action without any installation required!
 
