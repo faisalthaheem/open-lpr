@@ -5,12 +5,28 @@ on:
     branches:
       - main
       - master
+    paths:
+      - 'lpr_app/**'
+      - 'lpr_project/**'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - 'docker-entrypoint.sh'
+      - 'docker-compose.yml'
+      - '.github/workflows/docker-publish.yml'
     tags:
       - 'v*'
   pull_request:
     branches:
       - main
       - master
+    paths:
+      - 'lpr_app/**'
+      - 'lpr_project/**'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - 'docker-entrypoint.sh'
+      - 'docker-compose.yml'
+      - '.github/workflows/docker-publish.yml'
 
 env:
   REGISTRY: ghcr.io
