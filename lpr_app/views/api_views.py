@@ -7,7 +7,11 @@ including OCR processing, health checks, metrics, and image listing.
 
 import logging
 import time
-from datetime import datetime
+import json
+import urllib.request
+import urllib.error
+import urllib.parse
+from datetime import datetime, timedelta
 
 from django.conf import settings as django_settings
 from django.http import JsonResponse
@@ -320,3 +324,75 @@ def api_config(request):
         'max_upload_bytes': django_settings.UPLOAD_FILE_MAX_SIZE,
         'processing_timeout_minutes': django_settings.PROCESSING_TIMEOUT_MINUTES,
     })
+
+
+@require_http_methods(["GET"])
+def api_health_light(request):
+    try:
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            result = cursor.fetchone()
+            db_healthy = result is not None and result[0] == 1
+
+        if db_healthy:
+            return JsonResponse({
+                'status': 'healthy',
+                'database_healthy': True,
+                'timestamp': datetime.now().isoformat(),
+            }, status=200)
+        else:
+            return JsonResponse({
+                'status': 'unhealthy',
+                'database_healthy': False,
+                'timestamp': datetime.now().isoformat(),
+            }, status=503)
+    except Exception as e:
+        logger.error(f"Light health check failed: {str(e)}")
+        return JsonResponse({
+            'status': 'unhealthy',
+            'database_healthy': False,
+            'timestamp': datetime.now().isoformat(),
+        }, status=503)
+
+
+@require_http_methods(["GET"])
+def api_availability(request):
+    try:
+        days = int(request.GET.get('days', 3))
+    except (ValueError, TypeError):
+        days = 3
+
+    try:
+        prometheus_url = getattr(django_settings, 'PROMETHEUS_URL', 'http://prometheus:9090')
+        now = datetime.utcnow()
+        start = now - timedelta(days=days)
+        step = '300'
+
+        params = urllib.parse.urlencode({
+            'query': 'avg_over_time(lpr_api_health_status[5m])',
+            'start': start.timestamp(),
+            'end': now.timestamp(),
+            'step': step,
+        })
+
+        url = f"{prometheus_url}/api/v1/query_range?{params}"
+        req = urllib.request.Request(url, headers={'Accept': 'application/json'})
+
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+
+        results = data.get('data', {}).get('result', [])
+        if not results:
+            return JsonResponse({'data': []})
+
+        values = results[0].get('values', [])
+        points = [
+            {'timestamp': datetime.utcfromtimestamp(float(v[0])).isoformat() + 'Z', 'value': float(v[1])}
+            for v in values
+        ]
+
+        return JsonResponse({'data': points})
+    except Exception as e:
+        logger.error(f"Availability query failed: {str(e)}")
+        return JsonResponse({'error': 'Prometheus unavailable'}, status=503)

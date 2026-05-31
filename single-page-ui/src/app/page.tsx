@@ -6,9 +6,12 @@ import UploadForm from '@/components/UploadForm';
 import { getImages } from '@/lib/api';
 import type { ImageSummary } from '@/lib/api';
 import ImageCard from '@/components/ImageCard';
+import { useHealth } from '@/components/HealthContext';
+import AvailabilityGraph from '@/components/AvailabilityGraph';
 
 export default function HomePage() {
   const router = useRouter();
+  const { isHealthy } = useHealth();
   const [recentImages, setRecentImages] = useState<ImageSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -47,7 +50,12 @@ export default function HomePage() {
             if (id) router.push(`/image/${id}`);
           }}
           onError={setError}
+          disabled={isHealthy === false}
         />
+      </div>
+
+      <div className="max-w-4xl mx-auto mb-12">
+        <AvailabilityGraph />
       </div>
 
       {recentImages.length > 0 && (

@@ -207,3 +207,5 @@ CANARY_ENABLED = config('CANARY_ENABLED', default='true', cast=bool)
 CANARY_HEADER_NAME = config('CANARY_HEADER_NAME', default='X-Canary-Request')
 CANARY_HEADER_VALUE = config('CANARY_HEADER_VALUE', default='random-string-not-known-outside')
 CANARY_INTERVAL = config('CANARY_INTERVAL', default='900', cast=int)
+
+PROMETHEUS_URL = config('PROMETHEUS_URL', default='http://prometheus:9090')

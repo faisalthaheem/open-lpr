@@ -58,6 +58,9 @@ services:
       # Metrics persistence
       - METRICS_FILE_PATH=/app/metrics/metrics_state.json
       
+      # Prometheus URL for availability proxy
+      - PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus:9090}
+      
       # Canary Configuration
       - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
       - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}

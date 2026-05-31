@@ -157,3 +157,28 @@ export function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
+
+export interface HealthStatus {
+  status: string;
+  database_healthy: boolean;
+  timestamp: string;
+}
+
+export async function checkHealthLight(): Promise<HealthStatus> {
+  const base = await getApiBase();
+  const res = await fetch(`${base}/api/v1/health-light/`);
+  return res.json();
+}
+
+export interface AvailabilityPoint {
+  timestamp: string;
+  value: number;
+}
+
+export async function getAvailability(days: number = 3): Promise<AvailabilityPoint[]> {
+  const base = await getApiBase();
+  const res = await fetch(`${base}/api/v1/availability/?days=${days}`);
+  if (!res.ok) throw new Error('Failed to fetch availability');
+  const data = await res.json();
+  return data.data ?? [];
+}

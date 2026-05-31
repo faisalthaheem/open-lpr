@@ -6,11 +6,12 @@ import { uploadImage, getMaxUploadBytes, UPLOAD_TIMEOUT_MS, formatBytes } from '
 interface UploadFormProps {
   onSuccess: (data: any) => void;
   onError: (error: string) => void;
+  disabled?: boolean;
 }
 
 type UploadState = 'idle' | 'selected' | 'uploading' | 'timed_out';
 
-export default function UploadForm({ onSuccess, onError }: UploadFormProps) {
+export default function UploadForm({ onSuccess, onError, disabled = false }: UploadFormProps) {
   const [dragover, setDragover] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -93,17 +94,25 @@ export default function UploadForm({ onSuccess, onError }: UploadFormProps) {
 
   return (
     <div className="space-y-4">
+      {disabled && state === 'idle' && (
+        <p className="text-center text-sm text-red-500 dark:text-red-400">
+          Uploads are disabled — backend service is unavailable
+        </p>
+      )}
+
       {state === 'idle' || state === 'selected' ? (
         <div
-          className={`border-3 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all duration-300 ${
-            dragover
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-              : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#1a1a1a] hover:border-purple-500 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]'
+          className={`border-3 border-dashed rounded-xl p-12 text-center transition-all duration-300 ${
+            disabled
+              ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-[#111] opacity-50 cursor-not-allowed'
+              : dragover
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-pointer'
+                : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-[#1a1a1a] hover:border-purple-500 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] cursor-pointer'
           }`}
-          onDragOver={(e) => { e.preventDefault(); setDragover(true); }}
+          onDragOver={(e) => { if (disabled) return; e.preventDefault(); setDragover(true); }}
           onDragLeave={() => setDragover(false)}
-          onDrop={(e) => { e.preventDefault(); setDragover(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
-          onClick={() => inputRef.current?.click()}
+          onDrop={(e) => { if (disabled) return; e.preventDefault(); setDragover(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
+          onClick={() => { if (disabled) return; inputRef.current?.click(); }}
         >
           <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
           <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -131,7 +140,12 @@ export default function UploadForm({ onSuccess, onError }: UploadFormProps) {
           <div className="flex justify-center space-x-3">
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+              disabled={disabled}
+              className={`px-6 py-2 rounded-lg font-medium transition-opacity ${
+                disabled
+                  ? 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed opacity-50'
+                  : 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:opacity-90'
+              }`}
             >
               Upload & Detect
             </button>

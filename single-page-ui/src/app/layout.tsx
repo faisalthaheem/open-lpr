@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import DisclaimerBanner from "./disclaimer-banner";
 import AppInitializer from "@/components/AppInitializer";
+import { HealthProvider } from "@/components/HealthContext";
+import HealthIndicator from "@/components/HealthIndicator";
 
 export const metadata: Metadata = {
   title: "License Plate Recognition",
@@ -52,6 +54,7 @@ export default function RootLayout({
                 </div>
               </div>
               <div className="flex items-center space-x-2">
+                <HealthIndicator />
                 <button
                   id="theme-toggle"
                   className="p-2 rounded-full hover:bg-gray-700 transition-colors"
@@ -95,7 +98,9 @@ export default function RootLayout({
 
         <main className="flex-1">
           <AppInitializer>
-            {children}
+            <HealthProvider>
+              {children}
+            </HealthProvider>
           </AppInitializer>
         </main>
 
