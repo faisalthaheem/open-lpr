@@ -79,6 +79,44 @@ Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 - `BACKEND_API_URL` — Backend API URL (default: empty = relative paths, works behind shared reverse proxy). Docker Compose default: `http://lpr-app:8000`
 - `NEXT_PUBLIC_UPLOAD_TIMEOUT` — Upload timeout in ms (default: 120000)
 
+## Deployment
+
+When the user asks to "deploy the change", follow these steps in order:
+
+### 1. Ensure 80%+ test coverage
+- Write or update tests to cover the changed code
+- Run `python manage.py test` and verify all tests pass
+- Ensure coverage is 80%+ for changed files (use `coverage run --source='lpr_app' manage.py test && coverage report`)
+
+### 2. Commit and push via SSH
+- Stage only the intended files (never commit secrets)
+- Commit with a concise message matching the repo style
+- Push to `origin` (git@github.com:faisalthaheem/open-lpr.git) via SSH
+
+### 3. Wait for GitHub Actions CI
+- Monitor the workflow run triggered by the push:
+  ```bash
+  gh run list --limit 1                          # Get latest run ID
+  gh run watch <run-id>                          # Stream logs
+  ```
+- The CI builds multi-arch Docker images and publishes to `ghcr.io/faisalthaheem/open-lpr`
+- If the build fails, read the logs with `gh run view <run-id> --log-failed`, fix errors, commit and push again
+
+### 4. Pull latest images on prod server
+- SSH to prod: `ssh root@10.1.200.101`
+- Navigate to the Coolify app directory and pull the latest images:
+  ```bash
+  ssh root@10.1.200.101 "cd /path/to/app && docker compose pull"
+  ```
+- If the exact path is unknown, inspect running containers first:
+  ```bash
+  ssh root@10.1.200.101 "docker ps --format '{{.Names}} {{.Image}}'"
+  ```
+
+### 5. Notify user
+- Tell the user the images are pulled and ready
+- The user will redeploy the app via Coolify themselves
+
 ## Conventions
 
 - **Environment variables**: When adding new environment variables, add them to `.env.example`, `.env.llamacpp.example`, and any relevant Docker Compose files. Document them in this file under Environment Variables.

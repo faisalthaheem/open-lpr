@@ -109,11 +109,17 @@ def api_ocr_upload(request):
                 
                 if is_canary:
                     MetricsHelper.record_canary_request('failed')
+                    MetricsHelper.record_canary_processing_duration(processing_time_ms / 1000.0)
+                    if not save_image:
+                        ImageProcessingService._handle_canary_cleanup(
+                            uploaded_image, save_image=False, comparison_path=None
+                        )
                 
+                response_image_id = None if is_canary and not save_image else uploaded_image.id
                 response = ApiService.format_error_response(
                     error_message=result.get('error', 'Unknown processing error'),
                     error_code='PROCESSING_FAILED',
-                    image_id=uploaded_image.id,
+                    image_id=response_image_id,
                     processing_time_ms=processing_time_ms,
                     is_canary=is_canary,
                     status_code=500
@@ -131,13 +137,20 @@ def api_ocr_upload(request):
             MetricsHelper.record_upload_attempt('error')
             MetricsHelper.record_api_error()
             
+            exception_processing_time_ms = int((time.time() - start_time) * 1000)
+            
             if is_canary:
                 MetricsHelper.record_canary_request('error')
+                MetricsHelper.record_canary_processing_duration(exception_processing_time_ms / 1000.0)
+                if not save_image and 'uploaded_image' in locals() and uploaded_image and uploaded_image.pk:
+                    ImageProcessingService._handle_canary_cleanup(
+                        uploaded_image, save_image=False, comparison_path=None
+                    )
             
             return ApiService.format_error_response(
                 error_message='Internal server error during image processing',
                 error_code='INTERNAL_ERROR',
-                processing_time_ms=int((time.time() - start_time) * 1000),
+                processing_time_ms=exception_processing_time_ms,
                 is_canary=is_canary,
                 status_code=500
             )
