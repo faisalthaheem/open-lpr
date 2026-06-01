@@ -61,6 +61,9 @@ services:
       # Prometheus URL for availability proxy
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus:9090}
       
+      # Scheduler - auto-detected under Gunicorn, set explicitly if needed
+      # - RUN_SCHEDULER=true
+      
       # Canary Configuration
       - CANARY_HEADER_NAME=${CANARY_HEADER_NAME:-X-Canary-Request}
       - CANARY_HEADER_VALUE=${CANARY_HEADER_VALUE:-true}

@@ -1,9 +1,19 @@
 import logging
+import os
+import sys
 
 from django.apps import AppConfig
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _should_run_scheduler():
+    if not getattr(settings, 'RETRY_SCHEDULER_ENABLED', True):
+        return False
+    if os.environ.get('RUN_SCHEDULER', '').lower() in ('1', 'true', 'yes'):
+        return True
+    return 'gunicorn' in os.path.basename(sys.argv[0]).lower()
 
 
 class LprAppConfig(AppConfig):
@@ -12,7 +22,7 @@ class LprAppConfig(AppConfig):
     verbose_name = 'License Plate Recognition'
 
     def ready(self):
-        if not getattr(settings, 'RETRY_SCHEDULER_ENABLED', True):
+        if not _should_run_scheduler():
             return
 
         try:
