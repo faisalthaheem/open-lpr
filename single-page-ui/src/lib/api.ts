@@ -2,6 +2,15 @@ const UPLOAD_TIMEOUT_MS = parseInt(process.env.NEXT_PUBLIC_UPLOAD_TIMEOUT || '12
 
 export { UPLOAD_TIMEOUT_MS };
 
+export class RateLimitError extends Error {
+  retryAfter: number;
+  constructor(message: string, retryAfter: number) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+  }
+}
+
 let _apiBase: string | null = null;
 let _initPromise: Promise<string> | null = null;
 
@@ -68,6 +77,10 @@ export async function uploadImage(file: File, maxBytes: number): Promise<any> {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get('Retry-After') || res.headers.get('X-RateLimit-Reset') || '60', 10);
+        throw new RateLimitError(err.detail || err.error || 'Too many requests', retryAfter);
+      }
       throw new Error(err.error || err.error_message || 'Upload failed');
     }
 

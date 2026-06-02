@@ -14,6 +14,7 @@ export default function HomePage() {
   const { isHealthy } = useHealth();
   const [recentImages, setRecentImages] = useState<ImageSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const loadRecent = async () => {
@@ -37,6 +38,12 @@ export default function HomePage() {
         <p className="mt-2 text-gray-600 dark:text-gray-400">Upload an image to detect and recognize license plates</p>
       </div>
 
+      {rateLimitError && (
+        <div className="max-w-2xl mx-auto mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg text-amber-700 dark:text-amber-400 text-sm">
+          {rateLimitError}
+        </div>
+      )}
+
       {error && (
         <div className="max-w-2xl mx-auto mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-400 text-sm">
           {error}
@@ -49,7 +56,17 @@ export default function HomePage() {
             const id = data?.image_id || data?.id;
             if (id) router.push(`/image/${id}`);
           }}
-          onError={setError}
+          onError={(msg) => {
+            if (msg.startsWith('__RATE_LIMIT__')) {
+              const seconds = msg.replace('__RATE_LIMIT__', '');
+              setRateLimitError(`Too many requests. Please wait ${seconds} seconds and try again.`);
+              setError(null);
+            } else {
+              setError(msg);
+              setRateLimitError(null);
+            }
+          }}
+          onUploadStart={() => { setRateLimitError(null); setError(null); }}
           disabled={isHealthy === false}
         />
       </div>

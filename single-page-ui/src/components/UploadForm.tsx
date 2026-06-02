@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { uploadImage, getMaxUploadBytes, UPLOAD_TIMEOUT_MS, formatBytes } from '@/lib/api';
+import { uploadImage, getMaxUploadBytes, UPLOAD_TIMEOUT_MS, formatBytes, RateLimitError } from '@/lib/api';
 
 interface UploadFormProps {
   onSuccess: (data: any) => void;
   onError: (error: string) => void;
+  onUploadStart?: () => void;
   disabled?: boolean;
 }
 
 type UploadState = 'idle' | 'selected' | 'uploading' | 'timed_out';
 
-export default function UploadForm({ onSuccess, onError, disabled = false }: UploadFormProps) {
+export default function UploadForm({ onSuccess, onError, onUploadStart, disabled = false }: UploadFormProps) {
   const [dragover, setDragover] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export default function UploadForm({ onSuccess, onError, disabled = false }: Upl
 
     setState('uploading');
     setElapsed(0);
+    onUploadStart?.();
     const start = Date.now();
     timerRef.current = setInterval(() => {
       setElapsed(Math.floor((Date.now() - start) / 1000));
@@ -73,6 +75,9 @@ export default function UploadForm({ onSuccess, onError, disabled = false }: Upl
       if (err.name === 'AbortError') {
         setState('timed_out');
         onError(`Upload timed out after ${UPLOAD_TIMEOUT_MS / 1000}s. The server may be busy — try again.`);
+      } else if (err instanceof RateLimitError) {
+        setState('selected');
+        onError(`__RATE_LIMIT__${err.retryAfter}`);
       } else {
         setState('selected');
         onError(err.message || 'Upload failed');
