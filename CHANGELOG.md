@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-06-02
+
+### Added
+- SPA health indicator in navbar with real-time backend status polling (green/yellow/red dot)
+- Service availability graph on home page showing 3-day uptime history from Prometheus
+- `/api/v1/health-light/` lightweight health endpoint for SPA polling
+- `/api/v1/availability/` endpoint returning historical availability data
+- `CORS_ALLOW_PRIVATE_NETWORK` setting for browser Private Network Access support (needed when SPA is Cloudflare-proxied but API resolves to private IP)
+- Canary cleanup service that removes failed canary images and reports impact in metrics
+- `SPA_PORT` environment variable for configurable SPA container port
+
+### Fixed
+- Health indicator permanently stuck on "Checking..." — `HealthProvider` now wraps entire body layout including navbar
+- CORS Private Network Access blocked when frontend is public (Cloudflare) but API resolves to private IP
+- APScheduler running under `manage.py` commands (now gated to only run under Gunicorn)
+- SPA container health check failing in Alpine-based images (`127.0.0.1` instead of `localhost`)
+- `CORS_ALLOWED_ORIGINS` missing from docker-compose environment
+
+### Changed
+- Docker Compose passes `CORS_ALLOWED_ORIGINS` to both SPA and Django containers
+- Live demo URL updated to `openlpr.computedsynergy.com`
+
 ## [1.3.0] - 2026-05-24
 
 ### Added
