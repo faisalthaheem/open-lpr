@@ -71,6 +71,9 @@ Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 - `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` — Django core
 - `CORS_ALLOWED_ORIGINS` — Comma-separated frontend origins allowed to access the API (default: `http://localhost:3000`)
 - `CORS_ALLOW_PRIVATE_NETWORK` — Allow browsers to access the API from a public origin when the API resolves to a private IP (default: `False`). Set to `True` when using Cloudflare-proxied frontend with a local API endpoint.
+- `RATE_LIMIT_ENABLE` — Enable per-IP rate limiting on API endpoints (default: `True`)
+- `RATE_LIMIT_RATE` — Throttle rate in `num/period` format, e.g. `2/min` (default: `2/min`)
+- `RATE_LIMIT_EXCLUDE_PATHS` — Comma-separated URL paths excluded from rate limiting (default: `/health/,/api/v1/health-light/`)
 - `DATABASE_PATH` — SQLite path (default: project root `db.sqlite3`)
 - `MEDIA_PATH` — Media storage (default: `./media`, Docker: `./container-media`)
 - `UPLOAD_FILE_MAX_SIZE` — Default 250KB in settings.py (10MB in Docker compose)

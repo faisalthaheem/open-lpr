@@ -42,7 +42,12 @@ services:
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0,lpr-app}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      - CORS_ALLOW_PRIVATE_NETWORK=${CORS_ALLOW_PRIVATE_NETWORK:-False}
       
+      # Rate Limiting
+      - RATE_LIMIT_ENABLE=${RATE_LIMIT_ENABLE:-True}
+      - RATE_LIMIT_RATE=${RATE_LIMIT_RATE:-2/min}
+      - RATE_LIMIT_EXCLUDE_PATHS=${RATE_LIMIT_EXCLUDE_PATHS:-/health/,/api/v1/health-light/}
       # Qwen3-VL API Configuration - Updated to use local LlamaCpp service
       - QWEN_API_KEY=${QWEN_API_KEY:-sk-llamacpp-local}
       - QWEN_BASE_URL=${QWEN_BASE_URL:-http://llamacpp-cpu:8000/v1}

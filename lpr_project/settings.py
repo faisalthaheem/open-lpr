@@ -138,6 +138,16 @@ PLATE_HEIGHT_FRACTION = config('PLATE_HEIGHT_FRACTION', default=0.05, cast=float
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 CORS_ALLOW_PRIVATE_NETWORK = config('CORS_ALLOW_PRIVATE_NETWORK', default=False, cast=bool)
 
+RATE_LIMIT_ENABLE = config('RATE_LIMIT_ENABLE', default=True, cast=bool)
+RATE_LIMIT_RATE = config('RATE_LIMIT_RATE', default='2/min', cast=str)
+RATE_LIMIT_EXCLUDE_PATHS = config('RATE_LIMIT_EXCLUDE_PATHS', default='/health/,/api/v1/health-light/', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
+
+import sys
+if 'test' in sys.argv:
+    RATE_LIMIT_ENABLE = False
+
+MIDDLEWARE.append('lpr_app.middleware.rate_limit.RateLimitMiddleware')
+
 OCR_CROP_PADDING_PX = config('OCR_CROP_PADDING_PX', default=25, cast=int)
 
 PROCESSING_TIMEOUT_MINUTES = config('PROCESSING_TIMEOUT_MINUTES', default=5, cast=int)
