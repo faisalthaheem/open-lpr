@@ -75,6 +75,7 @@ services:
       - RATE_LIMIT_ENABLE=${RATE_LIMIT_ENABLE:-True}
       - RATE_LIMIT_RATE=${RATE_LIMIT_RATE:-2/min}
       - RATE_LIMIT_EXCLUDE_PATHS=${RATE_LIMIT_EXCLUDE_PATHS:-/health/,/api/v1/health-light/}
+      - RATE_LIMIT_INCLUDE_PATHS=${RATE_LIMIT_INCLUDE_PATHS:-/api/v1/ocr/}
       # Qwen3-VL API Configuration - Updated to use local LlamaCpp service
       - QWEN_API_KEY=${QWEN_API_KEY:-sk-llamacpp-local}
       - QWEN_BASE_URL=${QWEN_BASE_URL:-http://llamacpp-cpu:8000/v1}

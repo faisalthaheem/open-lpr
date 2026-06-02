@@ -29,6 +29,12 @@ class RateLimitMiddleware:
         self.cache_key_prefix = 'rl:'
 
     def _is_excluded(self, path):
+        include_only = getattr(settings, 'RATE_LIMIT_INCLUDE_PATHS', None)
+        if include_only:
+            for included in include_only:
+                if path.startswith(included):
+                    return False
+            return True
         for excluded in self.exclude_paths:
             if path.startswith(excluded):
                 return True

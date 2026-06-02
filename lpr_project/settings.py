@@ -141,6 +141,7 @@ CORS_ALLOW_PRIVATE_NETWORK = config('CORS_ALLOW_PRIVATE_NETWORK', default=False,
 RATE_LIMIT_ENABLE = config('RATE_LIMIT_ENABLE', default=True, cast=bool)
 RATE_LIMIT_RATE = config('RATE_LIMIT_RATE', default='2/min', cast=str)
 RATE_LIMIT_EXCLUDE_PATHS = config('RATE_LIMIT_EXCLUDE_PATHS', default='/health/,/api/v1/health-light/', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
+RATE_LIMIT_INCLUDE_PATHS = config('RATE_LIMIT_INCLUDE_PATHS', default='/api/v1/ocr/', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 
 import sys
 if 'test' in sys.argv:
