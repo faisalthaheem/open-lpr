@@ -136,6 +136,7 @@ MIN_PLATE_HEIGHT = config('MIN_PLATE_HEIGHT', default=30, cast=int)
 PLATE_HEIGHT_FRACTION = config('PLATE_HEIGHT_FRACTION', default=0.05, cast=float)
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
+CORS_ALLOW_PRIVATE_NETWORK = config('CORS_ALLOW_PRIVATE_NETWORK', default=False, cast=bool)
 
 OCR_CROP_PADDING_PX = config('OCR_CROP_PADDING_PX', default=25, cast=int)
 
