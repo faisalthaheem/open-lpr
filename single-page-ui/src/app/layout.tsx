@@ -34,6 +34,8 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-white text-gray-900 dark:bg-[#0f0f0f] dark:text-gray-100 transition-colors duration-300">
+      <AppInitializer>
+        <HealthProvider>
         <nav className="bg-gray-800 dark:bg-[#0f0f0f] text-white shadow-lg sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
@@ -97,11 +99,7 @@ export default function RootLayout({
         <DisclaimerBanner />
 
         <main className="flex-1">
-          <AppInitializer>
-            <HealthProvider>
-              {children}
-            </HealthProvider>
-          </AppInitializer>
+          {children}
         </main>
 
         <footer className="bg-gray-100 dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-700 mt-12">
@@ -154,6 +152,8 @@ export default function RootLayout({
             `,
           }}
         />
+        </HealthProvider>
+      </AppInitializer>
       </body>
     </html>
   );
