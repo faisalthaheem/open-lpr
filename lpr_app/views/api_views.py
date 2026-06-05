@@ -229,6 +229,9 @@ def _serialize_image_summary(img):
         'original_image_url': img.original_image_url,
         'processed_image_url': img.processed_image_url,
         'file_size': img.file_size,
+        'plate_count': img.get_plate_count(),
+        'ocr_count': img.get_total_ocr_count(),
+        'first_ocr_text': img.get_first_ocr_text(),
     }
 
 

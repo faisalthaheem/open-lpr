@@ -100,6 +100,119 @@ class APIImageListResponseTest(TestCase):
 
 
 @override_settings(MEDIA_ROOT="/tmp/test_lpr_api_media/")
+class APIImageListPlateOcrFieldsTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_result_includes_plate_ocr_fields(self):
+        UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="test.jpg",
+            processing_status="completed",
+        )
+        response = self.client.get("/api/v1/images/")
+        result = response.json()["results"][0]
+        self.assertIn("plate_count", result)
+        self.assertIn("ocr_count", result)
+        self.assertIn("first_ocr_text", result)
+
+    def test_completed_with_single_detection(self):
+        api_response = {
+            "detections": [
+                {
+                    "plate": {
+                        "confidence": 0.95,
+                        "coordinates": {"x1": 10, "y1": 20, "x2": 100, "y2": 50},
+                    },
+                    "ocr": [
+                        {
+                            "text": "ABC 1234",
+                            "confidence": 0.9,
+                            "coordinates": {"x1": 12, "y1": 22, "x2": 98, "y2": 48},
+                        }
+                    ],
+                }
+            ]
+        }
+        UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="single.jpg",
+            processing_status="completed",
+            api_response=api_response,
+        )
+        response = self.client.get("/api/v1/images/")
+        result = response.json()["results"][0]
+        self.assertEqual(result["plate_count"], 1)
+        self.assertEqual(result["ocr_count"], 1)
+        self.assertEqual(result["first_ocr_text"], "ABC 1234")
+
+    def test_completed_with_multiple_plates(self):
+        api_response = {
+            "detections": [
+                {
+                    "plate": {"confidence": 0.9, "coordinates": {"x1": 0, "y1": 0, "x2": 50, "y2": 20}},
+                    "ocr": [{"text": "XYZ 1", "confidence": 0.8, "coordinates": {"x1": 0, "y1": 0, "x2": 50, "y2": 20}}],
+                },
+                {
+                    "plate": {"confidence": 0.85, "coordinates": {"x1": 60, "y1": 0, "x2": 110, "y2": 20}},
+                    "ocr": [
+                        {"text": "DEF 2", "confidence": 0.75, "coordinates": {"x1": 60, "y1": 0, "x2": 110, "y2": 20}},
+                        {"text": "GHI 3", "confidence": 0.7, "coordinates": {"x1": 60, "y1": 0, "x2": 110, "y2": 20}},
+                    ],
+                },
+            ]
+        }
+        UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="multi.jpg",
+            processing_status="completed",
+            api_response=api_response,
+        )
+        response = self.client.get("/api/v1/images/")
+        result = response.json()["results"][0]
+        self.assertEqual(result["plate_count"], 2)
+        self.assertEqual(result["ocr_count"], 3)
+        self.assertEqual(result["first_ocr_text"], "XYZ 1")
+
+    def test_completed_with_zero_plates(self):
+        UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="zero.jpg",
+            processing_status="completed",
+            api_response=None,
+        )
+        response = self.client.get("/api/v1/images/")
+        result = response.json()["results"][0]
+        self.assertEqual(result["plate_count"], 0)
+        self.assertEqual(result["ocr_count"], 0)
+        self.assertIsNone(result["first_ocr_text"])
+
+    def test_pending_image_has_zero_counts(self):
+        UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="pending.jpg",
+            processing_status="pending",
+        )
+        response = self.client.get("/api/v1/images/")
+        result = response.json()["results"][0]
+        self.assertEqual(result["plate_count"], 0)
+        self.assertEqual(result["ocr_count"], 0)
+        self.assertIsNone(result["first_ocr_text"])
+
+    def test_failed_image_has_zero_counts(self):
+        UploadedImage.objects.create(
+            original_image=_make_image_file(),
+            filename="failed.jpg",
+            processing_status="failed",
+        )
+        response = self.client.get("/api/v1/images/")
+        result = response.json()["results"][0]
+        self.assertEqual(result["plate_count"], 0)
+        self.assertEqual(result["ocr_count"], 0)
+        self.assertIsNone(result["first_ocr_text"])
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_api_media/")
 class APIImageListSearchTest(TestCase):
     def setUp(self):
         self.client = Client()

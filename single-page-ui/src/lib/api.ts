@@ -99,6 +99,9 @@ export interface ImageSummary {
   original_image_url: string | null;
   processed_image_url: string | null;
   file_size: number | null;
+  plate_count: number;
+  ocr_count: number;
+  first_ocr_text: string | null;
 }
 
 export interface PaginatedResponse {

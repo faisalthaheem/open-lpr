@@ -9,6 +9,9 @@ export const mockImageSummaryCompleted: ImageSummary = {
   original_image_url: '/media/uploads/2026/05/23/car-plate.jpg',
   processed_image_url: '/media/uploads/2026/05/23/processed_car-plate.jpg',
   file_size: 120000,
+  plate_count: 1,
+  ocr_count: 1,
+  first_ocr_text: 'ABC 1234',
 };
 
 export const mockImageSummaryFailed: ImageSummary = {
@@ -20,6 +23,9 @@ export const mockImageSummaryFailed: ImageSummary = {
   original_image_url: '/media/uploads/2026/05/23/bad-image.jpg',
   processed_image_url: null,
   file_size: 85000,
+  plate_count: 0,
+  ocr_count: 0,
+  first_ocr_text: null,
 };
 
 export const mockImageSummaryPending: ImageSummary = {
@@ -31,6 +37,9 @@ export const mockImageSummaryPending: ImageSummary = {
   original_image_url: '/media/uploads/2026/05/23/pending.jpg',
   processed_image_url: null,
   file_size: 50000,
+  plate_count: 0,
+  ocr_count: 0,
+  first_ocr_text: null,
 };
 
 export const mockDetection = {
