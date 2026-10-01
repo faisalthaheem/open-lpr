@@ -1,5 +1,6 @@
-from unittest.mock import patch, MagicMock
-from django.test import TestCase, Client, override_settings
+from unittest.mock import MagicMock, patch
+
+from django.test import Client, TestCase, override_settings
 
 
 @override_settings(MEDIA_ROOT="/tmp/test_lpr_health_media/")
@@ -53,19 +54,24 @@ class AvailabilityEndpointTest(TestCase):
     @patch("lpr_app.views.api_views.urllib.request.urlopen")
     def test_returns_data_points(self, mock_urlopen):
         import json
+
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({
-            "status": "success",
-            "data": {
-                "result": [{
-                    "values": [
-                        [1717000000, "1"],
-                        [1717000300, "0"],
-                        [1717000600, "1"],
+        mock_resp.read.return_value = json.dumps(
+            {
+                "status": "success",
+                "data": {
+                    "result": [
+                        {
+                            "values": [
+                                [1717000000, "1"],
+                                [1717000300, "0"],
+                                [1717000600, "1"],
+                            ]
+                        }
                     ]
-                }]
+                },
             }
-        }).encode()
+        ).encode()
         mock_resp.__enter__ = lambda s: mock_resp
         mock_resp.__exit__ = MagicMock(return_value=False)
         mock_urlopen.return_value = mock_resp
@@ -87,11 +93,9 @@ class AvailabilityEndpointTest(TestCase):
     @patch("lpr_app.views.api_views.urllib.request.urlopen")
     def test_empty_prometheus_result(self, mock_urlopen):
         import json
+
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({
-            "status": "success",
-            "data": {"result": []}
-        }).encode()
+        mock_resp.read.return_value = json.dumps({"status": "success", "data": {"result": []}}).encode()
         mock_resp.__enter__ = lambda s: mock_resp
         mock_resp.__exit__ = MagicMock(return_value=False)
         mock_urlopen.return_value = mock_resp
@@ -104,11 +108,9 @@ class AvailabilityEndpointTest(TestCase):
     @patch("lpr_app.views.api_views.urllib.request.urlopen")
     def test_invalid_days_defaults_to_3(self, mock_urlopen):
         import json
+
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({
-            "status": "success",
-            "data": {"result": []}
-        }).encode()
+        mock_resp.read.return_value = json.dumps({"status": "success", "data": {"result": []}}).encode()
         mock_resp.__enter__ = lambda s: mock_resp
         mock_resp.__exit__ = MagicMock(return_value=False)
         mock_urlopen.return_value = mock_resp

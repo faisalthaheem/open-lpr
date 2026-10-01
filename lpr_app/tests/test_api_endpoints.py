@@ -1,13 +1,11 @@
 import io
-import json
 from datetime import datetime, timedelta
-from unittest.mock import patch
 
-from django.test import TestCase, Client, override_settings
-from django.urls import reverse, resolve
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
+from django.urls import reverse
 
-from ..models import UploadedImage, ProcessingLog
+from ..models import ProcessingLog, UploadedImage
 
 
 def _make_image_file(name="test.jpg", content=b"fake image"):
@@ -16,6 +14,7 @@ def _make_image_file(name="test.jpg", content=b"fake image"):
 
 def _create_real_image_file(name="test.jpg"):
     from PIL import Image
+
     buf = io.BytesIO()
     Image.new("RGB", (100, 100), "red").save(buf, format="JPEG")
     buf.seek(0)
@@ -151,7 +150,9 @@ class APIImageListPlateOcrFieldsTest(TestCase):
             "detections": [
                 {
                     "plate": {"confidence": 0.9, "coordinates": {"x1": 0, "y1": 0, "x2": 50, "y2": 20}},
-                    "ocr": [{"text": "XYZ 1", "confidence": 0.8, "coordinates": {"x1": 0, "y1": 0, "x2": 50, "y2": 20}}],
+                    "ocr": [
+                        {"text": "XYZ 1", "confidence": 0.8, "coordinates": {"x1": 0, "y1": 0, "x2": 50, "y2": 20}}
+                    ],
                 },
                 {
                     "plate": {"confidence": 0.85, "coordinates": {"x1": 60, "y1": 0, "x2": 110, "y2": 20}},
@@ -567,19 +568,23 @@ class CORSMiddlewareTest(TestCase):
 class CORSConfigTest(TestCase):
     def test_cors_allowed_origins_setting_exists(self):
         from django.conf import settings
+
         self.assertTrue(hasattr(settings, "CORS_ALLOWED_ORIGINS"))
         self.assertIsInstance(settings.CORS_ALLOWED_ORIGINS, list)
 
     def test_cors_middleware_installed(self):
         from django.conf import settings
+
         self.assertIn("corsheaders.middleware.CorsMiddleware", settings.MIDDLEWARE)
 
     def test_cors_middleware_before_common(self):
         from django.conf import settings
+
         cors_idx = settings.MIDDLEWARE.index("corsheaders.middleware.CorsMiddleware")
         common_idx = settings.MIDDLEWARE.index("django.middleware.common.CommonMiddleware")
         self.assertLess(cors_idx, common_idx)
 
     def test_corsheaders_in_installed_apps(self):
         from django.conf import settings
+
         self.assertIn("corsheaders", settings.INSTALLED_APPS)
