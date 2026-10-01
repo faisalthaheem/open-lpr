@@ -30,7 +30,13 @@ log_error() {
 }
 
 # Script configuration
-COMPOSE_FILE="docker-compose-llamacpp-cpu.yml"
+COMPOSE_FILE="docker-compose.yaml"
+COMPOSE_PROFILES="core,cpu"
+# The retired docker-compose-llamacpp-cpu.yml started exactly these two services.
+# Naming them keeps this script equivalent, and avoids starting the monitoring
+# stack (grafana/spa both default to host port 3000, so `--profile core` alone
+# would hit a port conflict).
+COMPOSE_SERVICES="llamacpp-cpu lpr-app"
 ENV_FILE=".env.llamacpp"
 ENV_TEMPLATE=".env.llamacpp"
 
@@ -100,7 +106,7 @@ create_directories() {
 pull_images() {
     log_info "Pulling Docker images..."
     
-    docker compose -f "$COMPOSE_FILE" pull
+    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILES" pull $COMPOSE_SERVICES
     
     log_success "Docker images pulled"
 }
@@ -110,7 +116,7 @@ start_services() {
     log_info "Starting services..."
     
     # Start with detached mode
-    docker compose -f "$COMPOSE_FILE" up -d
+    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILES" up -d $COMPOSE_SERVICES
     
     log_success "Services started"
 }
@@ -156,7 +162,7 @@ wait_for_services() {
 # Show status
 show_status() {
     log_info "Service status:"
-    docker compose -f "$COMPOSE_FILE" ps
+    docker compose -f "$COMPOSE_FILE" --profile "$COMPOSE_PROFILES" ps $COMPOSE_SERVICES
     
     echo
     log_info "Access URLs:"
@@ -168,7 +174,7 @@ show_status() {
     log_info "Useful commands:"
     echo "  📋 View logs: docker compose -f $COMPOSE_FILE logs -f"
     echo "  🛑 Stop services: docker compose -f $COMPOSE_FILE down"
-    echo "  🧪 Test integration: ./test-llamacpp-integration.py"
+    echo "  🧪 Test integration: ./scripts/test-llamacpp-integration.py"
 }
 
 # Main execution
@@ -192,7 +198,7 @@ main() {
         show_status
         
         log_success "🎉 Setup complete! Your OpenLPR + LlamaCpp stack is running."
-        log_info "Run './test-llamacpp-integration.py' to verify everything is working."
+        log_info "Run './scripts/test-llamacpp-integration.py' to verify everything is working."
     else
         log_error "❌ Setup failed. Check the logs with 'docker compose -f $COMPOSE_FILE logs'"
         exit 1
