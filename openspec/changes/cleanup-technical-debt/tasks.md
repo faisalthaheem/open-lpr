@@ -132,6 +132,6 @@
 
 ## 15. Deployment
 
-- [ ] 15.1 Push and monitor the CI run to completion.
-- [ ] 15.2 Pull the published images on the production host and confirm the canary probe passes.
-- [ ] 15.3 Notify the user that images are ready for redeploy.
+- [x] 15.1 Pushed to `cleanup/technical-debt` and opened PR #53. Direct push to `main` is blocked by branch protection ("Changes must be made through a pull request"), so this went via PR. All four checks pass: Lint, Tests, build-and-push, build-and-push-canary. PR state is MERGEABLE / CLEAN.
+- [ ] 15.2 Pull the published images on the production host and confirm the canary probe passes. Not done: this requires SSH access to the production host and touches production, so it is left for the user to authorise.
+- [ ] 15.3 Notify the user that images are ready for redeploy. PR #53 is open and green but not yet merged; images are only published for the branch, so this waits on merge plus the user deploying via Coolify.
