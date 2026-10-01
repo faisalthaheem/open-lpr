@@ -72,8 +72,13 @@ class QwenClientCachingTest(SimpleTestCase):
         self.assertIsNot(first, second)
 
 
+@override_settings(QWEN_API_KEY="test-key", QWEN_BASE_URL="http://example.invalid/v1", QWEN_MODEL="m")
 class QwenBatchInferenceTest(SimpleTestCase):
     """One bad plate crop must not discard results for the other crops."""
+
+    # Setting QWEN_API_KEY matters: QwenVLClient refuses to construct without one,
+    # so without this the class only passes where a developer's local .env happens
+    # to supply a placeholder key.
 
     def _client(self, side_effect):
         with patch("lpr_app.services.qwen_client.OpenAI") as mock_openai:
