@@ -9,17 +9,17 @@ logger = logging.getLogger(__name__)
 
 
 def _should_run_scheduler():
-    if not getattr(settings, 'RETRY_SCHEDULER_ENABLED', True):
+    if not getattr(settings, "RETRY_SCHEDULER_ENABLED", True):
         return False
-    if os.environ.get('RUN_SCHEDULER', '').lower() in ('1', 'true', 'yes'):
+    if os.environ.get("RUN_SCHEDULER", "").lower() in ("1", "true", "yes"):
         return True
-    return 'gunicorn' in os.path.basename(sys.argv[0]).lower()
+    return "gunicorn" in os.path.basename(sys.argv[0]).lower()
 
 
 class LprAppConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'lpr_app'
-    verbose_name = 'License Plate Recognition'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "lpr_app"
+    verbose_name = "License Plate Recognition"
 
     def ready(self):
         if not _should_run_scheduler():
@@ -31,19 +31,27 @@ class LprAppConfig(AppConfig):
             from django_apscheduler.jobstores import DjangoJobStore
 
             scheduler = BackgroundScheduler()
-            scheduler.add_jobstore(DjangoJobStore(), 'default')
+            scheduler.add_jobstore(DjangoJobStore(), "default")
 
             scheduler.add_job(
-                'lpr_app.scheduler:run_retry_stuck_images',
+                "lpr_app.scheduler:run_retry_stuck_images",
                 trigger=IntervalTrigger(minutes=settings.RETRY_INTERVAL_MINUTES),
-                id='retry_stuck_images',
+                id="retry_stuck_images",
+                replace_existing=True,
+            )
+
+            scheduler.add_job(
+                "lpr_app.scheduler:refresh_availability",
+                trigger=IntervalTrigger(seconds=settings.AVAILABILITY_REFRESH_SECONDS),
+                id="refresh_availability",
                 replace_existing=True,
             )
 
             scheduler.start()
             logger.info(
-                'APScheduler started: retry_stuck_images every %d minutes',
+                "APScheduler started: retry_stuck_images every %d minutes, " "refresh_availability every %d seconds",
                 settings.RETRY_INTERVAL_MINUTES,
+                settings.AVAILABILITY_REFRESH_SECONDS,
             )
         except Exception:
-            logger.exception('Failed to start APScheduler')
+            logger.exception("Failed to start APScheduler")

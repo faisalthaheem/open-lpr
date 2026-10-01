@@ -11,15 +11,15 @@ Usage:
 Falls back to plain stdout mode if no terminal is available.
 """
 
+import argparse
+import collections
 import os
 import shutil
-import sys
 import signal
 import subprocess
+import sys
 import threading
-import argparse
 import time
-import collections
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 VENV_DIR = os.path.join(SCRIPT_DIR, ".venv")
@@ -28,6 +28,7 @@ SPA_DIR = os.path.join(SCRIPT_DIR, "single-page-ui")
 HAS_CURSES = False
 try:
     import curses
+
     HAS_CURSES = True
 except ImportError:
     pass
@@ -55,10 +56,7 @@ MAX_LINES = 5000
 
 
 def has_terminal():
-    return (
-        hasattr(sys.stdin, "isatty") and sys.stdin.isatty()
-        and hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
-    )
+    return hasattr(sys.stdin, "isatty") and sys.stdin.isatty() and hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
 
 def find_python():
@@ -82,7 +80,7 @@ def check_prerequisites():
     try:
         with open(python):
             pass
-    except (OSError, IOError):
+    except OSError:
         errors.append(f"Python not found: {python}")
     if not os.path.isdir(SPA_DIR):
         errors.append(f"SPA directory not found: {SPA_DIR}")
@@ -98,7 +96,9 @@ def find_pids_on_port(port):
     try:
         result = subprocess.run(
             ["lsof", "-ti", f":{port}"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
             return [int(p) for p in result.stdout.strip().split("\n") if p.strip()]
@@ -169,7 +169,7 @@ def prompt_kill_conflicts(conflicts):
         print()
         return False
     if answer in ("", "y", "yes"):
-        for label, (port, pids) in conflicts.items():
+        for port, _pids in conflicts.values():
             if kill_port(port):
                 print(f"{ANSI_GREEN}  Killed processes on port {port}{ANSI_RESET}")
             else:
@@ -228,7 +228,6 @@ def draw_pane(stdscr, log_deque, lock, top, left, height, width, title, color, p
     except curses.error:
         pass
 
-    border_ch = " "
     for y in range(top, top + height):
         try:
             stdscr.addch(y, left + width - 1, curses.ACS_VLINE, curses.color_pair(COLOR_BORDER))
@@ -282,7 +281,9 @@ def run_tui(stdscr, backend_proc, spa_proc, backend_log, spa_log, lock, start_ti
                 killed = kill_all_dev_ports(backend_port, spa_port)
                 with lock:
                     if killed:
-                        backend_log.append(f"--- killed stale processes on port{'s' if len(killed) > 1 else ''} {', '.join(str(p) for p in killed)} ---")
+                        ports = ", ".join(str(p) for p in killed)
+                        plural = "s" if len(killed) > 1 else ""
+                        backend_log.append(f"--- killed stale processes on port{plural} {ports} ---")
                     else:
                         backend_log.append("--- no stale processes found ---")
         except curses.error:
@@ -291,7 +292,11 @@ def run_tui(stdscr, backend_proc, spa_proc, backend_log, spa_log, lock, start_ti
         stdscr.erase()
         h, w = stdscr.getmaxyx()
 
-        header = f" Open LPR Dev Server  |  API: localhost:{backend_port}  |  SPA: localhost:{spa_port}  |  Started {time.strftime('%H:%M:%S', time.localtime(start_time))} "
+        started = time.strftime("%H:%M:%S", time.localtime(start_time))
+        header = (
+            f" Open LPR Dev Server  |  API: localhost:{backend_port}"
+            f"  |  SPA: localhost:{spa_port}  |  Started {started} "
+        )
         right = " [k] Kill stale  [q] Quit "
         try:
             stdscr.addstr(0, 0, _truncate(header, w), curses.color_pair(COLOR_HEADER) | curses.A_BOLD)
@@ -308,13 +313,11 @@ def run_tui(stdscr, backend_proc, spa_proc, backend_log, spa_log, lock, start_ti
 
         be_rc = backend_proc.poll()
         spa_rc = spa_proc.poll()
-        be_state = f"RUNNING" if be_rc is None else f"EXITED({be_rc})"
-        spa_state = f"RUNNING" if spa_rc is None else f"EXITED({spa_rc})"
+        be_state = "RUNNING" if be_rc is None else f"EXITED({be_rc})"
+        spa_state = "RUNNING" if spa_rc is None else f"EXITED({spa_rc})"
 
-        draw_pane(stdscr, backend_log, lock, pane_top, 0, pane_height, half_w,
-                  f"[API]", COLOR_BACKEND, be_state)
-        draw_pane(stdscr, spa_log, lock, pane_top, right_left, pane_height, right_width,
-                  f"[SPA]", COLOR_SPA, spa_state)
+        draw_pane(stdscr, backend_log, lock, pane_top, 0, pane_height, half_w, "[API]", COLOR_BACKEND, be_state)
+        draw_pane(stdscr, spa_log, lock, pane_top, right_left, pane_height, right_width, "[SPA]", COLOR_SPA, spa_state)
 
         stdscr.refresh()
 
@@ -326,10 +329,22 @@ def run_tui(stdscr, backend_proc, spa_proc, backend_log, spa_log, lock, start_ti
         time.sleep(0.08)
 
 
-def run_plain(backend_proc, spa_proc, backend_log, spa_log, lock, start_time, stop_event, backend_port, spa_port):
+def run_plain(
+    backend_proc,
+    spa_proc,
+    backend_log,
+    spa_log,
+    lock,
+    start_time,
+    stop_event,
+    backend_port,
+    spa_port,
+):
     last_be = 0
     last_spa = 0
-    print(f"{ANSI_BOLD} Open LPR Dev Server started {time.strftime('%H:%M:%S', time.localtime(start_time))} {ANSI_RESET}")
+    print(
+        f"{ANSI_BOLD} Open LPR Dev Server started {time.strftime('%H:%M:%S', time.localtime(start_time))} {ANSI_RESET}"
+    )
     print(f"{ANSI_DIM} Press Ctrl+C to stop  |  'k' + Enter to kill stale processes{ANSI_RESET}")
     print()
 
@@ -340,7 +355,9 @@ def run_plain(backend_proc, spa_proc, backend_log, spa_log, lock, start_time, st
                 if ch and ch.strip().lower() == "k":
                     killed = kill_all_dev_ports(backend_port, spa_port)
                     if killed:
-                        print(f"{ANSI_YELLOW}  Killed stale processes on port{'s' if len(killed) > 1 else ''} {', '.join(str(p) for p in killed)}{ANSI_RESET}")
+                        ports = ", ".join(str(p) for p in killed)
+                        plural = "s" if len(killed) > 1 else ""
+                        print(f"{ANSI_YELLOW}  Killed stale processes on port{plural} {ports}{ANSI_RESET}")
                     else:
                         print(f"{ANSI_DIM}  No stale processes found{ANSI_RESET}")
             except Exception:
@@ -461,13 +478,29 @@ def main():
         if use_tui:
             curses.wrapper(
                 lambda stdscr: run_tui(
-                    stdscr, backend_proc, spa_proc,
-                    backend_log, spa_log, lock,
-                    start_time, args.backend_port, args.spa_port,
+                    stdscr,
+                    backend_proc,
+                    spa_proc,
+                    backend_log,
+                    spa_log,
+                    lock,
+                    start_time,
+                    args.backend_port,
+                    args.spa_port,
                 )
             )
         else:
-            run_plain(backend_proc, spa_proc, backend_log, spa_log, lock, start_time, stop_event, args.backend_port, args.spa_port)
+            run_plain(
+                backend_proc,
+                spa_proc,
+                backend_log,
+                spa_log,
+                lock,
+                start_time,
+                stop_event,
+                args.backend_port,
+                args.spa_port,
+            )
     except KeyboardInterrupt:
         pass
     finally:

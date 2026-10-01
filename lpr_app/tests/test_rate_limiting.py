@@ -1,10 +1,10 @@
 from django.core.cache import cache
-from django.test import TestCase, Client, override_settings
+from django.test import Client, TestCase, override_settings
 
 _TEST_CACHE = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'rate-limit-test',
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "rate-limit-test",
     }
 }
 
@@ -172,7 +172,7 @@ class CustomRateTest(TestCase):
         self.client = Client()
 
     def test_custom_rate_respected(self):
-        for i in range(5):
+        for _ in range(5):
             response = self.client.post("/api/v1/ocr/", {})
             self.assertIn(response.status_code, [400, 200])
         response = self.client.post("/api/v1/ocr/", {})

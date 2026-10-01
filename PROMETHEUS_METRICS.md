@@ -180,7 +180,7 @@ docker-compose up -d
 curl http://localhost:8000/metrics/
 
 # Test with the provided script
-python test_metrics.py
+python scripts/test_metrics.py
 ```
 
 ## Testing
@@ -188,7 +188,7 @@ python test_metrics.py
 A test script is provided to verify the metrics implementation:
 
 ```bash
-python test_metrics.py
+python scripts/test_metrics.py
 ```
 
 This script will:

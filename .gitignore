@@ -135,6 +135,7 @@ model_files_cache/
 
 # Metrics
 container-metrics/
+metrics_state.json
 
 #ai generated plans
 plans/*

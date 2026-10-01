@@ -1,11 +1,10 @@
 import io
-import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from django.test import TestCase, Client, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, TestCase, override_settings
 
-from ..models import UploadedImage, ProcessingLog
+from ..models import ProcessingLog, UploadedImage
 
 
 def _make_image_file(name="test.jpg", content=b"fake image"):
@@ -14,6 +13,7 @@ def _make_image_file(name="test.jpg", content=b"fake image"):
 
 def _create_real_image_file(name="test.jpg"):
     from PIL import Image
+
     buf = io.BytesIO()
     Image.new("RGB", (100, 100), "red").save(buf, format="JPEG")
     buf.seek(0)
@@ -86,7 +86,6 @@ class CanaryProcessingFailureCleanupTest(TestCase):
     def test_canary_failure_records_metrics_before_cleanup(self, mock_process):
         mock_process.return_value = {"success": False, "error": "API timeout"}
 
-        from ..utils.metrics_helpers import MetricsHelper
         from ..metrics import CANARY_REQUESTS_TOTAL
 
         initial_failed = CANARY_REQUESTS_TOTAL.labels(status="failed")._value._value
