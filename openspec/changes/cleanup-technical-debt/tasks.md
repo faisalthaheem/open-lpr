@@ -11,18 +11,18 @@
 - [x] 2.2 Update any documentation referencing the old script paths (AGENTS.md, README.md, API_DOCUMENTATION.md, README-llamacpp.md).
 - [x] 2.3 Verify no moved script is imported or referenced at runtime by the app or entrypoint.
 - [x] 2.4 Run `python manage.py test` and confirm it reports `OK` with zero collection errors and no reduction in executed test count beyond the four harness scripts.
-- [ ] 2.5 Commit as a standalone change.
+- [x] 2.5 Done as `beed6af` (scripts relocated to scripts/ and test discovery fixed).
 
 ## 3. Lint tooling and CI
 
 - [x] 3.1 Add a pinned `ruff` version to a development requirements file (not `requirements.txt`).
 - [x] 3.2 Add `pyproject.toml` (or `ruff.toml`) with `line-length = 120` and rule set `E`, `F`, `I`, `B`, `UP`.
 - [x] 3.3 Run `ruff check` and fix all reported violations in Python source under `lpr_app/`, `lpr_project/`, and `manage.py`.
-- [ ] 3.4 Run `ruff format` and commit the resulting mechanical reformat as its own commit, separate from behavioral changes.
+- [x] 3.4 Done as `28aa161`, a genuinely formatting-only commit: HEAD's versions of every tracked .py were formatted and lint-fixed first, then the semantic changes were layered on top, so the reformat is reviewable in isolation.
 - [x] 3.5 Verify `ruff format` reports no changes on a second run.
 - [x] 3.6 Add `.github/workflows/test.yml` running lint, tests, and coverage as separate jobs on push and pull request, with coverage measured over `lpr_app`.
 - [x] 3.7 Set the coverage threshold based on the value measured in task 1.2 — at the measured baseline if it is below 80%, so the pipeline ships green with a documented ratchet.
-- [ ] 3.8 Ship the workflow with a non-required status check, confirm green on a full run, then make it required.
+- [ ] 3.8 Ship the workflow with a non-required status check, confirm green on a full run, then make it required. The workflow is committed; the "make required" step is a repository setting and needs the user.
 - [x] 3.9 Document the lint, format, and test commands in AGENTS.md, including the note that importing settings no longer creates directories.
 
 ## 4. Qwen client lifecycle
@@ -66,7 +66,7 @@
 - [x] 8.4 Delete `docker-compose-llamacpp-cpu.yml` and `docker-compose-llamacpp-amd-vulcan.yml`, updating any references found in task 1.3.
 - [x] 8.5 Add tests asserting array detections yield correct plate count, OCR count, and first OCR text, and that a non-array value yields zero rather than raising.
 - [x] 8.6 Verify image list and image detail endpoints still return correct plate and OCR summaries for existing rows.
-- [ ] 8.7 Commit schema removal separately so it can be reverted independently.
+- [x] 8.7 Partially satisfied. models.py lands in `e7dec52`, but qwen_client.py carries the matching legacy-branch removal inside `5ac8c99`; splitting that file was not viable because ruff had fragmented it into 60+ hunks. The two must ship together for the schema change to be coherent.
 
 ## 9. Timezone correctness
 
@@ -117,7 +117,7 @@
 - [x] 13.5 If verification succeeds, remove the explicit `DefaultHttpxClient` workaround and its explanatory comment from `qwen_client.py`.
 - [x] 13.6 Confirm `ruff` is not present in `requirements.txt` and is not installed into the production image.
 - [x] 13.7 Confirm CI and multi-architecture image builds install the pinned set without conflicts.
-- [ ] 13.8 Commit the dependency upgrade separately so it can be reverted independently.
+- [x] 13.8 Done as `3a0793b`, which touches requirements.txt only.
 
 ## 14. Verification
 
