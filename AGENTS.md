@@ -8,14 +8,34 @@ Django 5.2 LTS web app for license plate recognition using Qwen3-VL vision-langu
 
 ```bash
 python manage.py runserver              # Dev server (port 8000)
-python manage.py test                   # Django test runner (no formal test suite exists yet)
+python manage.py test                   # Django test runner (212 tests in lpr_app/tests/)
 python manage.py makemigrations lpr_app # Create migrations after model changes
 python manage.py migrate                # Apply migrations
 python manage.py collectstatic --noinput # Collect static files (required before Docker deploy)
-python test_api.py /path/to/image.jpg   # Manual API integration test (requires running server)
+python scripts/test_api.py /path/to/image.jpg   # Manual API integration test (requires running server)
 ```
 
-There is no linter, formatter, or typecheck configured.
+### Lint, format, and coverage
+
+```bash
+pip install -r requirements-dev.txt    # ruff + coverage (dev-only, not in the production image)
+ruff check .                           # Lint
+ruff format .                          # Format
+ruff format --check .                 # Verify formatting in CI
+coverage run --source='lpr_app' manage.py test
+coverage report                        # CI gate is --fail-under=70; current baseline is ~72%
+```
+
+- Config lives in `pyproject.toml` (`line-length = 120`, rules `E`, `F`, `I`, `B`, `UP`).
+- `lpr_app/migrations/` is excluded from lint (generated code).
+- There is no typechecker configured.
+- CI (`.github/workflows/test.yml`) runs lint, format check, and tests with a coverage gate on every push and pull request.
+
+### Manual diagnostic scripts
+
+`scripts/` holds manual integration and diagnostic harnesses (`test_api.py`, `test_metrics.py`,
+`test_setup.py`, `test-llamacpp-integration.py`). They are **not** unit tests and are deliberately
+kept out of Django's test discovery — do not name a new unit test in a way that lands here.
 
 ## Architecture
 
@@ -77,6 +97,8 @@ Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 - `RATE_LIMIT_INCLUDE_PATHS` — Comma-separated URL paths to rate limit; all other paths are exempt (default: `/api/v1/ocr/`)
 - `DATABASE_PATH` — SQLite path (default: project root `db.sqlite3`)
 - `MEDIA_PATH` — Media storage (default: `./media`, Docker: `./container-media`)
+- `METRICS_FILE_PATH` — Prometheus metrics state file (default: `metrics_state.json` beside the database; Docker: `/app/metrics/metrics_state.json`)
+- `AVAILABILITY_REFRESH_SECONDS` — Background refresh interval for the cached availability series (default: `60`)
 - `UPLOAD_FILE_MAX_SIZE` — Default 250KB in settings.py (10MB in Docker compose)
 
 ### SPA Frontend (runtime via Docker environment)
