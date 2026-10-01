@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 REGISTRY = CollectorRegistry()
 
 # File-based persistence
-METRICS_FILE_PATH = getattr(settings, "METRICS_FILE_PATH", "/app/metrics/metrics_state.json")
+METRICS_FILE_PATH = settings.METRICS_FILE_PATH
 _persistence_lock = threading.Lock()
 
 # Application Performance Metrics
@@ -274,7 +274,8 @@ def initialize_persistent_metrics():
             f"{completed_images} completed, {failed_images} failed"
         )
         logger.info(
-            f"Restored counters: uploads={upload_success}, processing={processing_completed}, plates={plates_detected}"
+            f"Restored counters: uploads={upload_success}, "
+            f"processing={processing_completed}, plates={plates_detected}"
         )
 
     except Exception as e:

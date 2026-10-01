@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -17,7 +16,9 @@ ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=lamb
 
 # CSRF Trusted Origins for cross-origin requests
 CSRF_TRUSTED_ORIGINS = config(
-    "CSRF_TRUSTED_ORIGINS", default="", cast=lambda v: [s.strip() for s in v.split(",") if s.strip()]
+    "CSRF_TRUSTED_ORIGINS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
 )
 
 # Application definition
@@ -70,10 +71,6 @@ DATABASE_PATH = config("DATABASE_PATH", default=str(BASE_DIR / "db.sqlite3"), ca
 DATABASE_DIR = Path(DATABASE_PATH).parent
 LOG_DIR = DATABASE_DIR
 
-# Ensure directories exist
-if not DATABASE_DIR.exists():
-    os.makedirs(DATABASE_DIR)
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -107,12 +104,6 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Ensure static directory exists for development
-if not os.path.exists("/app"):
-    # Development environment - ensure lpr_app/static directory exists
-    static_app_dir = BASE_DIR / "lpr_app" / "static"
-    os.makedirs(static_app_dir, exist_ok=True)
-
 STATICFILES_DIRS = [
     BASE_DIR / "lpr_app" / "static",
 ]
@@ -122,10 +113,9 @@ MEDIA_URL = "/media/"
 # Use environment variable for media location, fallback to project root
 MEDIA_ROOT = str(config("MEDIA_PATH", default=str(BASE_DIR / "media"), cast=str))
 
-# Ensure media directory exists
-MEDIA_DIR = Path(MEDIA_ROOT)
-if not MEDIA_DIR.exists():
-    os.makedirs(MEDIA_DIR)
+# Prometheus metrics state, persisted between restarts. Defaults to a location
+# derived from the data directory so local runs work without extra configuration.
+METRICS_FILE_PATH = config("METRICS_FILE_PATH", default=str(LOG_DIR / "metrics_state.json"), cast=str)
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024  # 250KB
@@ -138,6 +128,13 @@ ALLOWED_IMAGE_TYPES = ["jpeg", "jpg", "png", "webp"]
 # Detection pipeline settings
 MIN_PLATE_HEIGHT = config("MIN_PLATE_HEIGHT", default=30, cast=int)
 PLATE_HEIGHT_FRACTION = config("PLATE_HEIGHT_FRACTION", default=0.05, cast=float)
+
+# Detection validation thresholds (filter false positives)
+DETECTION_MIN_CONFIDENCE = config("DETECTION_MIN_CONFIDENCE", default=0.5, cast=float)
+DETECTION_MIN_BOX_AREA_FRACTION = config("DETECTION_MIN_BOX_AREA_FRACTION", default=0.001, cast=float)
+DETECTION_MAX_BOX_AREA_FRACTION = config("DETECTION_MAX_BOX_AREA_FRACTION", default=0.5, cast=float)
+DETECTION_MIN_PLATE_ASPECT = config("DETECTION_MIN_PLATE_ASPECT", default=1.5, cast=float)
+DETECTION_MAX_PLATE_ASPECT = config("DETECTION_MAX_PLATE_ASPECT", default=10.0, cast=float)
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
@@ -154,7 +151,9 @@ RATE_LIMIT_EXCLUDE_PATHS = config(
     cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
 )
 RATE_LIMIT_INCLUDE_PATHS = config(
-    "RATE_LIMIT_INCLUDE_PATHS", default="/api/v1/ocr/", cast=lambda v: [s.strip() for s in v.split(",") if s.strip()]
+    "RATE_LIMIT_INCLUDE_PATHS",
+    default="/api/v1/ocr/",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
 )
 
 if "test" in sys.argv:
@@ -170,6 +169,11 @@ RETRY_BATCH_SIZE = config("RETRY_BATCH_SIZE", default=5, cast=int)
 RETRY_INTERVAL_MINUTES = config("RETRY_INTERVAL_MINUTES", default=5, cast=int)
 RETRY_SCHEDULER_ENABLED = config("RETRY_SCHEDULER_ENABLED", default=True, cast=bool)
 
+# Background refresh interval for the cached availability series.
+# Keep well below the Prometheus scrape interval so served data is never
+# more than one scrape interval stale.
+AVAILABILITY_REFRESH_SECONDS = config("AVAILABILITY_REFRESH_SECONDS", default=60, cast=int)
+
 # Qwen3-VL API Configuration
 QWEN_API_KEY = config("QWEN_API_KEY", default="")
 QWEN_BASE_URL = config("QWEN_BASE_URL", default="https://ollama.computedsynergy.com/v1")
@@ -179,8 +183,6 @@ QWEN_MODEL = config("QWEN_MODEL", default="qwen3-vl-4b-instruct")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Security settings
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 # Email settings (for error notifications, optional)
@@ -222,7 +224,7 @@ LOGGING = {
         },
         "lpr_app": {
             "handlers": ["console", "file"],
-            "level": "DEBUG",
+            "level": "INFO",
             "propagate": False,
         },
     },

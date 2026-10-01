@@ -125,10 +125,10 @@ class BoundingBoxVisualizer:
 
     def draw_bounding_box(
         self,
-        x1: int | None = None,
-        y1: int | None = None,
-        width: int | None = None,
-        height: int | None = None,
+        x1=None,
+        y1=None,
+        width=None,
+        height=None,
         x2: int | None = None,
         y2: int | None = None,
         color: tuple[int, int, int] = (255, 0, 0),
@@ -237,8 +237,6 @@ class BoundingBoxVisualizer:
         Args:
             ocr_data: List of OCR detection dictionaries
         """
-        logger.info(f"DEBUG: OCR data type: {type(ocr_data)}")
-        logger.info(f"DEBUG: OCR data content: {ocr_data}")
 
         for ocr_item in ocr_data:
             if not isinstance(ocr_item, dict):
@@ -256,8 +254,6 @@ class BoundingBoxVisualizer:
                 ocr_info = ocr_item.get(ocr_text, {}) if ocr_text else {}
                 coords = ocr_info.get("coordinates", {})
                 confidence = ocr_info.get("confidence", 0)
-
-            logger.info(f"DEBUG: Processing OCR text: '{ocr_text}' at coords: {coords}")
 
             # Extract coordinates - handle both old and new formats
             if all(key in coords for key in ["x1", "y1", "x2", "y2"]):
@@ -297,15 +293,12 @@ class BoundingBoxVisualizer:
         detections = lpr_data["detections"]
 
         # Add diagnostic logging
-        logger.info(f"DEBUG: detections type: {type(detections)}")
-        logger.info(f"DEBUG: detections content: {detections}")
 
         # Handle both list and dictionary formats
         if isinstance(detections, list):
             # Process as list
             for i, detection_data in enumerate(detections):
                 try:
-                    logger.info(f"DEBUG: Processing detection {i}: {detection_data}")
                     self.draw_plate_detection(detection_data)
                 except Exception as e:
                     logger.error(f"Error drawing detection {i}: {str(e)}")
@@ -313,7 +306,6 @@ class BoundingBoxVisualizer:
             # Process as dictionary (original format)
             for detection_key, detection_data in detections.items():
                 try:
-                    logger.info(f"DEBUG: Processing detection {detection_key}: {detection_data}")
                     self.draw_plate_detection(detection_data)
                 except Exception as e:
                     logger.error(f"Error drawing detection {detection_key}: {str(e)}")
