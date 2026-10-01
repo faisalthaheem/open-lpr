@@ -82,7 +82,7 @@ The quickest way to get started is with Docker using the new profile-based compo
 
 > **🚨 Stability Notice**: For production environments, we strongly recommend using **tagged releases** instead of the mainline branch. See the [Production Deployment](#-production-deployment) section for stable version instructions.
 
-> **🚨 Important Notice**: Individual compose files (`docker-compose-llamacpp-*.yml`) are now deprecated. Please use the new profile-based approach with the main `docker-compose.yml` file.
+> **🚨 Important Notice**: The individual `docker-compose-llamacpp-*.yml` files have been removed. Use the profile-based approach with `docker-compose.yaml`.
 
 #### Option 1: AMD Vulkan GPU Version (Fastest Local Inference)
 For users with AMD GPUs that support Vulkan:
@@ -182,7 +182,7 @@ docker compose logs -f
 
 ### Docker Compose Files
 
-> **🚨 Deprecation Notice**: Individual compose files (`docker-compose-llamacpp-*.yml`) are now deprecated and will be removed in a future release. Please migrate to the new profile-based approach using the main `docker-compose.yml` file.
+> **🚨 Removal Notice**: The individual `docker-compose-llamacpp-*.yml` files have been removed. Use the profile-based approach with `docker-compose.yaml`.
 
 #### 🆕 Profile-Based Docker Compose (Recommended)
 
@@ -222,21 +222,14 @@ docker compose down
 
 For detailed profile documentation, see [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
 
-#### Deprecated Individual Compose Files
+#### Removed Individual Compose Files
 
-> **⚠️ Deprecated**: The following compose files are deprecated and will be removed in a future release. Please migrate to the profile-based approach above.
+> **⚠️ Removed**: `docker-compose-llamacpp-amd-vulcan.yml` and `docker-compose-llamacpp-cpu.yml` have been deleted. Use the profile-based commands above.
 
-1. **docker-compose-llamacpp-amd-vulcan.yml** (Deprecated)
-   - **Replaced by**: `docker compose --profile core --profile amd-vulkan up -d`
-   - **Was**: Full local deployment with AMD GPU acceleration using Vulkan
-
-2. **docker-compose-llamacpp-cpu.yml** (Deprecated)
-   - **Replaced by**: `docker compose --profile core --profile cpu up -d`
-   - **Was**: Full local deployment using CPU for inference
-
-3. **docker-compose.yml** (Legacy external API mode)
-   - **Replaced by**: `docker compose --profile core up -d`
-   - **Was**: OpenLPR deployment with external API endpoint
+| Removed file | Replacement command | Previous behaviour |
+| --- | --- | --- |
+| `docker-compose-llamacpp-amd-vulcan.yml` | `docker compose --profile core --profile amd-vulkan up -d` | Full local deployment with AMD GPU acceleration using Vulkan |
+| `docker-compose-llamacpp-cpu.yml` | `docker compose --profile core --profile cpu up -d` | Full local deployment using CPU for inference |
 
 ### Manual Installation
 
@@ -676,14 +669,13 @@ open-lpr/
 ├── PROMETHEUS_METRICS.md      # Prometheus metrics documentation
 ├── CHANGELOG.md               # Project changelog
 ├── LICENSE.md                 # License file
-├── test_api.py                 # API testing script
-├── test_setup.py               # Test setup utilities
-├── test-llamacpp-integration.py # LlamaCpp integration test script
-├── test_metrics.py             # Metrics testing script
+├── scripts/                    # Manual integration & diagnostic scripts (not unit tests)
+│   ├── test_api.py             # API testing script
+│   ├── test_setup.py           # Test setup utilities
+│   ├── test-llamacpp-integration.py # LlamaCpp integration test script
+│   └── test_metrics.py         # Metrics testing script
 ├── verify-monitoring-setup.sh  # Monitoring setup verification script
-├── docker-compose.yml           # Profile-based Docker Compose configuration
-├── docker-compose-llamacpp-cpu.yml    # [DEPRECATED] CPU-based LlamaCpp Docker Compose
-├── docker-compose-llamacpp-amd-vulcan.yml # [DEPRECATED] AMD Vulkan GPU LlamaCpp Docker Compose
+├── docker-compose.yaml          # Profile-based Docker Compose configuration
 ├── docker-entrypoint.sh         # Docker entrypoint script
 ├── Dockerfile                  # Docker image definition
 ├── start-llamacpp-cpu.sh     # LlamaCpp CPU startup script
@@ -804,10 +796,10 @@ Use the provided test script to verify API functionality:
 
 ```bash
 # Test with default image locations
-python test_api.py
+python scripts/test_api.py
 
 # Test with specific image
-python test_api.py /path/to/your/image.jpg
+python scripts/test_api.py /path/to/your/image.jpg
 ```
 
 </details>

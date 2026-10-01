@@ -293,10 +293,10 @@ Use the provided test script to verify API functionality:
 
 ```bash
 # Test with default image locations
-python test_api.py
+python scripts/test_api.py
 
 # Test with specific image
-python test_api.py /path/to/your/image.jpg
+python scripts/test_api.py /path/to/your/image.jpg
 ```
 
 ## Integration Notes

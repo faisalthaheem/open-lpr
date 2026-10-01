@@ -51,6 +51,17 @@ else
     echo "Warning: Running as non-root, may not be able to set metrics permissions"
 fi
 
+# Check if the static root exists (collectstatic target)
+if [ ! -d "/app/staticfiles" ]; then
+    echo "Creating staticfiles directory for collected static assets..."
+    mkdir -p /app/staticfiles
+fi
+
+if [ "$(id -u)" = "0" ]; then
+    chown -R django:django /app/staticfiles
+    chmod -R 755 /app/staticfiles
+fi
+
 # Change to app directory
 cd /app
 

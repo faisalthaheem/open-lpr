@@ -190,7 +190,10 @@ class ArabicRenderingTest(TestCase):
         try:
             viz = BoundingBoxVisualizer(path)
             viz.draw_bounding_box(
-                x1=100, y1=100, x2=300, y2=200,
+                x1=100,
+                y1=100,
+                x2=300,
+                y2=200,
                 color=(0, 255, 0),
                 label="٥١٥٦٢٩ اربيل العراق (0.95)",
             )
@@ -223,7 +226,10 @@ class CJKRenderingTest(TestCase):
         try:
             viz = BoundingBoxVisualizer(path)
             viz.draw_bounding_box(
-                x1=100, y1=100, x2=300, y2=200,
+                x1=100,
+                y1=100,
+                x2=300,
+                y2=200,
                 color=(0, 255, 0),
                 label="品川 (0.95)",
             )
@@ -293,17 +299,21 @@ class ArabicPlateVisualTest(TestCase):
         output_path = "/tmp/test_arabic_visual_result.png"
 
         lpr_data = {
-            "detections": [{
-                "plate": {
-                    "confidence": 0.98,
-                    "coordinates": {"x1": 349, "y1": 682, "x2": 605, "y2": 852},
-                },
-                "ocr": [{
-                    "text": self.OCR_TEXT,
-                    "confidence": 0.95,
-                    "coordinates": {"x1": 355, "y1": 685, "x2": 569, "y2": 828},
-                }],
-            }]
+            "detections": [
+                {
+                    "plate": {
+                        "confidence": 0.98,
+                        "coordinates": {"x1": 349, "y1": 682, "x2": 605, "y2": 852},
+                    },
+                    "ocr": [
+                        {
+                            "text": self.OCR_TEXT,
+                            "confidence": 0.95,
+                            "coordinates": {"x1": 355, "y1": 685, "x2": 569, "y2": 828},
+                        }
+                    ],
+                }
+            ]
         }
 
         result = visualize_lpr_on_image(image_path, lpr_data, output_path)
@@ -325,7 +335,7 @@ class ArabicPlateVisualTest(TestCase):
             self.assertGreater(green_bar, 10, "Label should have green color bar")
 
         print(f"\n  Visual output saved to: {output_path}")
-        print(f"  Inspect this file to verify Arabic text renders correctly.")
+        print("  Inspect this file to verify Arabic text renders correctly.")
 
     @skipUnless(HAS_ARABIC_TEST_IMAGE and HAS_NOTO_ARABIC, "arabic.jpg or Noto Arabic font missing")
     def test_arabic_image_label_pixel_diversity(self):
@@ -337,17 +347,21 @@ class ArabicPlateVisualTest(TestCase):
         output_path = "/tmp/test_arabic_pixel_diversity.png"
 
         lpr_data = {
-            "detections": [{
-                "plate": {
-                    "confidence": 0.98,
-                    "coordinates": {"x1": 349, "y1": 682, "x2": 605, "y2": 852},
-                },
-                "ocr": [{
-                    "text": self.OCR_TEXT,
-                    "confidence": 0.95,
-                    "coordinates": {"x1": 355, "y1": 685, "x2": 569, "y2": 828},
-                }],
-            }]
+            "detections": [
+                {
+                    "plate": {
+                        "confidence": 0.98,
+                        "coordinates": {"x1": 349, "y1": 682, "x2": 605, "y2": 852},
+                    },
+                    "ocr": [
+                        {
+                            "text": self.OCR_TEXT,
+                            "confidence": 0.95,
+                            "coordinates": {"x1": 355, "y1": 685, "x2": 569, "y2": 828},
+                        }
+                    ],
+                }
+            ]
         }
 
         visualize_lpr_on_image(image_path, lpr_data, output_path)
@@ -405,6 +419,7 @@ class BoundingBoxVisualizerInitTest(TestCase):
 class RaqmSupportTest(TestCase):
     def test_pillow_has_raqm_support(self):
         from PIL import features
+
         self.assertTrue(
             features.check("raqm"),
             "Pillow raqm support is disabled. Install libraqm for proper "
