@@ -5,23 +5,20 @@ This module contains views for handling API requests and responses
 including OCR processing, health checks, metrics, and image listing.
 """
 
-import json
 import logging
 import time
-import urllib.error
-import urllib.parse
-import urllib.request
-from datetime import datetime, timedelta
 
 from django.conf import settings as django_settings
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from ..metrics import get_metrics_response
 from ..models import UploadedImage
 from ..services.api_service import ApiService
+from ..services.availability import get_availability_points
 from ..services.file_service import FileService
 from ..services.image_processing_service import ImageProcessingService
 from ..services.qwen_client import get_qwen_client
@@ -48,7 +45,6 @@ def api_ocr_upload(request):
     Returns:
     - JSON response with OCR results or error information
     """
-    logger.info("DEBUG: api_ocr_upload function called!")
 
     # Detect if this is a canary request
     is_canary = ApiService.detect_canary_request(request)
@@ -71,14 +67,8 @@ def api_ocr_upload(request):
             # Create upload record
             uploaded_image = ApiService.create_upload_image_record(uploaded_file, save_image, is_canary)
 
-            logger.info(
-                f"DEBUG: About to call process_uploaded_image with save_image={save_image}, is_canary={is_canary}"
-            )
-
             # Process the image
             result = ImageProcessingService.process_uploaded_image(uploaded_image, save_image=save_image)
-
-            logger.info(f"DEBUG: process_uploaded_image returned: {result}")
 
             processing_time_ms = int((time.time() - start_time) * 1000)
 
@@ -100,7 +90,6 @@ def api_ocr_upload(request):
                 response = ApiService.format_success_response(
                     result, uploaded_image, processing_time_ms, is_canary, save_image
                 )
-                logger.info(f"DEBUG: Returning success response of type: {type(response)}")
                 return response
             else:
                 MetricsHelper.record_upload_attempt("failed")
@@ -124,15 +113,13 @@ def api_ocr_upload(request):
                     is_canary=is_canary,
                     status_code=500,
                 )
-                logger.info(f"DEBUG: Returning error response of type: {type(response)}")
                 return response
 
         except Exception as e:
-            logger.error(f"Error in api_ocr_upload: {str(e)}")
-            logger.error(f"Error type: {type(e)}")
-            import traceback
-
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.exception(
+                "Unhandled exception in api_ocr_upload: %s",
+                e,
+            )
 
             # Update error metrics
             MetricsHelper.record_upload_attempt("error")
@@ -188,7 +175,7 @@ def api_health_check(request):
                     "status": "healthy" if status_code == 200 else "unhealthy",
                     "api_healthy": api_healthy,
                     "database_healthy": db_healthy,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": timezone.now().isoformat(),
                 },
                 status=status_code,
             )
@@ -199,7 +186,7 @@ def api_health_check(request):
         MetricsHelper.record_api_error()
 
         return JsonResponse(
-            {"status": "unhealthy", "error": str(e), "timestamp": datetime.now().isoformat()}, status=503
+            {"status": "unhealthy", "error": str(e), "timestamp": timezone.now().isoformat()}, status=503
         )
 
 
@@ -236,6 +223,43 @@ def _serialize_image_summary(img):
     }
 
 
+def _parse_int_param(request, name, default, minimum=1, maximum=None):
+    """
+    Parse an integer query parameter, clamping it into range.
+
+    Returns a ``(value, None)`` tuple on success, or ``(None, error_response)`` when
+    the supplied value cannot be parsed as an integer. Returning an explicit 400 is
+    preferable to letting ``int()`` raise out of the view and produce a 500, and to
+    silently substituting a default, which hides client bugs.
+
+    Args:
+        request: The incoming request
+        name: Query parameter name
+        default: Value used when the parameter is absent
+        minimum: Lower bound; values below it are clamped up
+        maximum: Optional upper bound; values above it are clamped down
+    """
+    raw = request.GET.get(name)
+    if raw is None:
+        return default, None
+
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        error = JsonResponse(
+            {"error": f"Invalid value for '{name}': expected an integer, got {raw!r}"},
+            status=400,
+        )
+        return None, error
+
+    if minimum is not None and value < minimum:
+        value = minimum
+    if maximum is not None and value > maximum:
+        value = maximum
+
+    return value, None
+
+
 @require_http_methods(["GET"])
 def api_image_list(request):
     queryset = UploadedImage.objects.all()
@@ -258,8 +282,13 @@ def api_image_list(request):
 
     queryset = queryset.order_by("-upload_timestamp")
 
-    page_size = min(int(request.GET.get("page_size", 12)), 100)
-    page_number = int(request.GET.get("page", 1))
+    page_size, error = _parse_int_param(request, "page_size", default=12, minimum=1, maximum=100)
+    if error:
+        return error
+
+    page_number, error = _parse_int_param(request, "page", default=1, minimum=1)
+    if error:
+        return error
 
     paginator = Paginator(queryset, page_size)
     page = paginator.get_page(page_number)
@@ -351,7 +380,7 @@ def api_health_light(request):
                 {
                     "status": "healthy",
                     "database_healthy": True,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": timezone.now().isoformat(),
                 },
                 status=200,
             )
@@ -360,7 +389,7 @@ def api_health_light(request):
                 {
                     "status": "unhealthy",
                     "database_healthy": False,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": timezone.now().isoformat(),
                 },
                 status=503,
             )
@@ -370,7 +399,7 @@ def api_health_light(request):
             {
                 "status": "unhealthy",
                 "database_healthy": False,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": timezone.now().isoformat(),
             },
             status=503,
         )
@@ -378,43 +407,12 @@ def api_health_light(request):
 
 @require_http_methods(["GET"])
 def api_availability(request):
-    try:
-        days = int(request.GET.get("days", 3))
-    except (ValueError, TypeError):
-        days = 3
+    days, error = _parse_int_param(request, "days", default=3, minimum=1, maximum=365)
+    if error:
+        return error
 
-    try:
-        prometheus_url = getattr(django_settings, "PROMETHEUS_URL", "http://prometheus:9090")
-        now = datetime.utcnow()
-        start = now - timedelta(days=days)
-        step = "300"
+    points, error = get_availability_points(days)
+    if error:
+        return JsonResponse({"error": error}, status=503)
 
-        params = urllib.parse.urlencode(
-            {
-                "query": "avg_over_time(lpr_api_health_status[5m])",
-                "start": start.timestamp(),
-                "end": now.timestamp(),
-                "step": step,
-            }
-        )
-
-        url = f"{prometheus_url}/api/v1/query_range?{params}"
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode())
-
-        results = data.get("data", {}).get("result", [])
-        if not results:
-            return JsonResponse({"data": []})
-
-        values = results[0].get("values", [])
-        points = [
-            {"timestamp": datetime.utcfromtimestamp(float(v[0])).isoformat() + "Z", "value": float(v[1])}
-            for v in values
-        ]
-
-        return JsonResponse({"data": points})
-    except Exception as e:
-        logger.error(f"Availability query failed: {str(e)}")
-        return JsonResponse({"error": "Prometheus unavailable"}, status=503)
+    return JsonResponse({"data": points})

@@ -40,10 +40,18 @@ class LprAppConfig(AppConfig):
                 replace_existing=True,
             )
 
+            scheduler.add_job(
+                "lpr_app.scheduler:refresh_availability",
+                trigger=IntervalTrigger(seconds=settings.AVAILABILITY_REFRESH_SECONDS),
+                id="refresh_availability",
+                replace_existing=True,
+            )
+
             scheduler.start()
             logger.info(
-                "APScheduler started: retry_stuck_images every %d minutes",
+                "APScheduler started: retry_stuck_images every %d minutes, " "refresh_availability every %d seconds",
                 settings.RETRY_INTERVAL_MINUTES,
+                settings.AVAILABILITY_REFRESH_SECONDS,
             )
         except Exception:
             logger.exception("Failed to start APScheduler")
