@@ -1,10 +1,11 @@
 import json
 import logging
 import time
+from functools import lru_cache
 from typing import Any
 
 from django.conf import settings
-from openai import DefaultHttpxClient, OpenAI
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +21,10 @@ class QwenVLClient:
         self.base_url = settings.QWEN_BASE_URL
         self.model = settings.QWEN_MODEL
 
-        # Add diagnostic logging
-        logger.info(f"DEBUG: API Key configured: {bool(self.api_key)}")
-        logger.info(f"DEBUG: Base URL: {self.base_url}")
-        logger.info(f"DEBUG: Model: {self.model}")
-
         if not self.api_key:
             raise ValueError("QWEN_API_KEY is not configured in settings")
 
-        # Create httpx client to avoid proxies parameter issue
-        # This fixes the compatibility issue between OpenAI and httpx
-        http_client = DefaultHttpxClient()
-
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url, http_client=http_client)
+        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
         logger.info(f"QwenVLClient initialized with model: {self.model}")
 
@@ -59,12 +51,6 @@ class QwenVLClient:
                     ],
                 }
             ]
-
-            logger.info("DEBUG: Sending request to Qwen3-VL API")
-            logger.info(f"DEBUG: Base URL: {self.base_url}")
-            logger.info(f"DEBUG: Model: {self.model}")
-            logger.info(f"DEBUG: Full endpoint: {self.base_url}/chat/completions")
-            logger.info(f"DEBUG: API Key present: {bool(self.api_key)}")
 
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -104,50 +90,55 @@ class QwenVLClient:
             logger.error(f"Health check failed: {str(e)}")
             return False
 
-    def analyze_images_batch(self, base64_images: list[str], prompt: str) -> list[str] | None:
+    def analyze_images_batch(self, base64_images: list[str], prompt: str) -> list[str | None]:
         """
         Send multiple images with prompt to Qwen3-VL for analysis
+
+        Each image is sent independently so that a failure on one plate crop does not
+        discard results already obtained for the others. A failed position is reported
+        as ``None`` in the returned list.
 
         Args:
             base64_images: List of base64 encoded image strings
             prompt: Text prompt for the model
 
         Returns:
-            List of model response texts or None if error occurs
+            List of model response texts, same length as ``base64_images``, with ``None``
+            in positions whose request failed.
         """
-        try:
-            start_time = time.time()
+        start_time = time.time()
 
-            results = []
+        results: list[str | None] = []
+        failures = 0
 
-            for idx, base64_image in enumerate(base64_images):
-                messages = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
-                            {"type": "text", "text": prompt},
-                        ],
-                    }
-                ]
+        for base64_image in base64_images:
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
 
-                logger.info(f"DEBUG: Sending batch request {idx + 1}/{len(base64_images)} to Qwen3-VL API")
-
+            try:
                 response = self.client.chat.completions.create(
                     model=self.model, messages=messages, max_tokens=4096, temperature=0.1
                 )
+                results.append(response.choices[0].message.content)
+            except Exception as e:
+                failures += 1
+                logger.error(f"Batch Qwen3-VL API call failed for one image: {str(e)}")
+                results.append(None)
 
-                result = response.choices[0].message.content
-                results.append(result)
+        duration = (time.time() - start_time) * 1000
+        logger.info(
+            f"Batch API call finished in {duration:.2f}ms: "
+            f"{len(base64_images) - failures}/{len(base64_images)} succeeded"
+        )
 
-            duration = (time.time() - start_time) * 1000
-            logger.info(f"Batch API call ({len(base64_images)} images) completed successfully in {duration:.2f}ms")
-
-            return results
-
-        except Exception as e:
-            logger.error(f"Error in batch Qwen3-VL API call: {str(e)}")
-            return None
+        return results
 
 
 # Detection-only prompt template (Phase 1)
@@ -245,14 +236,65 @@ def convert_from_qwen2vl_format(bbox, original_h, original_w, resized_h=None, re
     return [x1_original, y1_original, x2_original, y2_original]
 
 
+@lru_cache(maxsize=1)
 def get_qwen_client() -> QwenVLClient:
     """
-    Get a configured Qwen3-VL client instance
+    Get a shared Qwen3-VL client instance.
+
+    The client owns an httpx connection pool, so constructing one per request would
+    pay for TCP/TLS setup on every OCR call and health check. A single instance is
+    reused per process instead.
+
+    ``lru_cache`` only stores successful returns, so a construction failure (for
+    example a missing API key) raises on first call and is retried on the next call
+    rather than being cached as a broken client.
 
     Returns:
         QwenVLClient instance
     """
     return QwenVLClient()
+
+
+def reset_qwen_client() -> None:
+    """
+    Discard the cached client so the next call constructs a fresh one.
+
+    Used by tests that need to change client configuration, and after settings that
+    the client reads at construction time change.
+    """
+    get_qwen_client.cache_clear()
+
+
+def _extract_json_text(response_text: str) -> str:
+    """
+    Extract the JSON payload from a model response.
+
+    Models wrap JSON in markdown code fences of varying quality. This handles a
+    ```` ```json ```` fence, a bare ```` ``` ```` fence, a bare JSON body, and the
+    case where an opening fence is never closed.
+
+    Args:
+        response_text: Raw response text from the API
+
+    Returns:
+        The candidate JSON text, stripped of surrounding whitespace.
+    """
+    text = response_text.strip()
+
+    if "```json" in text:
+        start = text.find("```json") + len("```json")
+    elif "```" in text:
+        start = text.find("```") + 3
+    else:
+        return text
+
+    end = text.find("```", start)
+    if end == -1:
+        # Unterminated fence: the payload runs to the end of the response. Taking
+        # text[start:-1] here would silently drop the final character.
+        return text[start:].strip()
+
+    return text[start:end].strip()
 
 
 def parse_lpr_response(
@@ -276,21 +318,7 @@ def parse_lpr_response(
         Parsed JSON data with scaled coordinates or None if parsing fails
     """
     try:
-        # Try to extract JSON from the response
-        # The response might contain markdown code blocks
-        if "```json" in response_text:
-            # Extract JSON from markdown code block
-            start = response_text.find("```json") + 7
-            end = response_text.find("```", start)
-            json_text = response_text[start:end].strip()
-        elif "```" in response_text:
-            # Extract JSON from generic code block
-            start = response_text.find("```") + 3
-            end = response_text.find("```", start)
-            json_text = response_text[start:end].strip()
-        else:
-            # Assume the entire response is JSON
-            json_text = response_text.strip()
+        json_text = _extract_json_text(response_text)
 
         # Parse the JSON
         parsed_data = json.loads(json_text)
@@ -332,13 +360,10 @@ def scale_coordinates_in_response(
 
     detections = data["detections"]
 
-    # Handle both list and dictionary formats
+    # `detections` is always a JSON array in the supported schema.
     if isinstance(detections, list):
         for detection in detections:
             scale_detection_coordinates(detection, original_h, original_w, resized_h, resized_w)
-    elif isinstance(detections, dict):
-        for detection_key in detections:
-            scale_detection_coordinates(detections[detection_key], original_h, original_w, resized_h, resized_w)
 
     return data
 
@@ -368,26 +393,14 @@ def scale_detection_coordinates(
             scaled_bbox = convert_from_qwen2vl_format(bbox, original_h, original_w, resized_h, resized_w)
             coords["x1"], coords["y1"], coords["x2"], coords["y2"] = scaled_bbox
 
-    # Scale OCR coordinates
-    if "ocr" in detection:
-        ocr_data = detection["ocr"]
-        if isinstance(ocr_data, list):
-            for ocr_item in ocr_data:
-                if isinstance(ocr_item, dict) and "coordinates" in ocr_item:
-                    coords = ocr_item["coordinates"]
-                    if all(key in coords for key in ["x1", "y1", "x2", "y2"]):
-                        bbox = [coords["x1"], coords["y1"], coords["x2"], coords["y2"]]
-                        scaled_bbox = convert_from_qwen2vl_format(bbox, original_h, original_w, resized_h, resized_w)
-                        coords["x1"], coords["y1"], coords["x2"], coords["y2"] = scaled_bbox
-        elif isinstance(ocr_data, dict):
-            for ocr_key in ocr_data:
-                ocr_item = ocr_data[ocr_key]
-                if isinstance(ocr_item, dict) and "coordinates" in ocr_item:
-                    coords = ocr_item["coordinates"]
-                    if all(key in coords for key in ["x1", "y1", "x2", "y2"]):
-                        bbox = [coords["x1"], coords["y1"], coords["x2"], coords["y2"]]
-                        scaled_bbox = convert_from_qwen2vl_format(bbox, original_h, original_w, resized_h, resized_w)
-                        coords["x1"], coords["y1"], coords["x2"], coords["y2"] = scaled_bbox
+    # Scale OCR coordinates. `ocr` is a JSON array in the supported schema.
+    for ocr_item in detection.get("ocr") or []:
+        if isinstance(ocr_item, dict) and "coordinates" in ocr_item:
+            coords = ocr_item["coordinates"]
+            if all(key in coords for key in ["x1", "y1", "x2", "y2"]):
+                bbox = [coords["x1"], coords["y1"], coords["x2"], coords["y2"]]
+                scaled_bbox = convert_from_qwen2vl_format(bbox, original_h, original_w, resized_h, resized_w)
+                coords["x1"], coords["y1"], coords["x2"], coords["y2"] = scaled_bbox
 
 
 def parse_detection_response(
@@ -411,17 +424,7 @@ def parse_detection_response(
         Parsed JSON data with scaled coordinates or None if parsing fails
     """
     try:
-        # Try to extract JSON from the response
-        if "```json" in response_text:
-            start = response_text.find("```json") + 7
-            end = response_text.find("```", start)
-            json_text = response_text[start:end].strip()
-        elif "```" in response_text:
-            start = response_text.find("```") + 3
-            end = response_text.find("```", start)
-            json_text = response_text[start:end].strip()
-        else:
-            json_text = response_text.strip()
+        json_text = _extract_json_text(response_text)
 
         # Parse the JSON
         parsed_data = json.loads(json_text)
@@ -459,17 +462,7 @@ def parse_ocr_response(
         Parsed OCR data with coordinates scaled to original image or None if parsing fails
     """
     try:
-        # Try to extract JSON from the response
-        if "```json" in response_text:
-            start = response_text.find("```json") + 7
-            end = response_text.find("```", start)
-            json_text = response_text[start:end].strip()
-        elif "```" in response_text:
-            start = response_text.find("```") + 3
-            end = response_text.find("```", start)
-            json_text = response_text[start:end].strip()
-        else:
-            json_text = response_text.strip()
+        json_text = _extract_json_text(response_text)
 
         # Parse the JSON
         parsed_data = json.loads(json_text)
