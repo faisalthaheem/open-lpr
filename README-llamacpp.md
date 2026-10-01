@@ -19,13 +19,13 @@ The LlamaCpp service can run in two modes:
 This project provides two LlamaCpp deployment options:
 
 ### 1. AMD Vulkan GPU Version (Recommended)
-- **File**: `docker-compose-llamacpp-amd-vulcan.yml`
+- **File**: `--profile core --profile amd-vulkan -f docker-compose.yaml`
 - **Performance**: Fastest inference with GPU acceleration
 - **Prerequisites**: AMD GPU with Vulkan support, ROCm drivers
 - **Use Case**: Production deployment with AMD hardware
 
 ### 2. CPU Version (Universal Compatibility)
-- **File**: `docker-compose-llamacpp-cpu.yml`
+- **File**: `--profile core --profile cpu -f docker-compose.yaml`
 - **Performance**: Slower but works on any hardware
 - **Prerequisites**: Sufficient RAM (16GB+ recommended)
 - **Use Case**: Testing, development, or hardware without GPU support
@@ -33,8 +33,8 @@ This project provides two LlamaCpp deployment options:
 ```mermaid
 graph TB
     subgraph "Deployment Options"
-        CPU[CPU Deployment<br/>docker-compose-llamacpp-cpu.yml]
-        GPU[GPU Deployment<br/>docker-compose-llamacpp-amd-vulcan.yml]
+        CPU[CPU Deployment<br/>--profile core --profile cpu -f docker-compose.yaml]
+        GPU[GPU Deployment<br/>--profile core --profile amd-vulkan -f docker-compose.yaml]
     end
     
     subgraph "Docker Network: openlpr-network"
@@ -123,13 +123,13 @@ Get your token from: https://huggingface.co/settings/tokens
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
 # Start all services with GPU acceleration
-docker compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+docker compose --profile core --profile amd-vulkan up -d
 
 # View logs
-docker compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f
+docker compose --profile core --profile amd-vulkan logs -f
 
 # Check service status
-docker compose -f docker-compose-llamacpp-amd-vulcan.yml ps
+docker compose --profile core --profile amd-vulkan ps
 ```
 
 #### Option B: CPU (Universal Compatibility)
@@ -139,13 +139,13 @@ docker compose -f docker-compose-llamacpp-amd-vulcan.yml ps
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
 # Start all services with CPU inference
-docker compose -f docker-compose-llamacpp-cpu.yml up -d
+docker compose --profile core --profile cpu up -d
 
 # View logs
-docker compose -f docker-compose-llamacpp-cpu.yml logs -f
+docker compose --profile core --profile cpu logs -f
 
 # Check service status
-docker compose -f docker-compose-llamacpp-cpu.yml ps
+docker compose --profile core --profile cpu ps
 ```
 
 ### 4. Access the Application
@@ -159,8 +159,8 @@ docker compose -f docker-compose-llamacpp-cpu.yml ps
 
 ```
 open-lpr/
-├── docker-compose-llamacpp-cpu.yml        # CPU-based compose file
-├── docker-compose-llamacpp-amd-vulcan.yml # AMD Vulkan GPU compose file
+├── --profile core --profile cpu -f docker-compose.yaml        # CPU-based compose file
+├── --profile core --profile amd-vulkan -f docker-compose.yaml # AMD Vulkan GPU compose file
 ├── .env.llamacpp.example               # Environment configuration template
 ├── .env.llamacpp                      # Environment configuration
 ├── scripts/
@@ -216,11 +216,11 @@ To use a different model:
 
 2. Restart services (replace with your compose file):
    ```bash
-   docker compose -f docker-compose-llamacpp-cpu.yml down
-   docker compose -f docker-compose-llamacpp-cpu.yml up -d
+   docker compose --profile core --profile cpu down
+   docker compose --profile core --profile cpu up -d
    # or
-   docker compose -f docker-compose-llamacpp-amd-vulcan.yml down
-   docker compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+   docker compose --profile core --profile amd-vulkan down
+   docker compose --profile core --profile amd-vulkan up -d
    ```
 
 ### Performance Tuning
@@ -261,7 +261,7 @@ For production deployment with Nginx:
 #### CPU Version:
 ```bash
 # Start with Nginx proxy
-docker compose -f docker-compose-llamacpp-cpu.yml --profile production up -d
+docker compose --profile core --profile cpu --profile production up -d
 
 # Configure SSL certificates
 mkdir -p nginx/ssl
@@ -271,7 +271,7 @@ mkdir -p nginx/ssl
 #### AMD Vulkan GPU Version:
 ```bash
 # Start with Nginx proxy
-docker compose -f docker-compose-llamacpp-amd-vulcan.yml --profile production up -d
+docker compose --profile core --profile amd-vulkan --profile production up -d
 
 # Configure SSL certificates
 mkdir -p nginx/ssl
@@ -286,9 +286,9 @@ Update `nginx/nginx.conf` for your domain and SSL configuration.
 
 ```bash
 # Check all services (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml ps
+docker compose --profile core --profile cpu ps
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml ps
+docker compose --profile core --profile amd-vulkan ps
 
 # Check OpenLPR health
 curl http://localhost:8000/health/
@@ -297,11 +297,11 @@ curl http://localhost:8000/health/
 curl http://localhost:8001/health
 
 # View logs (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml logs -f llamacpp
-docker-compose -f docker-compose-llamacpp-cpu.yml logs -f lpr-app
+docker compose --profile core --profile cpu logs -f llamacpp
+docker compose --profile core --profile cpu logs -f lpr-app
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f llamacpp
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f lpr-app
+docker compose --profile core --profile amd-vulkan logs -f llamacpp
+docker compose --profile core --profile amd-vulkan logs -f lpr-app
 ```
 
 ### Performance Monitoring
@@ -339,9 +339,9 @@ docker exec llamacpp radeontop
 echo $HF_TOKEN
 
 # Manual download test (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml exec llamacpp /scripts/download-model.sh
+docker compose --profile core --profile cpu exec llamacpp /scripts/download-model.sh
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml exec llamacpp /scripts/download-model.sh
+docker compose --profile core --profile amd-vulkan exec llamacpp /scripts/download-model.sh
 
 # Check available space
 df -h
@@ -354,14 +354,14 @@ df -h
 **Solution**:
 ```bash
 # Check logs (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml logs llamacpp
+docker compose --profile core --profile cpu logs llamacpp
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs llamacpp
+docker compose --profile core --profile amd-vulkan logs llamacpp
 
 # Check configuration (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml config
+docker compose --profile core --profile cpu config
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml config
+docker compose --profile core --profile amd-vulkan config
 
 # Verify permissions
 ls -la scripts/
@@ -379,9 +379,9 @@ docker network ls
 docker network inspect openlpr_openlpr-network
 
 # Test connectivity (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml exec lpr-app curl http://llamacpp:8000/health
+docker compose --profile core --profile cpu exec lpr-app curl http://llamacpp:8000/health
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml exec lpr-app curl http://llamacpp:8000/health
+docker compose --profile core --profile amd-vulkan exec lpr-app curl http://llamacpp:8000/health
 
 # Check ports
 netstat -tlnp | grep :8000
@@ -409,7 +409,7 @@ docker stats llamacpp
 For GPU deployment:
 ```bash
 # Reduce GPU layers offloaded
-# Edit docker-compose-llamacpp-amd-vulcan.yml
+# Edit --profile core --profile amd-vulkan -f docker-compose.yaml
 environment:
   - LLAMA_ARG_N_GPU_LAYERS=20  # Reduce from default 99
 
@@ -428,11 +428,11 @@ Enable debug logging:
 echo "DEBUG=True" >> .env.llamacpp
 
 # Restart with verbose logs (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml down
-docker-compose -f docker-compose-llamacpp-cpu.yml up --build
+docker compose --profile core --profile cpu down
+docker compose --profile core --profile cpu up --build
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml down
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up --build
+docker compose --profile core --profile amd-vulkan down
+docker compose --profile core --profile amd-vulkan up --build
 ```
 
 ## 🔄 Maintenance
@@ -441,23 +441,23 @@ docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up --build
 
 ```bash
 # Pull latest images (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml pull
+docker compose --profile core --profile cpu pull
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml pull
+docker compose --profile core --profile amd-vulkan pull
 
 # Restart with updates (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml up -d --force-recreate
+docker compose --profile core --profile cpu up -d --force-recreate
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d --force-recreate
+docker compose --profile core --profile amd-vulkan up -d --force-recreate
 ```
 
 ### Backup
 
 ```bash
 # Backup database (replace with your compose file)
-docker-compose -f docker-compose-llamacpp-cpu.yml exec lpr-app cp /app/data/db.sqlite3 /app/data/db.sqlite3.backup
+docker compose --profile core --profile cpu exec lpr-app cp /app/data/db.sqlite3 /app/data/db.sqlite3.backup
 # or
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml exec lpr-app cp /app/data/db.sqlite3 /app/data/db.sqlite3.backup
+docker compose --profile core --profile amd-vulkan exec lpr-app cp /app/data/db.sqlite3 /app/data/db.sqlite3.backup
 
 # Backup media files
 tar -czf container-media-backup-$(date +%Y%m%d).tar.gz container-media/
