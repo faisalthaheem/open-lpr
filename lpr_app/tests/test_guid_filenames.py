@@ -99,9 +99,9 @@ class GuidPrefixExtensionTest(TestCase):
         self.assertTrue(path.endswith(".png"))
 
     def test_date_partitioning_preserved(self):
-        from datetime import datetime
+        from django.utils import timezone
 
-        now = datetime.now()
+        now = timezone.now()
         path = upload_to_uploads(MagicMock(), "test.jpg")
         expected_prefix = f"uploads/{now.year}/{now.month:02d}/{now.day:02d}/"
         self.assertTrue(path.startswith(expected_prefix))

@@ -1,9 +1,11 @@
 import io
 from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from ..models import ProcessingLog, UploadedImage
 
@@ -89,7 +91,7 @@ class APIImageListResponseTest(TestCase):
             original_image=_make_image_file(),
             filename="ts.jpg",
             processing_status="completed",
-            processing_timestamp=datetime(2026, 1, 15, 10, 30, 0),
+            processing_timestamp=datetime(2026, 1, 15, 10, 30, 0, tzinfo=dt_timezone.utc),
         )
         response = self.client.get("/api/v1/images/")
         result = response.json()["results"][0]
@@ -241,13 +243,13 @@ class APIImageListSearchTest(TestCase):
         self.assertEqual(data["results"][0]["filename"], "xyz.jpg")
 
     def test_filter_by_date_from(self):
-        future = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+        future = (timezone.now() + timedelta(days=365)).strftime("%Y-%m-%d")
         response = self.client.get("/api/v1/images/", {"date_from": future})
         data = response.json()
         self.assertEqual(data["count"], 0)
 
     def test_filter_by_date_to(self):
-        past = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+        past = (timezone.now() - timedelta(days=365)).strftime("%Y-%m-%d")
         response = self.client.get("/api/v1/images/", {"date_to": past})
         data = response.json()
         self.assertEqual(data["count"], 0)
@@ -363,7 +365,7 @@ class APIImageDetailResponseTest(TestCase):
             processing_status="completed",
             file_size=2048,
             api_response=api_response,
-            processing_timestamp=datetime.now(),
+            processing_timestamp=timezone.now(),
             error_message=None,
         )
         ProcessingLog.objects.create(

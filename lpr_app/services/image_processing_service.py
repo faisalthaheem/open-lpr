@@ -8,13 +8,14 @@ API integration, coordinate scaling, and file operations.
 import logging
 import os
 import time
-from datetime import datetime
 from typing import Any
 
 from django.conf import settings
+from django.utils import timezone
 
 from ..models import ProcessingLog, UploadedImage
 from .bbox_visualizer import create_side_by_side_comparison, visualize_lpr_on_image
+from .detection_validator import DetectionValidator
 from .image_processor import ImageProcessor
 from .qwen_client import DETECTION_PROMPT, OCR_PROMPT, get_qwen_client, parse_detection_response, parse_ocr_response
 
@@ -41,13 +42,11 @@ class ImageProcessingService:
             Dictionary with processing result
         """
         processing_start_time = time.time()
-        logger.info(f"DEBUG: process_uploaded_image called with save_image={save_image}")
 
         try:
             # Update status to processing
             uploaded_image.processing_status = "processing"
             uploaded_image.save()
-            logger.info("DEBUG: Status updated to processing")
 
             # Update the "started" log with queue time (upload → processing start)
             started_log = ProcessingLog.objects.filter(uploaded_image=uploaded_image, status="started").first()
@@ -119,6 +118,17 @@ class ImageProcessingService:
                 logger.info("No license plates detected in image")
                 detections = []
 
+            validator = DetectionValidator(
+                min_confidence=settings.DETECTION_MIN_CONFIDENCE,
+                min_box_area_fraction=settings.DETECTION_MIN_BOX_AREA_FRACTION,
+                max_box_area_fraction=settings.DETECTION_MAX_BOX_AREA_FRACTION,
+                min_plate_aspect=settings.DETECTION_MIN_PLATE_ASPECT,
+                max_plate_aspect=settings.DETECTION_MAX_PLATE_ASPECT,
+            )
+            detections = validator.filter_detections(detections, original_h, original_w)
+            if not detections:
+                logger.info("No valid license plates after sanity checks")
+
             logger.info(f"Phase 1 complete: Detected {len(detections)} license plate(s)")
 
             api_call_log.duration_ms = int((time.time() - start_time) * 1000)
@@ -165,14 +175,14 @@ class ImageProcessingService:
                         base64_crops.append(None)
                         logger.error(f"Failed to encode crop: {crop_path}")
 
-                # Batch OCR call
+                # Batch OCR call. Each position is independent: a failure yields None
+                # in that slot only, and the remaining plates are still processed.
                 ocr_responses = client.analyze_images_batch(base64_crops, OCR_PROMPT)
 
-                if ocr_responses:
+                if len(ocr_responses) == len(crop_paths):
                     # Parse each OCR response and scale coordinates to original image
-                    for idx, (ocr_response, (crop_offset_x, crop_offset_y)) in enumerate(
-                        zip(ocr_responses, crop_offsets, strict=False)
-                    ):
+                    pairs = zip(ocr_responses, crop_offsets, strict=False)
+                    for idx, (ocr_response, (crop_offset_x, crop_offset_y)) in enumerate(pairs):
                         if not ocr_response or not crop_paths[idx]:
                             # Failed OCR for this crop, add empty OCR data
                             detections[idx]["ocr"] = []
@@ -196,14 +206,19 @@ class ImageProcessingService:
                             confidence = ocr_data.get("confidence", 0)
 
                             if text and confidence > 0:
-                                detections[idx]["ocr"] = [
-                                    {
-                                        "text": text,
-                                        "confidence": confidence,
-                                        "coordinates": ocr_data.get("coordinates", {}),
-                                    }
-                                ]
-                                logger.info(f"OCR result {idx + 1}: '{text}' (confidence: {confidence:.2f})")
+                                is_meaningful, reason = DetectionValidator.validate_ocr_text(text)
+                                if is_meaningful:
+                                    detections[idx]["ocr"] = [
+                                        {
+                                            "text": text,
+                                            "confidence": confidence,
+                                            "coordinates": ocr_data.get("coordinates", {}),
+                                        }
+                                    ]
+                                    logger.info(f"OCR result {idx + 1}: '{text}' (confidence: {confidence:.2f})")
+                                else:
+                                    detections[idx]["ocr"] = []
+                                    logger.info(f"OCR result {idx + 1}: text rejected ({reason})")
                             else:
                                 detections[idx]["ocr"] = []
                                 logger.info(f"OCR result {idx + 1}: No text detected")
@@ -250,23 +265,19 @@ class ImageProcessingService:
             # Update database record
             uploaded_image.api_response = merged_response  # type: ignore[arg-type]
             uploaded_image.processing_status = "completed"
-            uploaded_image.processing_timestamp = datetime.now()
+            uploaded_image.processing_timestamp = timezone.now()
 
             # Only save processed image path if we actually saved image
             if save_image and output_path:
                 output_path_str = str(output_path)
                 uploaded_image.processed_image.name = output_path_str.replace(str(settings.MEDIA_ROOT) + "/", "")
 
-            logger.info(f"DEBUG: About to save record, save_image={save_image}")
             uploaded_image.save()
-            logger.info("DEBUG: Record saved, checking cleanup condition")
 
             # Handle cleanup for canary requests
             result = ImageProcessingService._handle_canary_cleanup(uploaded_image, save_image, comparison_path)
             if result:
                 return result
-
-            logger.info(f"DEBUG: Not cleaning up because save_image={save_image}")
 
             # Log success
             duration = (time.time() - start_time) * 1000
@@ -282,11 +293,10 @@ class ImageProcessingService:
             return {"success": True, "processed_image_path": output_path, "processing_duration": processing_duration}
 
         except Exception as e:
-            logger.error(f"Error in process_uploaded_image: {str(e)}")
-            logger.error(f"Error type: {type(e)}")
-            import traceback
-
-            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.exception(
+                "Unhandled exception in process_uploaded_image: %s",
+                e,
+            )
 
             # Update status to failed
             uploaded_image.processing_status = "failed"
@@ -316,7 +326,6 @@ class ImageProcessingService:
             Result dictionary if cleanup was performed, None otherwise
         """
         # For canary requests with save_image=False, clean up completely
-        logger.info(f"DEBUG: save_image={save_image}, about to check cleanup condition")
         if not save_image:
             logger.info(f"Cleaning up canary image {uploaded_image.id} ({uploaded_image.filename})")
 

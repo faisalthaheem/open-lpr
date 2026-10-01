@@ -6,10 +6,10 @@ for web and API responses.
 """
 
 import logging
-from datetime import datetime
 from typing import Any
 
 from django.http import JsonResponse
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class ResponseHelper:
         Returns:
             JsonResponse with standardized success format
         """
-        response_data = {"success": True, "timestamp": datetime.now().isoformat(), **data}
+        response_data = {"success": True, "timestamp": timezone.now().isoformat(), **data}
 
         if message:
             response_data["message"] = message
@@ -56,7 +56,7 @@ class ResponseHelper:
         Returns:
             JsonResponse with standardized error format
         """
-        response_data = {"success": False, "error": error_message, "timestamp": datetime.now().isoformat()}
+        response_data = {"success": False, "error": error_message, "timestamp": timezone.now().isoformat()}
 
         if error_code:
             response_data["error_code"] = error_code

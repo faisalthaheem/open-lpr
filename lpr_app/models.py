@@ -3,6 +3,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 def _guid_filename(filename):
@@ -10,16 +11,14 @@ def _guid_filename(filename):
 
 
 def upload_to_uploads(instance, filename):
-    from datetime import datetime
-
-    now = datetime.now()
+    # Bucketed with an aware clock so the path date agrees with the stored
+    # upload_timestamp, regardless of the server's local timezone.
+    now = timezone.now()
     return f"uploads/{now.year}/{now.month:02d}/{now.day:02d}/{_guid_filename(filename)}"
 
 
 def upload_to_processed(instance, filename):
-    from datetime import datetime
-
-    now = datetime.now()
+    now = timezone.now()
     return f"processed/{now.year}/{now.month:02d}/{now.day:02d}/{_guid_filename(filename)}"
 
 
@@ -110,66 +109,38 @@ class UploadedImage(models.Model):
 
     def get_plate_count(self):
         """Get the number of license plates detected"""
-        results = self.get_detection_results()
-        if results and "detections" in results:
-            return len(results["detections"])
-        return 0
+        detections = self._detections()
+        return len(detections) if detections else 0
 
     def get_total_ocr_count(self):
         """Get the total number of OCR detections"""
-        results = self.get_detection_results()
-        if results and "detections" in results:
-            total = 0
-            detections = results["detections"]
-            # Handle both list and dictionary formats
-            if isinstance(detections, list):
-                # New API format: detections is a list
-                for detection in detections:
-                    if "ocr" in detection:
-                        total += len(detection["ocr"])
-            elif isinstance(detections, dict):
-                # Old API format: detections is a dictionary
-                for detection in detections.values():
-                    if "ocr" in detection:
-                        total += len(detection["ocr"])
-            return total
-        return 0
+        detections = self._detections()
+        if not detections:
+            return 0
+        return sum(len(d.get("ocr", [])) for d in detections)
 
     def get_first_ocr_text(self):
         """Get the first OCR text from the detection results"""
-        results = self.get_detection_results()
-        if results and "detections" in results:
-            detections = results["detections"]
-            # Handle both list and dictionary formats
-            if isinstance(detections, list):
-                # New API format: detections is a list
-                for detection in detections:
-                    if "ocr" in detection and detection["ocr"]:
-                        ocr_item = detection["ocr"][0]
-                        # Handle both new and old OCR formats
-                        if isinstance(ocr_item, dict):
-                            if "text" in ocr_item:
-                                # New format: {'text': 'value', 'confidence': 0.95, 'coordinates': {...}}
-                                return ocr_item["text"]
-                            else:
-                                # Old format: {'text_value': {'confidence': 0.95, 'coordinates': {...}}}
-                                # The text is the key itself
-                                return list(ocr_item.keys())[0] if ocr_item else None
-            elif isinstance(detections, dict):
-                # Old API format: detections is a dictionary
-                for detection in detections.values():
-                    if "ocr" in detection and detection["ocr"]:
-                        ocr_item = detection["ocr"][0]
-                        # Handle both new and old OCR formats
-                        if isinstance(ocr_item, dict):
-                            if "text" in ocr_item:
-                                # New format: {'text': 'value', 'confidence': 0.95, 'coordinates': {...}}
-                                return ocr_item["text"]
-                            else:
-                                # Old format: {'text_value': {'confidence': 0.95, 'coordinates': {...}}}
-                                # The text is the key itself
-                                return list(ocr_item.keys())[0] if ocr_item else None
+        detections = self._detections()
+        for detection in detections or []:
+            ocr_items = detection.get("ocr") or []
+            if ocr_items:
+                return ocr_items[0].get("text")
         return None
+
+    def _detections(self):
+        """
+        Return the stored detections as a list.
+
+        ``detections`` is always written as a JSON array by the current pipeline.
+        A non-array value is not a supported shape, so it yields no detections
+        rather than raising or producing a misleading count.
+        """
+        results = self.get_detection_results()
+        if not isinstance(results, dict):
+            return None
+        detections = results.get("detections")
+        return detections if isinstance(detections, list) else None
 
 
 class ProcessingLog(models.Model):
