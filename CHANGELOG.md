@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `ruff` linting and formatting with a committed configuration (`pyproject.toml`), plus a `requirements-dev.txt` that keeps dev tooling out of the production image
+- CI workflow (`.github/workflows/test.yml`) running lint, format check, and tests with a coverage gate on every push and pull request
+- `METRICS_FILE_PATH` environment variable, so Prometheus metrics state is configurable outside Docker
+- `AVAILABILITY_REFRESH_SECONDS` setting controlling the background refresh interval for the cached availability series
+- `reset_qwen_client()` helper for tests that need to change client configuration
+
+### Fixed
+- Test suite could not run clean: Django's discovery walked the project root and imported manual harness scripts, always reporting 2 collection errors
+- `GET /api/v1/images/` returned `500` on a non-integer `page` or `page_size`; it now returns `400` naming the offending parameter, and clamps out-of-range values
+- `analyze_images_batch` discarded results for every plate when a single crop failed; each item is now independent
+- Unterminated markdown code fences in model responses were parsed as truncated JSON, failing otherwise-valid responses
+- Naive datetimes were written against `USE_TZ=True`, so stored timestamps and media date partitions could disagree; all datetimes are now timezone-aware
+- Media paths are now bucketed by the same aware clock as `upload_timestamp`, so `uploads/YYYY/MM/DD/` agrees with the recorded date regardless of server timezone
+- `/api/v1/availability/` queried Prometheus synchronously on every request, occupying a worker for up to 10s; it now serves from a cache refreshed on a schedule
+- Local test runs logged `Permission denied: '/app'` when persisting metrics
+
+### Changed
+- `openai` upgraded from `1.30.1` to `3.22.1`; the `DefaultHttpxClient` compatibility workaround it required is no longer needed
+- All `requirements.txt` entries are now pinned exactly instead of using version ranges
+- Importing `settings.py` no longer creates directories; directory creation moved to `docker-entrypoint.sh`
+- Removed the deprecated `SECURE_BROWSER_XSS_FILTER` setting (a no-op since Django 4.0)
+- Removed the legacy dictionary form of `detections`, which no code path can produce
+- Removed leftover `DEBUG:` logging from request and inference paths; the `lpr_app` logger is now `INFO`
+- Deleted `docker-compose-llamacpp-cpu.yml` and `docker-compose-llamacpp-amd-vulcan.yml`; use the profile-based `docker-compose.yaml`
+- Manual integration and diagnostic scripts moved to `scripts/`, out of test discovery
+
 ## [1.4.0] - 2026-06-02
 
 ### Added

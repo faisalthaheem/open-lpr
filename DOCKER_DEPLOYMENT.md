@@ -43,10 +43,10 @@ nano .env.llamacpp
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
 # Start the application with AMD Vulkan GPU support
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml up -d
+docker compose --profile core --profile amd-vulkan up -d
 
 # Check the logs to ensure everything is running correctly
-docker-compose -f docker-compose-llamacpp-amd-vulcan.yml logs -f
+docker compose --profile core --profile amd-vulkan logs -f
 ```
 
 **Prerequisites:**
@@ -74,10 +74,10 @@ nano .env.llamacpp
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
 # Start the application with CPU support
-docker-compose -f docker-compose-llamacpp-cpu.yml up -d
+docker compose --profile core --profile cpu up -d
 
 # Check the logs to ensure everything is running correctly
-docker-compose -f docker-compose-llamacpp-cpu.yml logs -f
+docker compose --profile core --profile cpu logs -f
 ```
 
 **Prerequisites:**

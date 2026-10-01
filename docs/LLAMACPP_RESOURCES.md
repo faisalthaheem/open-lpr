@@ -50,6 +50,5 @@ This document contains important URLs and resources for deploying OpenLPR with L
 
 For more information about OpenLPR deployment with LlamaCpp:
 - [README-llamacpp.md](../README-llamacpp.md) - Comprehensive deployment guide
-- [docker-compose-llamacpp-cpu.yml](../docker-compose-llamacpp-cpu.yml) - CPU-based Docker Compose configuration
-- [docker-compose-llamacpp-amd-vulcan.yml](../docker-compose-llamacpp-amd-vulcan.yml) - AMD Vulkan GPU Docker Compose configuration
+- [docker-compose.yaml](../docker-compose.yaml) - Profile-based Docker Compose configuration (use `--profile core --profile cpu` or `--profile core --profile amd-vulkan`)
 - [DOCKER_DEPLOYMENT.md](../DOCKER_DEPLOYMENT.md) - General Docker deployment documentation
