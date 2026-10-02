@@ -94,32 +94,119 @@ built:
   Resolution and recall must therefore be reported bucketed by plate height,
   since a single mAP figure hides the case being optimised.
 
+## Measured results
+
+Trained to completion (100 epochs, ~37 min on one RX 7900 XTX under ROCm) and
+evaluated by `lpr_app/ml/benchmark.py` on the full 480-image validation split,
+CPU only, ONNX Runtime. Reproduce with:
+
+```
+python -m lpr_app.ml.benchmark --data <dataset> \
+    --model model/plate/plate_yolox_tiny_640.onnx --split val2017
+```
+
+| Metric | Value |
+|---|---|
+| COCO AP / AR (best) | 83.02 / 85.81 |
+| Latency mean | **21.7 ms** (median 20.8, p95 29.7, max 49.2) |
+| Budget | 500 ms — **23x headroom** |
+| Recall @ IoU 0.3 | **0.998** |
+| Precision | 0.970 |
+| False positives per image | 0.031 |
+| Model size | 20.2 MB |
+
+Recall by plate height, the case that limits this project:
+
+| Plate height | Recall | Count |
+|---|---|---|
+| < 40 px | **1.000** | 57 |
+| 40-60 px | 0.988 | 86 |
+| 60-100 px | 1.000 | 255 |
+| >= 100 px | 1.000 | 89 |
+
+Confidence threshold sweep at 640px:
+
+| Threshold | Recall | Precision | FP/image | Mean latency |
+|---|---|---|---|---|
+| 0.3 | 0.9979 | 0.9701 | 0.031 | 22.2 ms |
+| **0.5** | **0.9979** | **0.9759** | **0.025** | 22.8 ms |
+| 0.7 | 0.9918 | 0.9817 | 0.019 | 23.0 ms |
+
+**0.5 is frozen into configuration**: it holds recall identical to 0.3 while
+cutting false positives by a fifth. 0.7 buys little extra precision and starts
+costing recall.
+
+These figures supersede the estimates above, which were stated as unverified.
+The original expectation was 20-50 ms and adequate small-object recall; both
+held, and the 640px input choice is what makes the under-40px bucket work. A
+416px input would put those plates at ~23px against a stride-8 head.
+
+### Split integrity
+
+The reported numbers come from the frame-grouped split with a deliberate gap, not
+the corpus's published split:
+
+- Zero perceptual-hash overlap between train and validation.
+- Minimum frame distance of 51 between any training and validation frame.
+- 1789 train / 480 validation images, 1806 / 487 plate annotations.
+
+The published split leaks 10 images directly, and a random split leaks far more
+through adjacent near-identical frames, so metrics computed on it would be
+inflated.
+
 ## Training configuration
 
-- Input 640x640, not the checkpoint's default 416. A 36px plate letterboxed
-  from 480x640 into 416 is ~23px tall; at 640 it is ~45px against a stride-8
-  head. This is the single most important setting for small-object recall.
-- Multi-scale training enabled (YOLOX `--multiscale_upsizing`). Highest-value
-  knob for the small-plate case.
-- COCO-pretrained backbone, lower backbone learning rate than the head.
-- Mosaic and colour augmentation; the corpus is frame-derived with adjacent-frame
-  redundancy.
-- Early stopping on validation. Held-out negative/background images retained to
-  measure false-positive rate, which is the dominant failure mode on live video.
-- Single GPU. At 2351 images the run is minutes; DDP over 2 GPUs adds friction
-  for no benefit.
+As trained, in `training/exp_plate_tiny.py`:
+
+- Input 640x640, not the checkpoint default of 416. Measured effect: the
+  under-40px bucket reaches recall 1.000. At 416 those plates would be ~23px
+  against a stride-8 head.
+- Multi-scale training on (`multiscale_upsizing`), plus mixup and mosaic.
+- COCO-pretrained backbone (yolox_tiny.pth), 100 epochs, batch 16, lr 0.01 with
+  cosine decay, warmup 5 epochs, AdamW, weight decay 5e-4.
+- fp32 rather than fp16: this ROCm build is unstable in long fp16 chains and a
+  model this small gains nothing from it on a CPU deployment target.
+- Single GPU. At this dataset size the run is ~37 minutes; DDP over 2 GPUs adds
+  friction for no benefit.
+
+The corpus contains no negative or background images (every record has a plate),
+so false-positive rate is measured on plates plus whatever non-plate regions the
+detector fires on: 0.031 per image at threshold 0.5. A held-out set of genuinely
+negative frames would be worth adding, since false positives are the dominant
+operational failure mode on live video and this corpus cannot measure it
+properly.
 
 ## Unverified
 
-- **No candidate publishes CPU ONNX latency.** The 20-50ms figure for
-  YOLOX-Tiny is an estimate. Task 11.7 measures it.
-- ROCm training is expected to be straightforward (plain PyTorch, no custom
-  CUDA ops) but is **unverified** for this checkpoint on this hardware.
+- ROCm training is confirmed working: torch 2.5.1+rocm6.2 on an RX 7900 XTX
+  (gfx1100) trains this checkpoint in ~37 minutes for 100 epochs. One caveat
+  found in practice: YOLOX's own `setup.py` pins `onnx-simplifier==0.4.10`,
+  whose `pinocchio` build fails to compile. Removing that requirement is
+  sufficient for training; ONNX export needs only `torch` and `onnx`.
 - YOLOX is largely dormant upstream (last README update 2023). It works; we
   would own its maintenance.
-- YOLOX ONNX input is raw 0-255 letterboxed, **not** normalised to 0-1, and
-  output needs grid/stride decoding. Port from the official
-  `demo/ONNXRuntime` rather than reimplementing.
+- Long chained fp16 matmuls on this ROCm build overflow to NaN. Training runs in
+  fp32, which costs nothing meaningful for a model this small. Normalised fp16,
+  bf16, and fp32 chains are all stable, so this is arithmetic overflow rather
+  than a driver fault.
+
+## A bug this measurement caught
+
+The decoder originally exponentiated the regressed width and height. That is
+correct for YOLOX's raw PyTorch output but wrong for the ONNX export, which
+applies `exp()` inside the graph. Exponentiating twice inflated every box until
+it clamped to the whole image:
+
+```
+predicted: 0, 0, 1280, 960   (the entire image)
+truth:     516, 403, 208, 109
+```
+
+Synthetic test fixtures had been written to match the decoder rather than the
+export, so they agreed with each other and passed. Only running the real
+artifact exposed it. Worth recording because it is the failure mode unit tests
+invite when the fixture is derived from the implementation instead of from the
+thing being integrated.
 
 ## Sources
 

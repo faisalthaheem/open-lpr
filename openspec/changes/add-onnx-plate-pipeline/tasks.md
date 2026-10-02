@@ -95,29 +95,29 @@
 
 ## 10. Dataset tooling
 
-- [ ] 10.1 Inspect all annotation databases in the corpus, including `train_and_val.db` alongside `train.db` and `val.db`, and report which exist and which the tooling uses, so the authoritative split is not assumed.
-- [ ] 10.2 Implement annotation loading, parsing file name, image dimensions, and the per-image region list into samples pairing an image with its plate region and label.
-- [ ] 10.3 Resolve each annotation's file name to an image under the corpus image directory.
-- [ ] 10.4 Emit region boxes in full-size image pixel coordinates.
-- [ ] 10.5 Support axis-aligned box regions as the corpus geometry, and do not require corner or polygon annotations that the corpus does not contain.
-- [ ] 10.6 Exclude records with no region or marked deleted, background, or unreviewed, counting them as skipped.
-- [ ] 10.7 Report missing image files by name and count rather than discarding silently.
-- [ ] 10.8 Implement a seeded, configurable train/validation split, asserting the partitions do not intersect.
-- [ ] 10.9 Resolve the corpus path from an environment variable with a documented default, printing the resolved path.
-- [ ] 10.10 Exit with a clear error naming the resolved path and expectations when the corpus is missing.
-- [ ] 10.11 Write tests for annotation parsing, coordinate space, axis-aligned region handling, skip categories, missing-image reporting, multi-database reporting, and split determinism and disjointness, using a small fixture corpus.
+- [x] 10.1 Inspect all annotation databases in the corpus, including `train_and_val.db` alongside `train.db` and `val.db`, and report which exist and which the tooling uses, so the authoritative split is not assumed.
+- [x] 10.2 Implement annotation loading, parsing file name, image dimensions, and the per-image region list into samples pairing an image with its plate region and label.
+- [x] 10.3 Resolve each annotation's file name to an image under the corpus image directory.
+- [x] 10.4 Emit region boxes in full-size image pixel coordinates.
+- [x] 10.5 Support axis-aligned box regions as the corpus geometry, and do not require corner or polygon annotations that the corpus does not contain.
+- [x] 10.6 Exclude records with no region or marked deleted, background, or unreviewed, counting them as skipped.
+- [x] 10.7 Report missing image files by name and count rather than discarding silently.
+- [x] 10.8 Implement a seeded, configurable train/validation split, asserting the partitions do not intersect.
+- [x] 10.9 Resolve the corpus path from an environment variable with a documented default, printing the resolved path.
+- [x] 10.10 Exit with a clear error naming the resolved path and expectations when the corpus is missing.
+- [x] 10.11 Write tests for annotation parsing, coordinate space, axis-aligned region handling, skip categories, missing-image reporting, multi-database reporting, and split determinism and disjointness, using a small fixture corpus.
 
 ## 11. Training, export, and benchmark
 
-- [ ] 11.1 Implement detector training against the loaded corpus, in the training-only subpackage, runnable without Django settings.
-- [ ] 11.2 Export the trained or adopted detector to ONNX and record a manifest entry with filename, checksum, upstream identity, and license.
-- [ ] 11.3 Adopt the PP-OCRv6_small recognizer, export it to ONNX, and record its manifest entry with the upstream checkpoint identity and license.
-- [ ] 11.4 Confirm model artifacts land under the already-ignored model path while the manifest stays reviewable.
-- [ ] 11.5 Implement the benchmark, excluding first-run model loading from per-stage figures, reporting per-stage and end-to-end durations and the image count.
-- [ ] 11.6 Make the benchmark exit non-zero when measured end-to-end latency exceeds the budget.
-- [ ] 11.7 Sweep detection input resolution, confidence threshold, and duplicate-suppression settings against the corpus, recording recall and latency, and freeze the chosen values into configuration. Pay particular attention to small plates: the corpus median plate height is 61px with a 36px 10th percentile, so a resolution that loses those destroys recall.
-- [ ] 11.8 Measure the local pipeline against the corpus on CPU, reporting recognition accuracy separately for single-row and stacked two-line plates.
-- [ ] 11.9 Run a side-by-side accuracy and latency comparison of local versus LLM backend over the corpus and record the numbers.
+- [x] 11.1 Implement detector training against the loaded corpus, in the training-only subpackage, runnable without Django settings.
+- [x] 11.2 Export the trained or adopted detector to ONNX and record a manifest entry with filename, checksum, upstream identity, and license.
+- [x] 11.3 Adopt the PP-OCRv6_small recognizer, export it to ONNX, and record its manifest entry with the upstream checkpoint identity and license.
+- [x] 11.4 Confirm model artifacts land under the already-ignored model path while the manifest stays reviewable.
+- [x] 11.5 Implement the benchmark, excluding first-run model loading from per-stage figures, reporting per-stage and end-to-end durations and the image count.
+- [x] 11.6 Make the benchmark exit non-zero when measured end-to-end latency exceeds the budget.
+- [x] 11.7 Sweep detection input resolution, confidence threshold, and duplicate-suppression settings against the corpus, recording recall and latency, and freeze the chosen values into configuration. Pay particular attention to small plates: the corpus median plate height is 61px with a 36px 10th percentile, so a resolution that loses those destroys recall.
+- [x] 11.8 Measure the local pipeline against the corpus on CPU, reporting recognition accuracy separately for single-row and stacked two-line plates.
+- [x] 11.9 Run a side-by-side accuracy and latency comparison of local versus LLM backend over the corpus and record the numbers.
 - [ ] 11.10 Keep the default backend as the LLM until the comparison justifies a switch, and open a follow-up change proposing the flip with the measured numbers attached.
 
 ## 12. Verification

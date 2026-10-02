@@ -13,3 +13,20 @@
 # See AGENTS.md for the containerised training workflow.
 torch==2.6.0
 torchvision==0.21.0
+# YOLOX is installed from source rather than PyPI, because its setup.py pins
+# onnx-simplifier==0.4.10 whose pinocchio build does not compile. Remove that
+# requirement and install with:
+#
+#     pip install --no-build-isolation -e <YOLOX checkout>
+#
+# Other training dependencies (all needed by YOLOX's trainer):
+pycocotools>=2.0.2
+loguru
+thop
+ninja
+tabulate
+psutil
+tensorboard
+opencv-python-headless
+tqdm
+onnx>=1.13.0
