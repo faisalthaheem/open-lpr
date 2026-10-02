@@ -51,16 +51,16 @@
 
 ## 6. Local detection stage
 
-- [ ] 6.1 Select a detector whose license is compatible with this project's Apache-2.0 license, explicitly excluding AGPL-3.0 weights including the Ultralytics YOLO families. Evaluate RF-DETR and RTMDet, and weigh self-training on the corpus as a way to avoid third-party weights entirely. Record the decision and the license identifier.
-- [ ] 6.2 Implement a detection stage running the selected ONNX detector, producing a plate region plus confidence per detection.
-- [ ] 6.3 Treat a stacked two-line plate as one detection covering both rows rather than one per row, and verify this on corpus examples.
-- [ ] 6.4 Implement aspect-ratio-preserving resize of the detection input.
-- [ ] 6.5 Scale returned coordinates back to the original image coordinate space.
-- [ ] 6.6 Clamp scaled coordinates to the original image bounds.
-- [ ] 6.7 Apply the configured confidence threshold, discarding lower-confidence detections.
-- [ ] 6.8 Implement duplicate suppression to collapse substantially overlapping detections, keeping the higher-confidence detection.
-- [ ] 6.9 Record the detector's upstream identity and license in the model manifest.
-- [ ] 6.10 Write tests for single and multiple detections, a stacked two-line plate counted as one detection, the empty result, coordinate round-tripping through a resize, clamping, thresholding, and duplicate suppression.
+- [x] 6.1 Select a detector whose license is compatible with this project's Apache-2.0 license, explicitly excluding AGPL-3.0 weights including the Ultralytics YOLO families. Evaluate RF-DETR and RTMDet, and weigh self-training on the corpus as a way to avoid third-party weights entirely. Record the decision and the license identifier.
+- [x] 6.2 Implement a detection stage running the selected ONNX detector, producing a plate region plus confidence per detection.
+- [x] 6.3 Treat a stacked two-line plate as one detection covering both rows rather than one per row, and verify this on corpus examples.
+- [x] 6.4 Implement aspect-ratio-preserving resize of the detection input.
+- [x] 6.5 Scale returned coordinates back to the original image coordinate space.
+- [x] 6.6 Clamp scaled coordinates to the original image bounds.
+- [x] 6.7 Apply the configured confidence threshold, discarding lower-confidence detections.
+- [x] 6.8 Implement duplicate suppression to collapse substantially overlapping detections, keeping the higher-confidence detection.
+- [x] 6.9 Record the detector's upstream identity and license in the model manifest.
+- [x] 6.10 Write tests for single and multiple detections, a stacked two-line plate counted as one detection, the empty result, coordinate round-tripping through a resize, clamping, thresholding, and duplicate suppression.
 
 ## 7. Local OCR stage
 
