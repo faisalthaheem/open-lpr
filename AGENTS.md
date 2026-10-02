@@ -48,6 +48,11 @@ kept out of Django's test discovery — do not name a new unit test in a way tha
     - `image_processor.py` / `image_processing_service.py` — Image handling
     - `bbox_visualizer.py` — Bounding box drawing
     - `api_service.py`, `file_service.py` — Service layer
+  - `pipeline/` — Local ONNX plate pipeline: a configuration-declared graph of swappable stages
+    - `graph.py` — Graph construction, validation, dependency-ordered and concurrent execution
+    - `stages/base.py` — `Stage` contract (declared inputs/outputs, lazy model loading)
+    - `runtime/onnx.py` — ONNX Runtime session construction, provider resolution, signature validation
+  - `ml/` — **Training only, never imported by the web app.** Datasets, detector training, ONNX export, benchmark. See `ml/requirements-train.txt`.
   - `utils/` — Helpers: `validators.py`, `response_helpers.py`, `metrics_helpers.py`
   - `management/commands/` — `setup_project`, `inspect_image`
 - **`single-page-ui/`** — Next.js 16 SPA frontend (React 19, Tailwind CSS 4, Storybook 10)
@@ -60,6 +65,12 @@ kept out of Django's test discovery — do not name a new unit test in a way tha
 - Two env file modes: `.env` for external API, `.env.llamacpp` for bundled LlamaCpp inference. Docker Compose reads `.env.llamacpp` by default.
 - The AI client (`QwenVLClient`) wraps the `openai` Python SDK. It calls any OpenAI-compatible endpoint (LlamaCpp, vLLM, remote API).
 - Detection uses a two-phase pipeline: Phase 1 detects plate bounding boxes, Phase 2 runs OCR on cropped regions. Prompts are in `qwen_client.py`.
+- The **local ONNX pipeline** (`lpr_app/pipeline/`) is an alternative backend selected by `PIPELINE_BACKEND`, defaulting to `llm`. It is not wired into `image_processing_service.py` yet.
+- **ONNX Runtime install variants are an install-time choice, not a code branch.** No module branches on the execution provider; a stage is assigned `cpu`, `cuda`, or `rocm` by configuration and an unavailable provider falls back to CPU with a logged warning. The wheels:
+  - CPU (default, and the supported deployment target): `pip install onnxruntime`
+  - CUDA: `pip install onnxruntime-gpu`
+  - ROCm (AMD): `pip install onnxruntime-rocm`, which needs a matching ROCm runtime
+- **ROCm is never a prerequisite for contributors.** CPU inference is the supported path; ROCm or CUDA is for local experimentation only. `onnxruntime` is the only new runtime dependency — the web app must never import `torch` (see `ml/requirements-train.txt`).
 - Bounding box coordinates arrive in Qwen2VL 0-1000 normalized range and must be converted via `convert_from_qwen2vl_format()`.
 - `UploadedImage` media is organized into `uploads/YYYY/MM/DD/` and `processed/YYYY/MM/DD/` subdirectories.
 - Django serves API-only (no templates, no web UI). The frontend is a separate Next.js SPA in `single-page-ui/`.

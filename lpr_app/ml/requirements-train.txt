@@ -1,0 +1,15 @@
+# Training-only dependencies for the local plate pipeline.
+#
+# These are deliberately NOT in requirements.txt. The Django application must
+# run without them: importing lpr_app.pipeline must never pull in torch.
+# Install them explicitly when working on the detector:
+#
+#     pip install -r lpr_app/ml/requirements-train.txt
+#
+# On an AMD host, install the ROCm build of torch instead of the default:
+#
+#     pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.2
+#
+# See AGENTS.md for the containerised training workflow.
+torch==2.6.0
+torchvision==0.21.0

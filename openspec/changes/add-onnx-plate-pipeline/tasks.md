@@ -1,53 +1,53 @@
 ## 1. Package scaffolding and dependency split
 
-- [ ] 1.1 Create `lpr_app/pipeline/` with `__init__.py`, `stages/__init__.py`, and `runtime/__init__.py`.
-- [ ] 1.2 Create `lpr_app/ml/` with `__init__.py`, `datasets/`, and `requirements-train.txt` holding the training-only dependencies (torch, torchvision, OCR data pipeline) so the runtime requirements never need them.
-- [ ] 1.3 Add `onnxruntime` at a pinned exact version to the runtime requirements.
-- [ ] 1.4 Document the ROCm and CUDA install variants of `onnxruntime` as alternatives in `AGENTS.md`, noting they are install-time choices and no code branches on the provider.
-- [ ] 1.5 Verify the web application starts and image processing runs with no training dependency installed, confirming the dependency split holds.
+- [x] 1.1 Create `lpr_app/pipeline/` with `__init__.py`, `stages/__init__.py`, and `runtime/__init__.py`.
+- [x] 1.2 Create `lpr_app/ml/` with `__init__.py`, `datasets/`, and `requirements-train.txt` holding the training-only dependencies (torch, torchvision, OCR data pipeline) so the runtime requirements never need them.
+- [x] 1.3 Add `onnxruntime` at a pinned exact version to the runtime requirements.
+- [x] 1.4 Document the ROCm and CUDA install variants of `onnxruntime` as alternatives in `AGENTS.md`, noting they are install-time choices and no code branches on the provider.
+- [x] 1.5 Verify the web application starts and image processing runs with no training dependency installed, confirming the dependency split holds.
 
 ## 2. Stage contract
 
-- [ ] 2.1 Implement the stage base class declaring name, required input fields, output fields, and optional model path.
-- [ ] 2.2 Implement lazy model loading: load on first execution, cache the session, never load when the stage is skipped.
-- [ ] 2.3 Implement shape and output-name validation against the loaded artifact's declared signature, failing with a message naming expected versus actual.
-- [ ] 2.4 Implement the missing-artifact error path that names the stage and resolved path, with no silent substitution of another model.
-- [ ] 2.5 Write unit tests for contract declaration, lazy load-once, skip-does-not-load, missing artifact, and input shape mismatch.
-- [ ] 2.6 Confirm the tests fail before the implementation exists and pass after.
+- [x] 2.1 Implement the stage base class declaring name, required input fields, output fields, and optional model path.
+- [x] 2.2 Implement lazy model loading: load on first execution, cache the session, never load when the stage is skipped.
+- [x] 2.3 Implement shape and output-name validation against the loaded artifact's declared signature, failing with a message naming expected versus actual.
+- [x] 2.4 Implement the missing-artifact error path that names the stage and resolved path, with no silent substitution of another model.
+- [x] 2.5 Write unit tests for contract declaration, lazy load-once, skip-does-not-load, missing artifact, and input shape mismatch.
+- [x] 2.6 Confirm the tests fail before the implementation exists and pass after.
 
 ## 3. ONNX runtime wrapper
 
-- [ ] 3.1 Implement a session wrapper that constructs an inference session for a requested provider from `cpu`, `cuda`, or `rocm`.
-- [ ] 3.2 Default to the CPU provider when no provider is requested.
-- [ ] 3.3 Detect provider unavailability, fall back to CPU, and log the substitution without failing the pipeline.
-- [ ] 3.4 Expose per-execution timing so call sites can record stage duration.
-- [ ] 3.5 Write tests covering CPU default, explicit provider selection, and the fallback-with-log path, using a trivially small model artifact.
+- [x] 3.1 Implement a session wrapper that constructs an inference session for a requested provider from `cpu`, `cuda`, or `rocm`.
+- [x] 3.2 Default to the CPU provider when no provider is requested.
+- [x] 3.3 Detect provider unavailability, fall back to CPU, and log the substitution without failing the pipeline.
+- [x] 3.4 Expose per-execution timing so call sites can record stage duration.
+- [x] 3.5 Write tests covering CPU default, explicit provider selection, and the fallback-with-log path, using a trivially small model artifact.
 
 ## 4. Graph runtime
 
-- [ ] 4.1 Implement graph construction from configuration: nodes declaring stage class and model path, edges declaring input bindings by field name.
-- [ ] 4.2 Validate bindings at construction, raising an error naming the node and the unsatisfied input field before any stage loads.
-- [ ] 4.3 Detect cycles at construction and raise an error identifying the participating nodes.
-- [ ] 4.4 Implement dependency-ordered execution over the validated graph.
-- [ ] 4.5 Skip a stage whose required input field is absent or null, recording the skip reason rather than raising.
-- [ ] 4.6 Implement conditional execution on upstream output, including confidence thresholds, recording the skip reason when unmet.
-- [ ] 4.7 Contain stage failures: record the failing stage name and reason, preserve outputs of stages that succeeded, and skip only the stages that depend on the failed output.
-- [ ] 4.8 Implement concurrent execution of independent stages, guarded so each stage uses its own session instance.
-- [ ] 4.9 Add a setting to disable concurrency and execute independent stages sequentially in a deterministic order.
-- [ ] 4.10 Write tests for topological order, unsatisfied binding, cycle rejection, skip on absent input, conditional skip, failure containment, dependent-skip cascade, and concurrent-versus-sequential equivalence of results.
+- [x] 4.1 Implement graph construction from configuration: nodes declaring stage class and model path, edges declaring input bindings by field name.
+- [x] 4.2 Validate bindings at construction, raising an error naming the node and the unsatisfied input field before any stage loads.
+- [x] 4.3 Detect cycles at construction and raise an error identifying the participating nodes.
+- [x] 4.4 Implement dependency-ordered execution over the validated graph.
+- [x] 4.5 Skip a stage whose required input field is absent or null, recording the skip reason rather than raising.
+- [x] 4.6 Implement conditional execution on upstream output, including confidence thresholds, recording the skip reason when unmet.
+- [x] 4.7 Contain stage failures: record the failing stage name and reason, preserve outputs of stages that succeeded, and skip only the stages that depend on the failed output.
+- [x] 4.8 Implement concurrent execution of independent stages, guarded so each stage uses its own session instance.
+- [x] 4.9 Add a setting to disable concurrency and execute independent stages sequentially in a deterministic order.
+- [x] 4.10 Write tests for topological order, unsatisfied binding, cycle rejection, skip on absent input, conditional skip, failure containment, dependent-skip cascade, and concurrent-versus-sequential equivalence of results.
 
 ## 5. Plate rectification stage
 
-- [ ] 5.1 Implement a non-model stage that maps a detected plate region to a configured aspect ratio via perspective transform at a configured output width and height.
-- [ ] 5.2 Make the canonical aspect ratio configurable per layout rather than a single global constant.
-- [ ] 5.3 Support rectification from an axis-aligned bounding region alone, deriving corners when explicit corner geometry is absent.
-- [ ] 5.4 Use explicit corner geometry for rectification when the detection supplies it, in preference to the bounding region's corners.
-- [ ] 5.5 Confirm the stage declares no model artifact and loads no session.
-- [ ] 5.6 Reject self-intersecting corner geometry, reporting rectification as failed.
-- [ ] 5.7 Reject regions below the configured minimum area, reporting rectification as failed.
-- [ ] 5.8 Make failed rectification yield no recognition input, causing the recognition stage to skip for that detection with no recognized text recorded.
-- [ ] 5.9 Add the bypass configuration path deriving the crop from the detection's bounding region with no transform.
-- [ ] 5.10 Write tests for skew correction, per-layout aspect ratio enforcement, exact output dimensions, box-only input, explicit-corner preference, each degenerate case, and the bypass path.
+- [x] 5.1 Implement a non-model stage that maps a detected plate region to a configured aspect ratio via perspective transform at a configured output width and height.
+- [x] 5.2 Make the canonical aspect ratio configurable per layout rather than a single global constant.
+- [x] 5.3 Support rectification from an axis-aligned bounding region alone, deriving corners when explicit corner geometry is absent.
+- [x] 5.4 Use explicit corner geometry for rectification when the detection supplies it, in preference to the bounding region's corners.
+- [x] 5.5 Confirm the stage declares no model artifact and loads no session.
+- [x] 5.6 Reject self-intersecting corner geometry, reporting rectification as failed.
+- [x] 5.7 Reject regions below the configured minimum area, reporting rectification as failed.
+- [x] 5.8 Make failed rectification yield no recognition input, causing the recognition stage to skip for that detection with no recognized text recorded.
+- [x] 5.9 Add the bypass configuration path deriving the crop from the detection's bounding region with no transform.
+- [x] 5.10 Write tests for skew correction, per-layout aspect ratio enforcement, exact output dimensions, box-only input, explicit-corner preference, each degenerate case, and the bypass path.
 
 ## 6. Local detection stage
 
