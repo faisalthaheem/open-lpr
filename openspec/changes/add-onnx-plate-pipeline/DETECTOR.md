@@ -154,6 +154,62 @@ The published split leaks 10 images directly, and a random split leaks far more
 through adjacent near-identical frames, so metrics computed on it would be
 inflated.
 
+## OCR: PP-OCRv5 mobile, adopted not trained
+
+The corpus carries **no transcription labels**, so a recogniser cannot be trained
+here. PP-OCRv5_mobile_rec is adopted and converted to ONNX with `paddle2onnx`;
+it is Apache-2.0 and ships a 18383-entry character dictionary.
+
+The design originally named PP-OCRv6_small. v6 was unavailable from this network
+(Hugging Face returned 401 for the RapidAI and PaddlePaddle repos), so v5 mobile
+was used instead. v6 is expected to be somewhat more accurate; the stage is
+artifact-agnostic, so swapping it in is a configuration change.
+
+Measured on 120 validation plates read as single lines: **median confidence
+0.80, 1% empty results**, with reads such as `EG209`, `QG260`, `SE428`, `ADT140`.
+Separators are stripped by the charset profile.
+
+### What measuring OCR revealed, and the design change it forced
+
+Row splitting for stacked plates was specified in this change and is implemented,
+but it is **off by default**, because measuring it showed the premise was wrong.
+
+Inspection of the corpus found three distinct plate shapes, not two:
+
+- genuinely stacked two-line, e.g. `VA9/2229`, `L802 WGK`, `MN f1 / 5730`
+- single-line US/EU, e.g. `SV07UVG`, `KRR 2583`
+- **single-line with a caption** underneath, e.g. `QG.260` with `ISLAMABAD`
+  beneath it, at aspect ratio 1.88
+
+The captioned plates overlap the stacked ones on every geometric signal
+available: aspect ratio (both span 1.4-2.4), presence of an ink gap (both have
+one), and row-height balance (both split unevenly). A splitter therefore reads
+the caption as a second line, and observed results like `QG260ISLAMABAD` and
+`ICTSE428` rather than `QG260` and `SE428`.
+
+Confidence cannot arbitrate either: the split read scored *higher* confidence
+(0.85 versus 0.79) while being wrong, because splitting a clean single line
+gives the recogniser an easier input.
+
+So the honest position is that this is not solvable by geometry on this corpus,
+and `split_two_rows` defaults to off. `split_stacked=True` enables it for
+regions whose plates are known to be uniformly stacked. Resolving it properly
+needs a layout classifier trained on captioned examples, which the corpus does
+not provide. This is recorded rather than papered over, because a test asserting
+"stacked plates are recognised as two rows" would pass on synthetic fixtures
+while doing nothing for the real ones.
+
+### A bug measurement caught here too
+
+The recogniser's CTC head emits **already-normalised probabilities** (the ONNX
+graph contains the Softmax). Applying softmax again pushed every value toward
+uniform and drove confidence to exactly 0.00 on every plate. `_as_probabilities`
+now detects the normalised case and leaves it alone.
+
+The same class of error as the detector's double `exp()`: an assumption taken
+from framework semantics rather than from what the artifact actually emits.
+Both were only caught by running the real model.
+
 ## Training configuration
 
 As trained, in `training/exp_plate_tiny.py`:
