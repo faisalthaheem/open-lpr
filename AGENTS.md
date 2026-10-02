@@ -50,9 +50,13 @@ kept out of Django's test discovery — do not name a new unit test in a way tha
     - `api_service.py`, `file_service.py` — Service layer
   - `pipeline/` — Local ONNX plate pipeline: a configuration-declared graph of swappable stages
     - `graph.py` — Graph construction, validation, dependency-ordered and concurrent execution
+    - `local_backend.py` — The `local` backend end to end: detect, rectify, recognise, validate, and emit the same detections collection the LLM backend emits
     - `stages/base.py` — `Stage` contract (declared inputs/outputs, lazy model loading)
+    - `stages/detect.py` — YOLOX plate detector: letterboxing, decoding, NMS, coordinate mapping
+    - `stages/rectify.py` — Classical perspective correction; accepts an axis-aligned box when no corner geometry exists
+    - `stages/ocr.py` — PP-OCR CTC recogniser: preprocessing, greedy decode, charset profiles, row splitting, batched inference
     - `runtime/onnx.py` — ONNX Runtime session construction, provider resolution, signature validation
-  - `ml/` — **Training only, never imported by the web app.** Datasets, detector training, ONNX export, benchmark. See `ml/requirements-train.txt`.
+  - `ml/` — **Training only, never imported by the web app.** Datasets, detector training, ONNX export, benchmark, backend comparison. See `ml/requirements-train.txt`.
   - `utils/` — Helpers: `validators.py`, `response_helpers.py`, `metrics_helpers.py`
   - `management/commands/` — `setup_project`, `inspect_image`
 - **`single-page-ui/`** — Next.js 16 SPA frontend (React 19, Tailwind CSS 4, Storybook 10)
@@ -65,7 +69,10 @@ kept out of Django's test discovery — do not name a new unit test in a way tha
 - Two env file modes: `.env` for external API, `.env.llamacpp` for bundled LlamaCpp inference. Docker Compose reads `.env.llamacpp` by default.
 - The AI client (`QwenVLClient`) wraps the `openai` Python SDK. It calls any OpenAI-compatible endpoint (LlamaCpp, vLLM, remote API).
 - Detection uses a two-phase pipeline: Phase 1 detects plate bounding boxes, Phase 2 runs OCR on cropped regions. Prompts are in `qwen_client.py`.
-- The **local ONNX pipeline** (`lpr_app/pipeline/`) is an alternative backend selected by `PIPELINE_BACKEND`, defaulting to `llm`. It is not wired into `image_processing_service.py` yet.
+- **Two backends, one output shape.** `PIPELINE_BACKEND` selects `local` (default) or `llm`. Both return the identical detections collection — `[{"plate": {"confidence", "coordinates"}, "ocr": [{"text", "confidence", "coordinates"}]}]` — so no caller, API, visualizer, or metric branches on which ran. `image_processing_service.py` holds the two paths in separate `_run_llm_pipeline` / `_run_local_pipeline` methods and branches once. **Switching back is configuration-only**: set `PIPELINE_BACKEND=llm` and redeploy. No migration, no data rewrite.
+- **The local backend is the default, and is not a proven replacement.** It is faster (60ms mean vs 3611ms) and detects more reliably on the corpus (recall 1.000 vs 0.375), but its *text accuracy is unmeasurable* because the corpus carries no transcription labels. It reads more plates and also misreads some of them (`QG.260` → `0G260`). Do not treat higher coverage as higher accuracy. The default was flipped on the latency budget and the detection numbers, not on a text-accuracy result — because none exists. See `openspec/changes/measure-local-backend-accuracy/COMPARISON.md`.
+- **Stacked-plate row splitting is off by default, deliberately.** Aspect ratio cannot distinguish a two-line plate from a single-line plate carrying a caption — both span ratios 1.4–2.4, both have an ink gap, both split unevenly — and the split read scores *higher* confidence while being wrong. `PIPELINE_OCR_SPLIT_STACKED=true` enables it for regions known to be uniformly stacked. This is an open limitation, not a bug.
+- **Latency is instrumented, not assumed.** Per-stage durations export as `lpr_pipeline_stage_duration_seconds{stage,outcome}` and end-to-end as `lpr_pipeline_duration_seconds{outcome}`. The pre-existing `lpr_processing_duration_seconds` is still recorded on both backends so they stay comparable on one series. `PIPELINE_LATENCY_BUDGET_SECONDS` (default 0.5) is the project's sub-500ms target; `PIPELINE_STAGE_BUDGETS` takes `stage=seconds` pairs.
 - **ONNX Runtime install variants are an install-time choice, not a code branch.** No module branches on the execution provider; a stage is assigned `cpu`, `cuda`, or `rocm` by configuration and an unavailable provider falls back to CPU with a logged warning. The wheels:
   - CPU (default, and the supported deployment target): `pip install onnxruntime`
   - CUDA: `pip install onnxruntime-gpu`
@@ -75,6 +82,95 @@ kept out of Django's test discovery — do not name a new unit test in a way tha
 - `UploadedImage` media is organized into `uploads/YYYY/MM/DD/` and `processed/YYYY/MM/DD/` subdirectories.
 - Django serves API-only (no templates, no web UI). The frontend is a separate Next.js SPA in `single-page-ui/`.
 - `upload_to` path helpers in `models.py` generate date-partitioned upload paths.
+
+## Local ONNX Pipeline
+
+The default detection and OCR backend, selected by `PIPELINE_BACKEND`. It runs
+in-process on CPU and is the only path that fits the sub-500ms budget. Setting
+`PIPELINE_BACKEND=llm` selects the old API-backed path instead.
+
+### Stage contract
+
+Every stage declares `name`, `inputs` (field names it consumes), and `outputs` (field
+names it produces). `PipelineGraph` routes data purely from those declarations and
+validates them at construction time, so an unsatisfied binding fails before any model
+loads rather than at inference time.
+
+| Stage | Inputs | Outputs | Notes |
+|---|---|---|---|
+| `detect_plate` | `image` | `detections` | YOLOX-tiny; letterboxes, decodes, NMS, maps coordinates back and clamps them |
+| `rectify_plate` | `plate` | `rectified` | Perspective correction. Classical — loads no model. Takes an axis-aligned box when no corner geometry exists, since the corpus has no corner annotations |
+| `read_plate` | `plate_crop` | `ocr` | PP-OCR CTC. Batch-oriented: `read_plates()` takes a list and returns one result per plate |
+
+Three things in these stages were bugs found only by running the real artifacts, all
+of the same class — an assumption about framework semantics rather than about what
+the export emits:
+
+- The YOLOX export **already exponentiates** width and height. Applying `exp()` again
+  inflates every box until it clamps to the whole frame.
+- The PP-OCR CTC head emits **already-normalised probabilities** (the graph contains
+  the Softmax). Softmaxing again drove confidence to exactly 0.00 on every plate.
+- The PP-OCR output is `[""] + dictionary + [" "]`, i.e. `len(dict) + 2` classes, with
+  the trailing space class letting CTC emit a gap. Omitting it makes the highest index
+  look out of range on every decode.
+
+Synthetic fixtures written to match a decoder rather than the export will agree with
+the decoder and pass. `test_pipeline_detection_real_model.py` exists because of this.
+
+### Configuration
+
+`PIPELINE_BACKEND` (`local` default, `llm` to switch back). Model artifacts are resolved
+under `PIPELINE_MODEL_DIR` (default `model/plate/`, gitignored); `model/plate/manifest.json`
+records filename, SHA-256, upstream identity, and license for each.
+
+| Setting | Default | Notes |
+|---|---|---|
+| `PIPELINE_BACKEND` | `local` | `local` or `llm`. Artifacts under `PIPELINE_MODEL_DIR` are **required** when selected; a missing one raises rather than degrading to zero plates |
+| `PIPELINE_MODEL_DIR` | `model/plate` | Artifacts are resolved relative to this |
+| `PIPELINE_DETECTOR_MODEL` | `plate_yolox_tiny_640.onnx` | |
+| `PIPELINE_DETECTOR_INPUT_SIZE` | `640,640` | Recall-critical, not a speed knob — see below |
+| `PIPELINE_DETECTOR_CONF_THRESHOLD` | `0.3` | |
+| `PIPELINE_DETECTOR_NMS_IOU` | `0.45` | |
+| `PIPELINE_LAYOUT_THRESHOLD` | `2.0` | Aspect ratio separating stacked from single-line |
+| `PIPELINE_OCR_MODEL` | `plate_ocr_ppocrv5_mobile.onnx` | |
+| `PIPELINE_OCR_DICT` | `plate_ocr_dict.json` | |
+| `PIPELINE_OCR_BATCH_SIZE` | `8` | Crops per inference |
+| `PIPELINE_OCR_CHARSET_PROFILE` | `alphanumeric` | `alphanumeric` or `no_io` |
+| `PIPELINE_OCR_SPLIT_STACKED` | `False` | Off by default; see above |
+| `PIPELINE_RECTIFY_ENABLED` | `True` | When false, `OCR_CROP_PADDING_PX` applies instead |
+| `PIPELINE_PROVIDER` | `cpu` | `cpu`, `cuda`, `rocm`; falls back to CPU with a warning |
+| `PIPELINE_LATENCY_BUDGET_SECONDS` | `0.5` | The sub-500ms target |
+| `PIPELINE_STAGE_BUDGETS` | empty | `stage=seconds` pairs, e.g. `detect_plate=0.4` |
+
+**Detection resolution is a recall decision.** The corpus median plate height is 61px
+with a 36px 10th percentile; at 640px input a 36px plate is still resolvable by a
+stride-8 head, and at 416px it would not be. Measured recall at 640px is 1.000 on
+plates under 40px. Do not lower it for speed without re-measuring that bucket.
+
+### Training and evaluation
+
+Training lives in `lpr_app/ml/` and uses its own venv with ROCm/CUDA torch. It is
+**never imported by the web app**, which must not import `torch`.
+
+```bash
+pip install -r lpr_app/ml/requirements-train.txt
+python -m lpr_app.ml.datasets.plate --corpus <corpus-root> --out <dataset-root>
+python -m lpr_app.ml.benchmark --data <dataset-root> --model model/plate/plate_yolox_tiny_640.onnx
+python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 40
+```
+
+- The benchmark exits non-zero when mean latency exceeds the budget, and reports recall
+  bucketed by plate height, so a small-plate regression fails the check instead of
+  being discovered in production.
+- `compare_backends.py` measures both backends on the same images and records
+  `COMPARISON.md`. It **cannot measure text accuracy**: the corpus has no transcription
+  labels, so it reports read coverage and confidence, which is not correctness.
+- **Ultralytics YOLO is AGPL-3.0** and cannot be used against this Apache-2.0 project.
+  The detector is YOLOX (Apache-2.0). Do not "upgrade" the detector to a YOLO variant.
+- The corpus is frame-extracted video and **leaks**: the published split shares 10
+  images by perceptual hash, and a random split leaks far more through adjacent
+  frames. The exporter builds a frame-grouped split with a deliberate gap (0 hash
+  overlap, minimum frame distance 51). Metrics on the published split are inflated.
 
 ## Docker
 
@@ -99,6 +195,7 @@ docker compose --profile core up -d                        # External API only
 Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 
 - `QWEN_API_KEY`, `QWEN_BASE_URL`, `QWEN_MODEL` — AI model connection
+- `PIPELINE_BACKEND` — `local` (default) or `llm`. The default runs plate detection and OCR with in-process ONNX models instead of the API, which requires the model artifacts to be present. **The rollback is configuration-only**: set `PIPELINE_BACKEND=llm` and redeploy; no migration and no data change, and the LLM path stays fully tested. Full key list in the Local ONNX Pipeline section above.
 - `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` — Django core
 - `CORS_ALLOWED_ORIGINS` — Comma-separated frontend origins allowed to access the API (default: `http://localhost:3000`)
 - `CORS_ALLOW_PRIVATE_NETWORK` — Allow browsers to access the API from a public origin when the API resolves to a private IP (default: `False`). Set to `True` when using Cloudflare-proxied frontend with a local API endpoint.

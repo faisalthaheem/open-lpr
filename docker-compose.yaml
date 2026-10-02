@@ -34,6 +34,11 @@ services:
       - ./staticfiles:/app/staticfiles
       # Metrics persistence
       - ./container-metrics:/app/metrics
+      # Local ONNX pipeline model artifacts (detector, recogniser, dictionary).
+      # PIPELINE_BACKEND defaults to local, so docker-entrypoint.sh refuses to
+      # start unless these are present. Populate this directory, or set
+      # PIPELINE_BACKEND=llm to use the external API instead.
+      - ./model/plate:/app/model/plate:ro
     # Run as root initially for setup, then entrypoint switches to django user
     user: "0:0"
     environment:
@@ -63,6 +68,15 @@ services:
       
       # Metrics persistence
       - METRICS_FILE_PATH=/app/metrics/metrics_state.json
+      
+      # Local ONNX pipeline backend (local by default; llm uses the external API)
+      - PIPELINE_BACKEND=${PIPELINE_BACKEND:-local}
+      - PIPELINE_MODEL_DIR=/app/model/plate
+      - PIPELINE_DETECTOR_MODEL=${PIPELINE_DETECTOR_MODEL:-plate_yolox_tiny_640.onnx}
+      - PIPELINE_OCR_MODEL=${PIPELINE_OCR_MODEL:-plate_ocr_ppocrv5_mobile.onnx}
+      - PIPELINE_OCR_DICT=${PIPELINE_OCR_DICT:-plate_ocr_dict.json}
+      - PIPELINE_PROVIDER=${PIPELINE_PROVIDER:-cpu}
+      - PIPELINE_LATENCY_BUDGET_SECONDS=${PIPELINE_LATENCY_BUDGET_SECONDS:-0.5}
       
       # Prometheus URL for availability proxy
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus:9090}

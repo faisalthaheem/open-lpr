@@ -106,6 +106,32 @@ if [ -f "$DB_PATH" ]; then
     fi
 fi
 
+# Verify the local pipeline's model artifacts before serving traffic.
+#
+# PIPELINE_BACKEND defaults to local, so a deployment whose artifacts are missing
+# would start fine and then fail every upload. Failing at startup makes the cause
+# visible in the logs before requests arrive, rather than as 500s afterwards.
+if [ "$PIPELINE_BACKEND" = "local" ]; then
+    MODEL_DIR="${PIPELINE_MODEL_DIR:-/app/model/plate}"
+    MISSING=""
+    for REQUIRED in \
+        "${PIPELINE_DETECTOR_MODEL:-plate_yolox_tiny_640.onnx}" \
+        "${PIPELINE_OCR_MODEL:-plate_ocr_ppocrv5_mobile.onnx}" \
+        "${PIPELINE_OCR_DICT:-plate_ocr_dict.json}"
+    do
+        if [ ! -f "$MODEL_DIR/$REQUIRED" ]; then
+            MISSING="$MISSING
+  $MODEL_DIR/$REQUIRED"
+        fi
+    done
+    if [ -n "$MISSING" ]; then
+        echo "ERROR: PIPELINE_BACKEND=local but these model artifacts are missing:$MISSING" >&2
+        echo "Mount or download them into PIPELINE_MODEL_DIR, or set PIPELINE_BACKEND=llm to use the external API." >&2
+        exit 1
+    fi
+    echo "Local pipeline artifacts verified in $MODEL_DIR"
+fi
+
 # Collect static files (in case they weren't collected during build)
 echo "Collecting static files..."
 python manage.py collectstatic --noinput

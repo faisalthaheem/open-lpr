@@ -64,34 +64,34 @@
 
 ## 7. Local OCR stage
 
-- [ ] 7.1 Implement a recognition stage running the PP-OCRv6_small ONNX recognizer on a rectified crop, returning text plus confidence.
-- [ ] 7.2 Return an empty text result rather than fabricating characters for an illegible crop.
-- [ ] 7.3 Implement stacked two-line handling: identify a stacked plate, split the crop into its two rows before recognition, and combine the rows with order preserved.
-- [ ] 7.4 Ensure a single-row crop is not split and that attempted row splitting does not introduce spurious characters into a one-row result.
-- [ ] 7.5 Implement a charset profile restricting emitted tokens to its members, applied at decode time, selectable at runtime without code changes.
-- [ ] 7.6 Default the charset profile to alphanumerics, and make region-specific profiles configurable.
-- [ ] 7.7 Route recognized text through the existing `DetectionValidator` text validation and discard implausible results.
-- [ ] 7.8 Record validated text and confidence against the corresponding entry in the detections collection.
-- [ ] 7.9 Ensure exactly one recognizer invocation per detected plate, treating the two rows of a stacked plate as one plate, batching across multiple invocations when the plate count exceeds the configured batch size.
-- [ ] 7.10 Write tests for clean-crop recognition, confidence reporting, illegible crop, two-line row splitting, single-row non-splitting, split-without-spurious-characters, out-of-charset suppression, profile selection and default, validation rejection, and the once-per-plate plus batch-bound behavior.
+- [x] 7.1 Implement a recognition stage running the PP-OCRv6_small ONNX recognizer on a rectified crop, returning text plus confidence.
+- [x] 7.2 Return an empty text result rather than fabricating characters for an illegible crop.
+- [x] 7.3 Implement stacked two-line handling: identify a stacked plate, split the crop into its two rows before recognition, and combine the rows with order preserved.
+- [x] 7.4 Ensure a single-row crop is not split and that attempted row splitting does not introduce spurious characters into a one-row result.
+- [x] 7.5 Implement a charset profile restricting emitted tokens to its members, applied at decode time, selectable at runtime without code changes.
+- [x] 7.6 Default the charset profile to alphanumerics, and make region-specific profiles configurable.
+- [x] 7.7 Route recognized text through the existing `DetectionValidator` text validation and discard implausible results.
+- [x] 7.8 Record validated text and confidence against the corresponding entry in the detections collection.
+- [x] 7.9 Ensure exactly one recognizer invocation per detected plate, treating the two rows of a stacked plate as one plate, batching across multiple invocations when the plate count exceeds the configured batch size.
+- [x] 7.10 Write tests for clean-crop recognition, confidence reporting, illegible crop, two-line row splitting, single-row non-splitting, split-without-spurious-characters, out-of-charset suppression, profile selection and default, validation rejection, and the once-per-plate plus batch-bound behavior.
 
 ## 8. Backend switch
 
-- [ ] 8.1 Add settings selecting the detection and OCR backend, defaulting to the existing LLM backend.
-- [ ] 8.2 Add the local pipeline execution path to `image_processing_service.py`, selected by the setting, leaving the LLM flow intact.
-- [ ] 8.3 Populate the identical detections collection shape from both backends so no caller or API branch depends on which ran.
-- [ ] 8.4 Confirm the LLM backend path is byte-for-byte unchanged in behavior, including the existing fixed-pixel crop padding.
-- [ ] 8.5 Write tests asserting the default selects the LLM backend and that the override selects the local pipeline.
-- [ ] 8.6 Document the new settings in `.env.example` and `AGENTS.md`, including that switching back is a configuration-only rollback.
+- [x] 8.1 Add settings selecting the detection and OCR backend, defaulting to the existing LLM backend.
+- [x] 8.2 Add the local pipeline execution path to `image_processing_service.py`, selected by the setting, leaving the LLM flow intact.
+- [x] 8.3 Populate the identical detections collection shape from both backends so no caller or API branch depends on which ran.
+- [x] 8.4 Confirm the LLM backend path is byte-for-byte unchanged in behavior, including the existing fixed-pixel crop padding.
+- [x] 8.5 Write tests asserting the default selects the LLM backend and that the override selects the local pipeline.
+- [x] 8.6 Document the new settings in `.env.example` and `AGENTS.md`, including that switching back is a configuration-only rollback.
 
 ## 9. Latency instrumentation
 
-- [ ] 9.1 Record a duration for every executed stage, distinguishing success, skip, and failure.
-- [ ] 9.2 Record end-to-end pipeline duration per image.
-- [ ] 9.3 Compare each measurement against a configurable budget, defaulting the end-to-end budget to 0.5 seconds.
-- [ ] 9.4 Export per-stage durations as a histogram on the existing Prometheus registry with a stage label and an outcome label.
-- [ ] 9.5 Confirm the existing overall processing duration metric is still recorded when the local backend runs, keeping backends comparable on one metric.
-- [ ] 9.6 Write tests for budget comparison, the 0.5s default, per-stage and outcome labelling, and continued recording of the existing metric.
+- [x] 9.1 Record a duration for every executed stage, distinguishing success, skip, and failure.
+- [x] 9.2 Record end-to-end pipeline duration per image.
+- [x] 9.3 Compare each measurement against a configurable budget, defaulting the end-to-end budget to 0.5 seconds.
+- [x] 9.4 Export per-stage durations as a histogram on the existing Prometheus registry with a stage label and an outcome label.
+- [x] 9.5 Confirm the existing overall processing duration metric is still recorded when the local backend runs, keeping backends comparable on one metric.
+- [x] 9.6 Write tests for budget comparison, the 0.5s default, per-stage and outcome labelling, and continued recording of the existing metric.
 
 ## 10. Dataset tooling
 
@@ -118,15 +118,15 @@
 - [x] 11.7 Sweep detection input resolution, confidence threshold, and duplicate-suppression settings against the corpus, recording recall and latency, and freeze the chosen values into configuration. Pay particular attention to small plates: the corpus median plate height is 61px with a 36px 10th percentile, so a resolution that loses those destroys recall.
 - [x] 11.8 Measure the local pipeline against the corpus on CPU, reporting recognition accuracy separately for single-row and stacked two-line plates.
 - [x] 11.9 Run a side-by-side accuracy and latency comparison of local versus LLM backend over the corpus and record the numbers.
-- [ ] 11.10 Keep the default backend as the LLM until the comparison justifies a switch, and open a follow-up change proposing the flip with the measured numbers attached.
+- [x] 11.10 Keep the default backend as the LLM until the comparison justifies a switch, and open a follow-up change proposing the flip with the measured numbers attached.
 
 ## 12. Verification
 
-- [ ] 12.1 Run `ruff check` and `ruff format`, fixing all violations in the new code.
-- [ ] 12.2 Confirm `ruff format` reports no changes on a second run.
-- [ ] 12.3 Run the full test suite and confirm coverage over `lpr_app` does not regress below the established ratchet.
-- [ ] 12.4 Confirm the application starts and processes an image correctly with the default LLM backend.
-- [ ] 12.5 Confirm the application starts and processes an image correctly with the local backend selected.
-- [ ] 12.6 Confirm the detections output shape is identical across backends.
-- [ ] 12.7 Update `AGENTS.md` with the pipeline architecture, stage contract, configuration keys, and the training workflow.
-- [ ] 12.8 Update the changelog.
+- [x] 12.1 Run `ruff check` and `ruff format`, fixing all violations in the new code.
+- [x] 12.2 Confirm `ruff format` reports no changes on a second run.
+- [x] 12.3 Run the full test suite and confirm coverage over `lpr_app` does not regress below the established ratchet.
+- [x] 12.4 Confirm the application starts and processes an image correctly with the default LLM backend.
+- [x] 12.5 Confirm the application starts and processes an image correctly with the local backend selected.
+- [x] 12.6 Confirm the detections output shape is identical across backends.
+- [x] 12.7 Update `AGENTS.md` with the pipeline architecture, stage contract, configuration keys, and the training workflow.
+- [x] 12.8 Update the changelog.
