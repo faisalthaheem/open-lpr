@@ -163,6 +163,89 @@ MIDDLEWARE.append("lpr_app.middleware.rate_limit.RateLimitMiddleware")
 
 OCR_CROP_PADDING_PX = config("OCR_CROP_PADDING_PX", default=25, cast=int)
 
+# ==========================================================================
+# Local ONNX pipeline backend
+# ==========================================================================
+# Which backend processes images: "llm" (the Qwen3-VL path) or "local" (the ONNX
+# detector + recognizer). The default is "local" because it is the only path that
+# fits the sub-500ms latency budget: 60ms mean per image against the LLM's 3600ms.
+#
+# The tradeoff, stated plainly: the local backend's *text accuracy is unmeasured*.
+# The corpus annotates plate boxes with no transcription labels, so the recorded
+# comparison can show it reads more plates than the LLM (0.95 vs 0.375) but cannot
+# show that those reads are correct -- it also misreads some plates it finds
+# (QG.260 -> 0G260). Higher coverage is not higher accuracy.
+# See openspec/changes/measure-local-backend-accuracy/COMPARISON.md.
+#
+# Rolling back is one configuration change: set PIPELINE_BACKEND=llm and redeploy.
+# No migration, no data rewrite, and the LLM path remains fully tested.
+PIPELINE_BACKEND = config("PIPELINE_BACKEND", default="local", cast=str)
+
+# Artifacts are resolved relative to this directory. It is outside MEDIA_ROOT so
+# uploads cannot overwrite a model, and it is gitignored.
+PIPELINE_MODEL_DIR = config("PIPELINE_MODEL_DIR", default=str(BASE_DIR / "model" / "plate"), cast=str)
+
+PIPELINE_DETECTOR_MODEL = config("PIPELINE_DETECTOR_MODEL", default="plate_yolox_tiny_640.onnx", cast=str)
+# Detector input resolution is recall-critical, not a speed knob: the corpus
+# median plate height is 61px with a 36px 10th percentile, and a resolution too
+# low to resolve those plates loses them outright.
+PIPELINE_DETECTOR_INPUT_SIZE = config(
+    "PIPELINE_DETECTOR_INPUT_SIZE",
+    default="640,640",
+    cast=lambda v: tuple(int(part) for part in v.split(",")),
+)
+PIPELINE_DETECTOR_CONF_THRESHOLD = config("PIPELINE_DETECTOR_CONF_THRESHOLD", default=0.3, cast=float)
+PIPELINE_DETECTOR_NMS_IOU = config("PIPELINE_DETECTOR_NMS_IOU", default=0.45, cast=float)
+
+# Plate layouts: "stacked" (two rows) or "single_line". Decided from the
+# detection's aspect ratio against this threshold, not configured per region.
+PIPELINE_LAYOUT_THRESHOLD = config("PIPELINE_LAYOUT_THRESHOLD", default=2.0, cast=float)
+
+PIPELINE_OCR_MODEL = config("PIPELINE_OCR_MODEL", default="plate_ocr_ppocrv5_mobile.onnx", cast=str)
+PIPELINE_OCR_DICT = config("PIPELINE_OCR_DICT", default="plate_ocr_dict.json", cast=str)
+# Crops per recognizer invocation. One plate is one crop unless it is stacked
+# and splitting is enabled.
+PIPELINE_OCR_BATCH_SIZE = config("PIPELINE_OCR_BATCH_SIZE", default=8, cast=int)
+PIPELINE_OCR_CHARSET_PROFILE = config("PIPELINE_OCR_CHARSET_PROFILE", default="alphanumeric", cast=str)
+# Off by default: on this corpus, splitting reads captions as a second line more
+# often than it rescues genuinely stacked plates. See the OCR stage docstring.
+PIPELINE_OCR_SPLIT_STACKED = config("PIPELINE_OCR_SPLIT_STACKED", default=False, cast=bool)
+
+# When rectification is enabled the perspective transform establishes the crop
+# boundary, so OCR_CROP_PADDING_PX is not applied. When disabled, padding is.
+PIPELINE_RECTIFY_ENABLED = config("PIPELINE_RECTIFY_ENABLED", default=True, cast=bool)
+
+# cpu | cuda | rocm. An unavailable provider falls back to CPU with a warning; the
+# supported deployment target is CPU, and ROCm is never a prerequisite.
+PIPELINE_PROVIDER = config("PIPELINE_PROVIDER", default="cpu", cast=str)
+
+# Latency budgets in seconds. The end-to-end budget is the project's
+# sub-500ms target; stage budgets are per stage name and are optional.
+PIPELINE_LATENCY_BUDGET_SECONDS = config("PIPELINE_LATENCY_BUDGET_SECONDS", default=0.5, cast=float)
+
+
+def _parse_stage_budgets(value: str) -> dict[str, float]:
+    """Parse ``stage=seconds`` pairs, e.g. ``detect_plate=0.4,read_plate=0.1``.
+
+    An entry without ``=``, or with a non-numeric duration, is ignored rather than
+    fatal: a malformed budget should not stop the application from starting, and a
+    stage with no parsed budget is the same as one with no budget at all.
+    """
+    budgets: dict[str, float] = {}
+    for entry in value.split(","):
+        name, separator, seconds = entry.partition("=")
+        name = name.strip()
+        if not separator or not name:
+            continue
+        try:
+            budgets[name] = float(seconds)
+        except ValueError:
+            continue
+    return budgets
+
+
+PIPELINE_STAGE_BUDGETS = config("PIPELINE_STAGE_BUDGETS", default="", cast=_parse_stage_budgets)
+
 PROCESSING_TIMEOUT_MINUTES = config("PROCESSING_TIMEOUT_MINUTES", default=5, cast=int)
 MAX_RETRIES = config("MAX_RETRIES", default=2, cast=int)
 RETRY_BATCH_SIZE = config("RETRY_BATCH_SIZE", default=5, cast=int)

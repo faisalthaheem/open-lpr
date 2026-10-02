@@ -18,6 +18,8 @@ from ..metrics import (
     FILE_ERRORS_TOTAL,
     IMAGES_IN_STORAGE,
     OCR_TEXTS_DETECTED_TOTAL,
+    PIPELINE_DURATION,
+    PIPELINE_STAGE_DURATION,
     PLATES_DETECTED_TOTAL,
     PROCESSING_DURATION,
     PROCESSING_ERRORS_TOTAL,
@@ -103,6 +105,29 @@ class MetricsHelper:
             duration: Duration in seconds
         """
         API_REQUEST_DURATION.observe(duration)
+
+    @staticmethod
+    def record_pipeline_stage_duration(stage: str, outcome: str, duration: float) -> None:
+        """
+        Record one local pipeline stage's duration.
+
+        Args:
+            stage: Stage name, e.g. 'detect_plate'
+            outcome: 'ok', 'skipped', or 'failed'
+            duration: Duration in seconds
+        """
+        PIPELINE_STAGE_DURATION.labels(stage=stage, outcome=outcome).observe(duration)
+
+    @staticmethod
+    def record_pipeline_duration(outcome: str, duration: float) -> None:
+        """
+        Record the local pipeline's end-to-end duration for one image.
+
+        Args:
+            outcome: 'ok' when plates were found, 'empty' when none were
+            duration: Duration in seconds
+        """
+        PIPELINE_DURATION.labels(outcome=outcome).observe(duration)
 
     @staticmethod
     def update_detection_metrics(uploaded_image) -> None:

@@ -44,6 +44,27 @@ API_REQUEST_DURATION = Histogram(
     registry=REGISTRY,
 )
 
+# Local ONNX pipeline timings. Labelled by stage and outcome so a regression is
+# attributable: a rise in the "read_plate" series is distinguishable from a rise
+# in "detect_plate", and a skipped or failed stage is distinguishable from a slow
+# successful one. Without the outcome label a failure would be indistinguishable
+# from a stage that never ran.
+PIPELINE_STAGE_DURATION = Histogram(
+    "lpr_pipeline_stage_duration_seconds",
+    "Time spent in each local pipeline stage",
+    ["stage", "outcome"],
+    buckets=[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, float("inf")],
+    registry=REGISTRY,
+)
+
+PIPELINE_DURATION = Histogram(
+    "lpr_pipeline_duration_seconds",
+    "End-to-end duration of the local pipeline, per image",
+    ["outcome"],
+    buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, float("inf")],
+    registry=REGISTRY,
+)
+
 UPLOAD_TOTAL = Counter("lpr_upload_total", "Total number of image uploads", ["status"], registry=REGISTRY)
 
 PROCESSING_TOTAL = Counter(

@@ -18,6 +18,7 @@ from lpr_app.pipeline.stages.ocr import (
     _as_probabilities,
     ctc_greedy_decode,
     load_charset,
+    preprocess_batch,
     preprocess_crop,
     split_two_rows,
 )
@@ -34,6 +35,41 @@ def plate_image(width=208, height=109, text_rows=1):
     if text_rows == 2:
         array[height // 2 + 4 : height - height // 6, width // 10 : width - width // 10] = 30
     return Image.fromarray(array)
+
+
+class PreprocessBatchTest(TestCase):
+    """A batch shares one width, padded to its widest member."""
+
+    def test_batch_is_nchw_with_one_row_per_image(self):
+        tensor, widths = preprocess_batch([plate_image(208, 109), plate_image(104, 109)])
+        self.assertEqual(tensor.shape[0], 2)
+        self.assertEqual(tensor.shape[1], 3)
+        self.assertEqual(tensor.shape[2], 48)
+        self.assertEqual(len(widths), 2)
+
+    def test_padded_to_the_widest_member(self):
+        tensor, widths = preprocess_batch([plate_image(208, 109), plate_image(104, 109)])
+        self.assertEqual(tensor.shape[3], max(widths))
+
+    def test_per_row_widths_are_reported_unpadded(self):
+        _, widths = preprocess_batch([plate_image(208, 109), plate_image(104, 109)])
+        self.assertLess(widths[1], widths[0])
+
+    def test_padding_is_normalised_black_not_mid_grey(self):
+        """Zero-filling would paint the pad mid-grey, where plate ink sits."""
+        tensor, widths = preprocess_batch([plate_image(208, 109), plate_image(104, 109)])
+        pad = tensor[1, :, :, widths[1] :]
+        self.assertGreater(pad.size, 0, "this batch should contain padding to inspect")
+        self.assertAlmostEqual(float(pad.max()), -1.0, places=5)
+
+    def test_real_content_is_preserved_at_its_own_offset(self):
+        tensor, widths = preprocess_batch([plate_image(208, 109), plate_image(104, 109)])
+        narrow = preprocess_crop(plate_image(104, 109))
+        self.assertTrue(np.allclose(tensor[1, :, :, : widths[1]], narrow[0]))
+
+    def test_empty_batch_is_rejected(self):
+        with self.assertRaises(StageError):
+            preprocess_batch([])
 
 
 class PreprocessTest(TestCase):
@@ -283,3 +319,109 @@ class StageContractTest(TestCase):
         """Reading text without a dictionary would silently return nothing."""
         with self.assertRaises(StageError):
             PlateOCRStage(dict_path=None)._ensure_charset()
+
+
+class FakeRecogniser:
+    """Stands in for a loaded session, recording the batch size of each call.
+
+    The stage's batching contract is about how many crops reach the model per
+    invocation and how many invocations happen. A fake that returns plausible CTC
+    output and counts its calls tests that contract directly; a real model cannot
+    report how many times it was called.
+
+    It also stands in for ``LoadedSession``, so the runtime's own signature
+    validation runs against it rather than being bypassed.
+    """
+
+    def __init__(self, labels_per_step: int = 4):
+        self.calls: list[int] = []
+        self.labels_per_step = labels_per_step
+        self.input_names = ("x",)
+        # Rank 4 NCHW with dynamic batch and width, as the real export declares.
+        self.input_shapes = (("x", ("N", 3, 48, "W")),)
+        self.output_names = PlateOCRStage.ONNX_OUTPUTS
+        # The runtime reaches the ORT session through this attribute.
+        self.session = self
+
+    def run(self, output_names, feed):
+        batch = int(feed["x"].shape[0])
+        self.calls.append(batch)
+        # One timestep per 8px of the shared width, as PP-OCR emits.
+        steps = int(feed["x"].shape[3]) // 8
+        # Label 1 is the first real character; index 0 is the CTC blank.
+        raw = np.zeros((batch, steps, self.labels_per_step), dtype=np.float32)
+        raw[:, 0, 1] = 1.0
+        return [raw]
+
+
+def stage_with_fake_session(**kwargs):
+    stage = PlateOCRStage(**kwargs)
+    stage.charset = ["", "A", "B", "C"]
+    stage._loaded_dict = True
+    stage._session = FakeRecogniser()
+    return stage
+
+
+class BatchBoundTest(TestCase):
+    """One recognition per plate, and batched invocations within the bound."""
+
+    def _plates(self, count):
+        return [(plate_image(200, 100), "single_line") for _ in range(count)]
+
+    def test_three_plates_produce_three_results(self):
+        stage = stage_with_fake_session(batch_size=8)
+        results = stage.read_plates(self._plates(3))
+        self.assertEqual(len(results), 3)
+
+    def test_results_are_in_plate_order(self):
+        """Each result must line up with the plate it came from, not with the
+        order the batch happened to pack them in."""
+        stage = stage_with_fake_session(batch_size=2)
+        plates = [
+            (plate_image(200, 100), "single_line"),
+            (plate_image(80, 100), "single_line"),
+            (plate_image(280, 100), "single_line"),
+        ]
+        results = stage.read_plates(plates)
+        self.assertEqual([r.text for r in results], ["A"] * 3)
+
+    def test_no_plate_is_recognised_twice(self):
+        """Every crop in the batch must come from a distinct plate, so the sum of
+        the batch sizes equals the plate count."""
+        stage = stage_with_fake_session(batch_size=8)
+        stage.read_plates(self._plates(3))
+        self.assertEqual(sum(stage._session.calls), 3)
+
+    def test_batch_size_bounds_a_single_invocation(self):
+        stage = stage_with_fake_session(batch_size=2)
+        stage.read_plates(self._plates(5))
+        self.assertTrue(all(size <= 2 for size in stage._session.calls), stage._session.calls)
+
+    def test_more_plates_than_the_bound_span_several_invocations(self):
+        stage = stage_with_fake_session(batch_size=2)
+        stage.read_plates(self._plates(5))
+        self.assertEqual(len(stage._session.calls), 3)
+
+    def test_fewer_plates_than_the_bound_use_one_invocation(self):
+        stage = stage_with_fake_session(batch_size=8)
+        stage.read_plates(self._plates(3))
+        self.assertEqual(len(stage._session.calls), 1)
+
+    def test_a_stacked_plate_counts_once_not_twice(self):
+        """Two rows of one plate are two crops of one plate, so a plate count of
+        one must not produce two recogniser results."""
+        stage = stage_with_fake_session(split_stacked=True, batch_size=8)
+        # A balanced two-row crop so split_two_rows finds a gap.
+        results = stage.read_plates([(plate_image(200, 100, text_rows=2), "stacked")])
+        self.assertEqual(len(results), 1)
+        # Rows are combined with order preserved, so "AA" rather than one "A".
+        self.assertEqual(results[0].rows, ["A", "A"])
+        self.assertEqual(results[0].text, "AA")
+
+    def test_empty_input_produces_no_results_and_no_invocation(self):
+        stage = stage_with_fake_session()
+        self.assertEqual(stage.read_plates([]), [])
+        self.assertEqual(stage._session.calls, [])
+
+    def test_batch_size_is_at_least_one(self):
+        self.assertEqual(PlateOCRStage(batch_size=0).batch_size, 1)

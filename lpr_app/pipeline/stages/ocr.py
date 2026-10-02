@@ -52,6 +52,10 @@ DEFAULT_INPUT_HEIGHT = 48
 DEFAULT_INPUT_WIDTH_BUCKET = 8
 DEFAULT_MAX_INPUT_WIDTH = 320
 
+# Crops per inference. One plate is one crop unless it is stacked and splitting
+# is enabled, so this bounds invocations per image rather than plates per image.
+DEFAULT_OCR_BATCH_SIZE = 8
+
 # Digits and Latin letters: the default profile, for a region whose plates are
 # alphanumeric. Region-specific profiles narrow or widen this.
 DEFAULT_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -159,6 +163,49 @@ def preprocess_crop(
     array = array / 255.0
     array = (array - 0.5) / 0.5
     return np.ascontiguousarray(array)
+
+
+def preprocess_batch(
+    images: list[Image.Image],
+    *,
+    input_height: int = DEFAULT_INPUT_HEIGHT,
+    bucket: int = DEFAULT_INPUT_WIDTH_BUCKET,
+    max_width: int = DEFAULT_MAX_INPUT_WIDTH,
+) -> tuple[np.ndarray, list[int]]:
+    """Preprocess several crops into one padded NCHW batch.
+
+    Width is a dynamic axis in the recogniser's signature, but every row in a
+    single inference must share one width. Rows are therefore padded to the
+    widest member of the batch, so a batch costs the width of its widest crop
+    rather than the sum of its crops.
+
+    Two details keep the padding from corrupting the decode:
+
+    - The pad value is the *normalised* value of a black pixel, not zero. The
+      normalisation maps black to -1.0 and mid-grey to 0.0, so zero-filling would
+      paint the padded region mid-grey, which is where plate ink sits.
+    - The per-row widths are returned alongside the tensor so the caller can trim
+      the timesteps belonging to padding. PP-OCR emits one timestep per 8px of
+      input width, so the valid timestep count is the row's own width over the
+      bucket. Without trimming, padding is decoded as extra characters.
+    """
+    if not images:
+        raise StageError("cannot preprocess an empty batch")
+
+    tensors = [
+        preprocess_crop(image, input_height=input_height, bucket=bucket, max_width=max_width) for image in images
+    ]
+    widths = [tensor.shape[3] for tensor in tensors]
+    width = max(widths)
+
+    # preprocess_crop normalises with (x/255 - 0.5)/0.5, so black is exactly -1.
+    black = -1.0
+    # preprocess_crop returns a single-row NCHW tensor, so drop its batch axis and
+    # rebuild it with the padded width.
+    padded = np.full((len(tensors), *tensors[0].shape[1:3], width), black, dtype=np.float32)
+    for index, tensor in enumerate(tensors):
+        padded[index, :, :, : tensor.shape[3]] = tensor
+    return np.ascontiguousarray(padded), widths
 
 
 def _as_probabilities(raw: np.ndarray) -> np.ndarray:
@@ -302,6 +349,7 @@ class PlateOCRStage(Stage):
         split_stacked: bool = False,
         stacked_threshold: float = 2.0,
         min_confidence: float = 0.0,
+        batch_size: int = DEFAULT_OCR_BATCH_SIZE,
     ) -> None:
         super().__init__(context)
         self.model_path = model_path
@@ -311,6 +359,10 @@ class PlateOCRStage(Stage):
         self.split_stacked = split_stacked
         self.stacked_threshold = stacked_threshold
         self.min_confidence = float(min_confidence)
+        # Crops per inference. Bounded because the recogniser's width is the
+        # widest crop in the batch, so a batch of N plates costs the width of its
+        # widest member rather than N inferences.
+        self.batch_size = max(1, int(batch_size))
         self.charset: list[str] = []
         self.profiles = dict(DEFAULT_PROFILES)
         self._loaded_dict = False
@@ -323,16 +375,91 @@ class PlateOCRStage(Stage):
             raise StageError(f"unknown charset profile {name!r}; configured: {sorted(self.profiles)}") from exc
 
     def run(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Read one crop. This is the graph-facing single-plate entry point."""
         crop = data.get("plate_crop")
         if crop is None:
             raise StageError("read_plate received no plate crop")
 
-        profile_name = data.get("charset_profile") or self.context.config.get("charset_profile")
-        profile = self.use_profile(profile_name) if profile_name else self.profiles["alphanumeric"]
-
+        profile = self._profile_for(data)
         layout = data.get("layout") or SINGLE_LINE_LAYOUT
-        rows = self._rows_for(crop, layout)
-        return {"ocr": self._recognise(rows, profile, layout)}
+        return {"ocr": self.read_plates([(crop, layout)], profile=profile)[0]}
+
+    def read_plates(
+        self,
+        plates: list[tuple[Image.Image, str | None]],
+        *,
+        profile: CharsetProfile | None = None,
+    ) -> list[RecognitionResult]:
+        """Read a list of plates, one result per plate, in order.
+
+        This is the entry point the service layer uses, because it is the only
+        one that can honour the batch bound: cropping happens here so every row
+        of every plate is known up front, and the rows are then packed into
+        inferences of at most ``batch_size`` crops.
+
+        Two properties the spec depends on and that are easy to lose:
+
+        - **One recognition per plate.** Each plate appears in exactly one batch
+          and contributes exactly one result, at its own index. The two rows of a
+          stacked plate are two crops of that one plate, so they count once.
+        - **Bounded invocations.** ``batch_size`` crops per inference, so an image
+          with more plates than the bound produces several inferences, none
+          oversized.
+
+        Row order is preserved when combining a stacked plate's rows.
+        """
+        if not plates:
+            return []
+
+        chosen = profile or self.profiles["alphanumeric"]
+
+        # Flatten plates into rows, remembering which plate each row belongs to.
+        rows: list[Image.Image] = []
+        owners: list[int] = []
+        for index, (crop, layout) in enumerate(plates):
+            for row in self._rows_for(crop, layout or SINGLE_LINE_LAYOUT):
+                rows.append(row)
+                owners.append(index)
+
+        decoded: list[tuple[str, float]] = [("", 0.0)] * len(rows)
+        for start in range(0, len(rows), self.batch_size):
+            chunk = rows[start : start + self.batch_size]
+            for offset, (text, confidence) in enumerate(self._decode_chunk(chunk)):
+                decoded[start + offset] = (text, confidence)
+
+        results: list[RecognitionResult] = []
+        for index in range(len(plates)):
+            texts: list[str] = []
+            confidences: list[float] = []
+            for row_index, owner in enumerate(owners):
+                if owner != index:
+                    continue
+                text, confidence = decoded[row_index]
+                texts.append(text)
+                confidences.append(confidence)
+
+            combined_raw = "".join(texts)
+            cleaned = chosen.sanitise(combined_raw)
+            confidence = float(np.mean(confidences)) if confidences else 0.0
+
+            if cleaned and confidence < self.min_confidence:
+                # Reported rather than dropped: the caller decides, and a
+                # low-confidence read is still information.
+                logger.info("recognition confidence %.2f below threshold %.2f", confidence, self.min_confidence)
+
+            results.append(
+                RecognitionResult(
+                    text=cleaned,
+                    confidence=confidence,
+                    raw_text=combined_raw,
+                    rows=texts,
+                )
+            )
+        return results
+
+    def _profile_for(self, data: dict[str, Any]) -> CharsetProfile:
+        profile_name = data.get("charset_profile") or self.context.config.get("charset_profile")
+        return self.use_profile(profile_name) if profile_name else self.profiles["alphanumeric"]
 
     def _rows_for(self, crop: Image.Image, layout: str) -> list[Image.Image]:
         """One crop, or two when the plate is stacked."""
@@ -345,45 +472,38 @@ class PlateOCRStage(Stage):
             logger.info("stacked plate did not separate into two rows; recognising as one line")
         return [crop]
 
-    def _recognise(self, rows: list[Image.Image], profile: CharsetProfile, layout: str) -> RecognitionResult:
+    def _decode_chunk(self, chunk: list[Image.Image]) -> list[tuple[str, float]]:
+        """Run one inference over up to ``batch_size`` crops."""
         if not self.charset:
             self._ensure_charset()
         if self._session is None:
             self.load()
 
-        texts: list[str] = []
-        confidences: list[float] = []
-        for row in rows:
-            tensor = preprocess_crop(row, input_height=self.input_height, max_width=self.max_input_width)
-            feed = {self._session.input_names[0]: tensor}
-            outputs = run_session(self._session, feed, self.ONNX_OUTPUTS, stage_name=self.name)
-            raw = np.asarray(next(iter(outputs.values())))
-            if raw.ndim == 3:
-                raw = raw[0]
+        tensor, widths = preprocess_batch(chunk, input_height=self.input_height, max_width=self.max_input_width)
+        feed = {self._session.input_names[0]: tensor}
+        outputs = run_session(self._session, feed, self.ONNX_OUTPUTS, stage_name=self.name)
+        raw = np.asarray(next(iter(outputs.values())))
+        if raw.ndim == 2:
+            raw = raw[np.newaxis, ...]
 
-            # The CTC head already emits normalised probabilities, which the
-            # ONNX graph contains as Softmax. Softmaxing again squashes every
-            # value toward uniform and drives confidence to zero, so detect the
+        results: list[tuple[str, float]] = []
+        for row_index, width in enumerate(widths):
+            if row_index >= raw.shape[0]:
+                break
+            probabilities = raw[row_index]
+            # Trim the timesteps that belong to padding. PP-OCR emits one
+            # timestep per 8px of input width, so a row's own width determines
+            # how much of the shared output width is real.
+            valid_steps = max(1, width // DEFAULT_INPUT_WIDTH_BUCKET)
+            probabilities = probabilities[:valid_steps]
+
+            # The CTC head already emits normalised probabilities, which the ONNX
+            # graph contains as Softmax. Softmaxing again squashes every value
+            # toward uniform and drives confidence to zero, so detect the
             # normalised case instead of assuming logits.
-            raw_text, per_char = ctc_greedy_decode(_as_probabilities(raw), self.charset)
-            texts.append(raw_text)
-            confidences.append(float(np.mean(per_char)) if per_char else 0.0)
-
-        combined_raw = "".join(texts)
-        cleaned = profile.sanitise(combined_raw)
-        confidence = float(np.mean(confidences)) if confidences else 0.0
-
-        if cleaned and confidence < self.min_confidence:
-            # Reported as empty rather than dropped: the caller decides, and a
-            # low-confidence read is still information.
-            logger.info("recognition confidence %.2f below threshold %.2f", confidence, self.min_confidence)
-
-        return RecognitionResult(
-            text=cleaned,
-            confidence=confidence,
-            raw_text=combined_raw,
-            rows=texts,
-        )
+            text, per_char = ctc_greedy_decode(_as_probabilities(probabilities), self.charset)
+            results.append((text, float(np.mean(per_char)) if per_char else 0.0))
+        return results
 
     def _ensure_charset(self) -> None:
         if self._loaded_dict:
