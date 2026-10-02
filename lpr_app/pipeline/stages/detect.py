@@ -216,13 +216,13 @@ def decode_yolox(
 
         indices = np.nonzero(keep)[0]
         for index in indices:
-            cx, cy, log_w, log_h = chunk[index, :4]
-            # YOLOX regresses width and height in log space; the exported tensor
-            # carries logs, so decoding without exp() yields absurd sizes that
-            # clamp to the whole image.
-            w = float(np.exp(log_w))
-            h = float(np.exp(log_h))
-            # cx/cy arrive as absolute centre coordinates in the exported
+            cx, cy, w, h = (float(v) for v in chunk[index, :4])
+            # The ONNX export already exponentiates width and height, so these
+            # arrive as linear pixels. Applying exp() again would be a double
+            # decode and inflates every box to an absurd size that clamps to the
+            # whole image.
+            #
+            # cx/cy also arrive as absolute centre coordinates in the exported
             # tensor, so no grid reconstruction is needed here.
             x1 = cx - w / 2
             y1 = cy - h / 2
@@ -301,8 +301,13 @@ class PlateDetectionStage(Stage):
         if image is None:
             raise StageError("detect_plate received no image")
 
+        # Load on demand so the stage is usable directly, not only through the
+        # graph runner, which is what the benchmark and tests do.
+        if self._session is None:
+            self.load()
+
         tensor, scale, pad = letterbox(image, self.input_size)
-        feed = {"input": tensor} if "input" in self._session.input_names else {self._session.input_names[0]: tensor}
+        feed = {self._session.input_names[0]: tensor}
 
         outputs = run_session(self._session, feed, self.ONNX_OUTPUTS, stage_name=self.name)
         raw = next(iter(outputs.values()))

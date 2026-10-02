@@ -27,8 +27,9 @@ def make_predictions(boxes, input_size=(640, 640), num_classes=1, conf=0.9):
     """Build a YOLOX-shaped prediction array.
 
     Each entry is (cx, cy, w, h, obj_conf, class_score, ...) in letterboxed
-    input space, placed on the stride-8 level. Width and height are encoded in
-    log space, matching a real export -- the decoder exponentiates them.
+    input space, placed on the stride-8 level. Width and height are linear
+    pixels: the ONNX export applies exp() internally, so the exported tensor is
+    already decoded and the stage must not exponentiate a second time.
 
     The layout is level-major with the anchor counts of strides 8, 16, 32, which
     is what a real YOLOX export produces.
@@ -45,8 +46,8 @@ def make_predictions(boxes, input_size=(640, 640), num_classes=1, conf=0.9):
         gx, gy = int(round(cx / 8)), int(round(cy / 8))
         arr[0, gx + gy * grid_w, 0] = cx
         arr[0, gx + gy * grid_w, 1] = cy
-        arr[0, gx + gy * grid_w, 2] = np.log(w)
-        arr[0, gx + gy * grid_w, 3] = np.log(h)
+        arr[0, gx + gy * grid_w, 2] = w
+        arr[0, gx + gy * grid_w, 3] = h
         arr[0, gx + gy * grid_w, 4] = 1.0
         arr[0, gx + gy * grid_w, 5] = score
     return arr
