@@ -180,12 +180,32 @@ trained model is measured, so the decision reflects the final artifact's size
 and the code that consumes it.
 
 - [ ] 13.11 Publish **all three** artifacts -- detector, OCR recogniser, and OCR dictionary -- not the detector alone. `docker-entrypoint.sh` exits non-zero if any of the three is missing, so publishing one relocates the failure rather than removing it.
-- [ ] 13.12 Prefer release assets on this repository over a separate model repository, pinned by tag. A separate repo leaves the artifacts unlinked from the code that expects them: retrain, publish, forget to bump the pin, and deployments pull a detector mismatched to their pipeline, discovered in production rather than CI.
-- [ ] 13.13 Verify each downloaded artifact against the `sha256` in `manifest.json` and fail startup on mismatch. Release assets are mutable and can be silently re-uploaded; a checksum failure must not load.
-- [ ] 13.14 Implement the download with the standard library, not a new runtime dependency. One HTTP GET with resume and retry does not justify adding a client library to the production image.
-- [ ] 13.15 Keep the existing "artifacts missing, mount them or set `PIPELINE_BACKEND=llm`" failure as the offline path, and make the error say so.
+- [ ] 13.12 Publish **both** the exported ONNX and the training checkpoint (`best_ckpt.pth`). They serve different audiences and neither replaces the other: the ONNX is what the app loads with `onnxruntime` alone, the checkpoint is what lets someone continue the training instead of restarting from COCO. Publishing only the ONNX forfeits the only reusable artifact for anyone extending this.
+- [ ] 13.13 Record for each artifact which one you trained and which you adopted upstream. Only the detector is trained here; the recogniser is pre-trained PP-OCR exported to ONNX. Without this the published checkpoint implies the whole pipeline is yours, which would misattribute PaddleOCR's work and misdescribe where to file a bug.
+- [ ] 13.14 Write the model card at the repository root as `README.md` with YAML frontmatter (`license: apache-2.0`). HF renders only a root `README.md` as the card, and an undeclared licence shows no badge -- the first thing a reviewer looks for.
+- [ ] 13.15 State in the card that loading the checkpoint requires torch and YOLOX but **not** ROCm; CPU torch reads a checkpoint fine and ROCm is only needed to train. Also note that a `.pth` is a pickle and executes constructors on load.
+- [ ] 13.16 Record the measured accuracy and its sample size in the card. Not the 20-plate pilot: a reader deciding whether to trust the weights is entitled to the number the shipped model actually produced.
+- [ ] 13.17 State that the training imagery is not published and why -- user-contributed photographs containing real plates, faces, and vehicles, with no consent obtained. Say what *is* published instead, so the absence reads as a decision rather than an oversight.
+
+### Model repository layout
+
+`onnx/` and `checkpoints/` are separated so a user who only wants to run
+inference does not download training state, and a user fine-tuning is not left
+to guess which ONNX file to load.
+
+- [ ] 13.18 Use `README.md` (model card), `manifest.json`, `onnx/`, and `checkpoints/`.
+- [ ] 13.19 Carry the existing `manifest.json` into the repository unchanged in structure. It already records `sha256`, `checkpoint_sha256`, `license`, `upstream`, `exported_with`, and `input_size`; it was written for this.
+- [ ] 13.20 Pin by HF **commit SHA**, never by `main`. A `main` pointer moves on retrain, so a deployment would silently pull different weights than it was tested against. The SHA is content-addressed and is the one capability that makes the artifact reproducible.
+
+### Consumption
+
+- [ ] 13.21 Download with the standard library, not `huggingface_hub`. One HTTP GET with resume and retry does not justify a client library in the production image, and pinning a commit SHA is plain URL construction. Keep `huggingface_hub` in the training environment only, for publishing.
+- [ ] 13.22 Verify every downloaded artifact against the `sha256` in `manifest.json` and fail startup on mismatch. Hosted files can be replaced; a plain fetch cannot tell.
+- [ ] 13.23 Make the publish step reproducible: a script that uploads the files and regenerates `manifest.json` from the files actually uploaded, so checksums cannot drift from artifacts.
+- [ ] 13.24 Keep the existing "artifacts missing, mount them or set `PIPELINE_BACKEND=llm`" failure as the offline path, and make the error say so.
+- [ ] 13.25 Have CI verify the pinned model revision resolves, so a deleted or renamed repository fails the build rather than a deployment.
 
 ### Close out
 
-- [ ] 13.16 Archive this change, and confirm the archived specs no longer contradict the shipped implementation.
-- [ ] 13.17 Verify the change's own `tasks.md` has no unchecked box, so the archive does not claim completeness it does not have.
+- [ ] 13.26 Archive this change, and confirm the archived specs no longer contradict the shipped implementation.
+- [ ] 13.27 Verify the change's own `tasks.md` has no unchecked box, so the archive does not claim completeness it does not have.
