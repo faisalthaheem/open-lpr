@@ -1,0 +1,16 @@
+# Requirements for the model evaluator (lpr_app/ml/evaluate.py).
+#
+# Separate from requirements.txt for the same reason requirements-train.txt is:
+# the Django application must run without them, and nothing under lpr_app.pipeline
+# may pull in a web framework or a GPU stack.
+#
+# Separate from requirements-train.txt because the evaluator does NOT need torch.
+# It reads ONNX artifacts through the same code path production uses, so
+# evaluating a model cannot disagree with what the deployed backend does -- and
+# a contributor can run it on a laptop without a ROCm build.
+#
+#     pip install -r lpr_app/ml/requirements-eval.txt
+#     python -m lpr_app.ml.evaluate --training-root ../plate-training
+streamlit>=1.40
+onnxruntime>=1.17
+pillow>=10.0
