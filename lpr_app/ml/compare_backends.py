@@ -448,7 +448,8 @@ def main() -> int:
         # so a wrong --data is the likeliest first mistake.
         print(
             f"no such split: {annotations}\n"
-            f"export one with: python -m lpr_app.ml.datasets.plate --corpus <corpus-root> --out <dataset-root>",
+            "export one with: python -m lpr_app.ml.datasets.imanno_to_coco\n"
+            f"  --corpus <corpus-root> --out <dataset-root>",
             file=sys.stderr,
         )
         return 2

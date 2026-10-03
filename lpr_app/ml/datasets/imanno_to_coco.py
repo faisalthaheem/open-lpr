@@ -1,4 +1,19 @@
-"""Export the annotated corpus to COCO format for detector training.
+"""Convert an iMAnno/Simanno-annotated plate corpus to COCO detection JSON.
+
+**The source format is iMAnno (Simanno):** a SQLite database whose `annotations`
+table holds one row per image, with an `imgareas` JSON column listing regions as
+`{x, y, z, width, height, lblid, lbltxt}`. `lbltxt` is the *class* name and its
+only value across the corpus is `plate` — there is no transcription field, which
+is why text accuracy cannot be scored from this data.
+
+**The target format is COCO detection JSON** (`annotations/{train,val}2017.json`
+plus image split directories), which is what YOLOX's `COCODataset` reads.
+
+**This script does not produce anything ONNX-related.** ONNX is a serialized
+computation graph and consumes no dataset at all; a `.pth` checkpoint is
+converted to one by `lpr_app/ml/export_onnx.py`, a separate step. The two are
+easy to conflate because the artifacts sit close together, so: corpus → COCO
+here, COCO → `.pth` by the YOLOX trainer, `.pth` → `.onnx` by export_onnx.
 
 Two things this does that a naive export does not.
 

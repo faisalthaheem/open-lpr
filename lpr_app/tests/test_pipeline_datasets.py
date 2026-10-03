@@ -16,7 +16,7 @@ from unittest import TestCase
 
 from PIL import Image
 
-from lpr_app.ml.datasets.plate import build, find_databases, group_key, load_records
+from lpr_app.ml.datasets.imanno_to_coco import build, find_databases, group_key, load_records
 
 
 def make_corpus(root: Path, *, frames: int = 200) -> Path:

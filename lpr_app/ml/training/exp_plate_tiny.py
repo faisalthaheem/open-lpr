@@ -63,6 +63,10 @@ class Exp(MyExp):
         # Dataset root, relative to the YOLOX checkout since tools/train.py runs
         # from there. annotations/{train,val}2017.json sit under it, and the
         # image splits are its immediate subdirectories.
+        #
+        # Unrelated to the converter module name. This is a directory inside the
+        # YOLOX checkout; the code that *writes* it is
+        # lpr_app/ml/datasets/imanno_to_coco.py, and they are free to differ.
         self.data_dir = "datasets/plate"
         self.train_ann = "train2017.json"
         self.val_ann = "val2017.json"

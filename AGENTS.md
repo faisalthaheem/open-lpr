@@ -154,7 +154,7 @@ Training lives in `lpr_app/ml/` and uses its own venv with ROCm/CUDA torch. It i
 
 ```bash
 pip install -r lpr_app/ml/requirements-train.txt
-python -m lpr_app.ml.datasets.plate --corpus <corpus-root> --out <dataset-root>
+python -m lpr_app.ml.datasets.imanno_to_coco --corpus <corpus-root> --out <dataset-root>
 python -m lpr_app.ml.benchmark --data <dataset-root> --model model/plate/plate_yolox_tiny_640.onnx
 python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 40
 python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 60 --dump-label-template <dir>
