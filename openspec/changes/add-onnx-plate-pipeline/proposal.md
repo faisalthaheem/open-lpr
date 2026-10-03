@@ -38,3 +38,17 @@ No breaking changes: the pipeline's output continues to populate the same `detec
 - **Models**: new ONNX artifacts under the already-gitignored `model/` path. Training data lives outside the repository and is located by a configurable path.
 - **Runtime**: CPU-only inference is the supported deployment path, so no production host change is required to run the new backend. Training is GPU-executed and runs in a container with the appropriate device passthrough, so ROCm is not a host prerequisite for contributors.
 - **Operational risk**: the new backend may be less accurate than the LLM on unusual plates. The LLM default is retained until a recorded accuracy comparison justifies the switch.
+
+## Follow-up
+
+Documentation was revised as each piece landed, which means it currently
+describes several states of the project at once — some pages still present the
+LLM backend as the default, the recorded accuracy figures are a 20-plate pilot
+rather than a measurement of the shipped model, and a dataset exporter was
+renamed after its references were written. `tasks.md` section 13 is the single
+pass that reconciles all of it.
+
+It is scheduled to run after the trained model is promoted, not before,
+because the figures it has to record are measured ones. It is tracked here
+rather than done inline because a checklist nobody can see is a checklist that
+does not get run.

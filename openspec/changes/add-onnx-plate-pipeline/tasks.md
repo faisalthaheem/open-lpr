@@ -130,3 +130,39 @@
 - [x] 12.6 Confirm the detections output shape is identical across backends.
 - [x] 12.7 Update `AGENTS.md` with the pipeline architecture, stage contract, configuration keys, and the training workflow.
 - [x] 12.8 Update the changelog.
+
+## 13. Release documentation sweep
+
+Documentation was updated as each piece landed, which leaves it describing
+several states of the project at once. This section is the single pass that
+reconciles the docs against the change as shipped. It runs last, after the
+trained model is promoted, because the numbers it has to record are the
+measured ones and not the pilot's.
+
+Deliberately last, and deliberately a checklist rather than work done
+alongside: every item below is a place where a reader would otherwise find a
+claim that was true when written and is not true now.
+
+### Accuracy numbers
+
+- [ ] 13.1 Replace the 20-plate pilot figures (CER 0.367, exact-match 0.35) in `AGENTS.md` and `CHANGELOG.md` with the measured figures from the trained-model evaluation, and record the sample size the new numbers rest on. A number without its sample size is not evidence.
+- [ ] 13.2 Update `docs/RELEASE_NOTES_*` or add a release note for the flip, stating what a deployment must do to obtain `model/plate/` and what happens if it does not. This is the one breaking operational change in this work: a deployment that upgrades without the artifacts cannot process images.
+- [ ] 13.3 State the rollback path (`PIPELINE_BACKEND=llm`) in the release note, since it is configuration-only and a reader deciding whether to upgrade needs it before upgrading.
+- [ ] 13.4 Correct any claim that coverage equals accuracy. The local backend reads more plates than the LLM backend and gets fewer of them right; several current sentences put those two facts next to each other in a way that reads as the first implying the second.
+
+### Docs and layout
+
+- [ ] 13.5 Verify every relative markdown link resolves, since the topic guides moved to `docs/` during this change and links were rewritten in bulk.
+- [ ] 13.6 Confirm the `README.md` file-structure tree matches the actual root layout.
+- [ ] 13.7 Confirm no document still describes the LLM backend as the default, or the local backend as opt-in.
+- [ ] 13.8 Confirm `.env.example` and `.env.llamacpp.example` carry every pipeline key, with the same defaults as `AGENTS.md`. Three lists of the same keys drift unless they are compared deliberately.
+
+### Tooling names
+
+- [ ] 13.9 Confirm every reference to the renamed dataset exporter points at `lpr_app.ml.datasets.imanno_to_coco`, not the old module name.
+- [ ] 13.10 Confirm no document describes the exporter as producing ONNX. It produces COCO JSON; the `.pth` and `.onnx` steps are separate and belong to the trainer and `export_onnx.py`.
+
+### Close out
+
+- [ ] 13.11 Archive this change, and confirm the archived specs no longer contradict the shipped implementation.
+- [ ] 13.12 Verify the change's own `tasks.md` has no unchecked box, so the archive does not claim completeness it does not have.
