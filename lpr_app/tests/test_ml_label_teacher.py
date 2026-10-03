@@ -229,6 +229,69 @@ class ScratchIsolationTests(SimpleTestCase):
             self.assertTrue(any("downscale" in path.name for path in scratch.iterdir()))
 
 
+class ImageNormalisationTests(SimpleTestCase):
+    """Images that PIL cannot re-encode as JPEG must not be lost.
+
+    121 of the 4,995 community images are RGBA PNGs carrying a `.jpg`
+    extension. `downscale_for_detection` saves as JPEG, so those raise and land
+    as errors -- a 2.4% silent hole in the queue that only shows up as a merge
+    that never completes.
+    """
+
+    def test_rgba_png_with_jpg_extension_is_handled(self):
+        from unittest.mock import MagicMock
+
+        from lpr_app.ml.label_teacher import label_one
+
+        with tempfile.TemporaryDirectory() as raw:
+            source = Path(raw) / "screenshot.jpg"
+            Image.new("RGBA", (900, 600), (200, 30, 30, 128)).save(source, "PNG")
+
+            client = MagicMock()
+            client.analyze_image.return_value = None
+            record = label_one(str(source), client=client, scratch_dir=Path(raw) / "scratch")
+
+            # Reaches the API call, rather than failing in the downscale step.
+            self.assertEqual(record["status"], "error")
+            self.assertNotEqual(record["error"], "downscale failed")
+            self.assertTrue(client.analyze_image.called)
+
+    def test_greyscale_and_cmyk_are_handled(self):
+        from unittest.mock import MagicMock
+
+        from lpr_app.ml.label_teacher import label_one
+
+        # PNG cannot hold greyscale-as-L or CMYK here, so L goes out as PNG and
+        # CMYK as JPEG -- both still land on disk with a .jpg name.
+        for mode, fmt in (("L", "PNG"), ("CMYK", "JPEG")):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as raw:
+                source = Path(raw) / "odd.jpg"
+                Image.new(mode, (400, 300)).save(source, fmt)
+
+                client = MagicMock()
+                client.analyze_image.return_value = None
+                record = label_one(str(source), client=client, scratch_dir=Path(raw) / "scratch")
+
+                self.assertNotEqual(record["error"], "downscale failed")
+
+    def test_pathological_image_is_bounded(self):
+        # A 108-megapixel screenshot trips PIL's decompression-bomb guard on the
+        # re-encode, and costs nothing at full size for plate detection.
+        from unittest.mock import MagicMock
+
+        from lpr_app.ml.label_teacher import label_one
+
+        with tempfile.TemporaryDirectory() as raw:
+            source = Path(raw) / "huge.jpg"
+            Image.new("RGB", (9000, 7000), (10, 90, 200)).save(source)
+
+            client = MagicMock()
+            client.analyze_image.return_value = None
+            record = label_one(str(source), client=client, scratch_dir=Path(raw) / "scratch")
+
+            self.assertNotEqual(record["error"], "downscale failed")
+
+
 class MergeTests(SimpleTestCase):
     def _queue(self, root: Path, images: list[str], shards: int = 1) -> Path:
         for image in images:

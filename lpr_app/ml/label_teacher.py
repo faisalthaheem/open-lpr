@@ -201,6 +201,9 @@ def label_one(image_path: str, client=None, scratch_dir: Path | None = None) -> 
 
     scratch = Path(scratch_dir) if scratch_dir else Path(tempfile.mkdtemp(prefix="teacher-"))
     owns_scratch = scratch_dir is None
+    # A caller-supplied scratch directory may not exist yet; creating it is the
+    # difference between working and a FileNotFoundError on every image.
+    scratch.mkdir(parents=True, exist_ok=True)
     try:
         from PIL import Image
 
@@ -208,8 +211,22 @@ def label_one(image_path: str, client=None, scratch_dir: Path | None = None) -> 
             original_w, original_h = opened.size
 
         # Every intermediate stays inside scratch; the source is only read.
-        staged = scratch / path.name
-        shutil.copy2(path, staged)
+        #
+        # Re-encoded rather than copied, because 121 of the 4,995 community
+        # images are RGBA PNGs carrying a .jpg extension. PIL cannot save those
+        # as JPEG, so `downscale_for_detection` raises and the image is lost as
+        # an error -- a 2.4% silent hole in the queue. Flattening alpha to RGB
+        # here fixes the class of problem rather than one file, and costs one
+        # re-encode that the downscale was going to do anyway.
+        staged = scratch / (path.stem + ".jpg")
+        with Image.open(path) as opened:
+            image = opened.convert("RGB")
+            if max(image.size) > 4096:
+                # Guard the pathological uploads. A 108-megapixel screenshot
+                # costs nothing useful here and trips PIL's decompression-bomb
+                # limit in the copy.
+                image.thumbnail((4096, 4096), Image.Resampling.LANCZOS)
+            image.save(staged, "JPEG", quality=95)
 
         downscaled_path = ImageProcessor.downscale_for_detection(
             str(staged),
