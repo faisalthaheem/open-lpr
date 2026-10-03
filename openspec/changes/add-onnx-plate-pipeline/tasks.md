@@ -143,6 +143,15 @@ Deliberately last, and deliberately a checklist rather than work done
 alongside: every item below is a place where a reader would otherwise find a
 claim that was true when written and is not true now.
 
+The training imagery is deliberately **not** published. The ~5,000
+community-contributed images are photographs taken by users of a live
+deployment: they contain real plates, and as whole scenes rather than crops,
+very likely faces and vehicles. Filenames preserve upload-time device and
+timestamp strings. Nobody consented, and a transcription beside an image is a
+searchable index of real registration numbers. The reusable contribution is the
+tooling in `lpr_app/ml/`, which is already public and needs none of that data
+to be useful.
+
 ### Accuracy numbers
 
 - [ ] 13.1 Replace the 20-plate pilot figures (CER 0.367, exact-match 0.35) in `AGENTS.md` and `CHANGELOG.md` with the measured figures from the trained-model evaluation, and record the sample size the new numbers rest on. A number without its sample size is not evidence.
@@ -162,7 +171,21 @@ claim that was true when written and is not true now.
 - [ ] 13.9 Confirm every reference to the renamed dataset exporter points at `lpr_app.ml.datasets.imanno_to_coco`, not the old module name.
 - [ ] 13.10 Confirm no document describes the exporter as producing ONNX. It produces COCO JSON; the `.pth` and `.onnx` steps are separate and belong to the trainer and `export_onnx.py`.
 
+### Artifact distribution
+
+`PIPELINE_BACKEND` defaults to `local`, which requires model artifacts at
+runtime that cannot be committed (`model/*` is gitignored). Without a
+distribution mechanism a fresh deployment cannot start. Deferred until the
+trained model is measured, so the decision reflects the final artifact's size
+and the code that consumes it.
+
+- [ ] 13.11 Publish **all three** artifacts -- detector, OCR recogniser, and OCR dictionary -- not the detector alone. `docker-entrypoint.sh` exits non-zero if any of the three is missing, so publishing one relocates the failure rather than removing it.
+- [ ] 13.12 Prefer release assets on this repository over a separate model repository, pinned by tag. A separate repo leaves the artifacts unlinked from the code that expects them: retrain, publish, forget to bump the pin, and deployments pull a detector mismatched to their pipeline, discovered in production rather than CI.
+- [ ] 13.13 Verify each downloaded artifact against the `sha256` in `manifest.json` and fail startup on mismatch. Release assets are mutable and can be silently re-uploaded; a checksum failure must not load.
+- [ ] 13.14 Implement the download with the standard library, not a new runtime dependency. One HTTP GET with resume and retry does not justify adding a client library to the production image.
+- [ ] 13.15 Keep the existing "artifacts missing, mount them or set `PIPELINE_BACKEND=llm`" failure as the offline path, and make the error say so.
+
 ### Close out
 
-- [ ] 13.11 Archive this change, and confirm the archived specs no longer contradict the shipped implementation.
-- [ ] 13.12 Verify the change's own `tasks.md` has no unchecked box, so the archive does not claim completeness it does not have.
+- [ ] 13.16 Archive this change, and confirm the archived specs no longer contradict the shipped implementation.
+- [ ] 13.17 Verify the change's own `tasks.md` has no unchecked box, so the archive does not claim completeness it does not have.
