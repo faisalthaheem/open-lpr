@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Recognition scoring: `lpr_app/ml/recognition_scoring.py` computes CER and exact-match over alphanumerics only, per layout and per confidence band, and `compare_backends.py` accepts `--labels` to use it. Blank labels are skipped rather than charged to a backend as full-length deletions
+- `compare_backends.py --dump-label-template <dir>` writes a per-plate crop plus a `labels.json` to transcribe, which is how the corpus's missing ground truth gets produced
 - Local ONNX plate detection and OCR backend — a YOLOX detector, classical perspective
   rectification, and a PP-OCR CTC recogniser — selectable with `PIPELINE_BACKEND=llm`.
   **See the Changed entry below for the default flip and its caveats.**
@@ -22,7 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **`PIPELINE_BACKEND` now defaults to `local`.** Images are detected and read by in-process ONNX models by default, at ~60ms per image against the LLM backend's ~3600ms — the only path that fits the project's sub-500ms budget. Measured on the corpus, the local backend also detects more reliably (recall 1.000 vs 0.375 at IoU 0.3) and reads more plates (0.95 vs 0.375 of detections).
-  - **Its text accuracy is unmeasured.** The corpus annotates plate boxes with no transcription labels, so there is no ground truth to score a read against; the local backend demonstrably misreads some plates it does find (`QG.260` → `0G260`). The flip rests on latency and detection numbers, not on a text-accuracy result, because none exists. Numbers recorded in `openspec/changes/measure-local-backend-accuracy/COMPARISON.md`.
+  - **Its text accuracy is now partially known, and is a pilot.** A 20-plate hand-transcribed run scores CER 0.367 and exact-match 0.35: it reads nearly every plate it detects and gets roughly a third exactly right. Twenty plates, ordered by image id rather than randomly sampled, with the LLM arm not scored on the same plates — this is evidence about the shape of the problem, not a basis for the flip. The flip still rests on latency and detection numbers. Numbers recorded in `openspec/changes/measure-local-backend-accuracy/COMPARISON.md`.
+  - **Confidence tracks correctness, monotonically.** Across 0.0–0.5 / 0.5–0.8 / 0.8–1.0 confidence bands on those plates, CER falls 0.684 → 0.527 → 0.043 and exact-match rises 0.00 → 0.11 → 0.75. The local backend's lower median confidence is honest, which is the safer failure. `PIPELINE_OCR_MIN_CONFIDENCE` is a real lever on this evidence but stays at 0.0: 20 plates is too few to pick a value on.
   - **Model artifacts are now required at runtime.** A deployment without `model/plate/` populated cannot process images. This fails loudly with the resolved path rather than degrading to zero plates, which would be indistinguishable from a working service that found nothing.
   - **Rollback is configuration-only:** set `PIPELINE_BACKEND=llm` and redeploy. No migration, no data rewrite, and the LLM path remains fully tested.
 - `lpr_app/services/image_processing_service.py` — the three-phase LLM procedure moved from inline code in `process_uploaded_image` into `_run_llm_pipeline`, alongside a new `_run_local_pipeline`. The LLM path's behaviour is unchanged, including its fixed-pixel OCR crop padding; tests pin the prompts sent, the padding applied, and the errors returned
@@ -36,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Manual integration and diagnostic scripts moved to `scripts/`, out of test discovery
 
 ### Fixed
+- `compare_backends.py` classified plate layout by aspect ratio at a 2.0 cutoff, labelling `EG·209` — one line with an `ICT-ISLAMABAD` caption beneath it, ratio 1.91 — as stacked, and so attributing most of the corpus to the stacked bucket. Geometry cannot separate a two-row plate from a captioned single-row plate, so `layout_of()` now declines outside 1.5–2.6 and reports those as `unknown` rather than guessing
+- `compare_backends.py` exited 0 on a missing `--labels` file and raised a bare `FileNotFoundError` on a missing `--data` split; both now name the path and exit 2
 - `lpr_processing_duration_seconds` was exported but never observed — no code path constructed `PerformanceTracker("processing")`, so the metric a dashboard already graphs was always empty. It is now recorded per upload on whichever backend ran, which is what makes the two backends comparable on one series.
 - YOLOX output decoder applied `exp()` to the regressed width and height, which the ONNX export already does; every box inflated until it clamped to the whole frame
 - PP-OCR CTC decode applied softmax to output that the export already emits as normalised probabilities, which drove recognition confidence to exactly 0.00 on every plate

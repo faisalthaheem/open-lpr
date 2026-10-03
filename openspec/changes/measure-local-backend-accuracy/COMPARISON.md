@@ -84,6 +84,16 @@ two-line plate from a single-line plate carrying a caption. The local backend's
 stacked plates. See `DETECTOR.md` for why this is unresolved and why row splitting
 defaults to off.
 
+This was also a bug in the measurement itself, not just a limitation of it. The
+original layout guess used a 2.0 aspect threshold, which labelled `EG·209` — one
+line with an `ICT-ISLAMABAD` caption beneath it, aspect 1.91 — as stacked, and so
+attributed most of this corpus to the stacked bucket. `layout_of()` now declines
+to classify anything between 1.5 and 2.6 and records it as `unknown` instead. On
+the same 20 plates that is the difference between a 15-plate "stacked" bucket that
+was mostly single-line plates and a 17-plate `unknown` bucket that honestly says
+the layout is not knowable from geometry. Per-layout accuracy cannot be reported
+until a layout classifier exists.
+
 ## Decision
 
 **The default is now `local`.** The maintainer's call, made on the latency and
@@ -112,3 +122,56 @@ Until (1) and (2) land, this comparison supports the decision that was made and
 does not verify it. Those are different things, and the difference is what would
 surface a silent accuracy regression as an alertable metric drop rather than as a
 slow accumulation of wrong numbers nobody notices.
+
+## Partial measurement: 20 labelled plates
+
+The scoring harness now exists (`lpr_app/ml/recognition_scoring.py`) and
+`compare_backends.py` takes `--labels`. It was exercised on **20 hand-transcribed
+plates** — a pilot to prove the harness works end to end, not a substitute for the
+few hundred the change calls for. The transcriber worked from per-plate crops
+written by `--dump-label-template`, without sight of the backend's read.
+
+| | Local ONNX |
+|---|---|
+| Plates scored | 20 |
+| CER | 0.367 |
+| Exact match | 0.35 |
+| Read as nothing | 1 |
+
+CER 0.367 against read coverage of 0.95 is the shape of the risk this change
+predicted: the backend reads nearly every plate it detects and gets roughly a
+third exactly right. The `QG.260` → `0G200` misread from the 40-image run above
+recurs here as a one-character substitution, which is what the edit-distance
+scoring is calibrated to catch.
+
+### Confidence tracks correctness, monotonically
+
+The question the unlabelled run could not answer was whether confidence is
+informative — that is, whether a threshold would be a real lever or a coin flip.
+Over 20 labelled plates it is informative, and in one direction:
+
+| Confidence band | Plates | CER | Exact match |
+|---|---|---|---|
+| 0.0–0.5 | 3 | 0.684 | 0.00 |
+| 0.5–0.8 | 9 | 0.527 | 0.11 |
+| 0.8–1.0 | 8 | 0.043 | 0.75 |
+
+CER falls by more than an order of magnitude across the bands and exact-match
+rises from 0% to 75% with no reversals. On this evidence the local backend's lower
+median confidence of 0.775 is honest rather than merely diffident, and reading 1
+(of the two readings in *What these numbers cannot tell us*) is supported: the
+LLM's 0.98 against 0.775 is not obviously a different backend being better
+calibrated, it may largely be 0.98-when-it-is-reading-and-low-when-it-is-not.
+
+**Twenty plates is not enough to set a threshold on.** The bands are small, the
+boundary between them was not tuned, and the sample is the first 20 sorted by
+image id rather than a random draw, so it inherits whatever ordering that implies.
+The bands are evidence the relationship exists, not a threshold value. Re-run on
+several hundred before `PIPELINE_OCR_MIN_CONFIDENCE` is set to anything but 0.0.
+
+### What is still missing
+
+- **Scale.** 20 of a target few hundred, on a non-random slice.
+- **The LLM arm.** Not scored here. The comparison that matters is both backends on
+  the same labelled plates, and this run only measures the local one.
+- **Layout.** `unknown` for 17 of 20. Needs a layout classifier, not a threshold.

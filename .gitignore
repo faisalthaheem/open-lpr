@@ -121,6 +121,15 @@ models/*
 
 tmp/**/*.jpg
 
+# Transcription labels for the plate corpus. Human-transcribed and gitignored for
+# the same reason the corpus is external: a partly-transcribed labels file would
+# look like authoritative ground truth in the history, and an unannotated one is
+# worse -- scored as if every blank were a real registration.
+labels/
+*/labels.json
+*_labels.json
+transcription-labels/
+
 .stfolder
 
 media/*

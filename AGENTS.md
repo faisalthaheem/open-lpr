@@ -70,7 +70,7 @@ kept out of Django's test discovery — do not name a new unit test in a way tha
 - The AI client (`QwenVLClient`) wraps the `openai` Python SDK. It calls any OpenAI-compatible endpoint (LlamaCpp, vLLM, remote API).
 - Detection uses a two-phase pipeline: Phase 1 detects plate bounding boxes, Phase 2 runs OCR on cropped regions. Prompts are in `qwen_client.py`.
 - **Two backends, one output shape.** `PIPELINE_BACKEND` selects `local` (default) or `llm`. Both return the identical detections collection — `[{"plate": {"confidence", "coordinates"}, "ocr": [{"text", "confidence", "coordinates"}]}]` — so no caller, API, visualizer, or metric branches on which ran. `image_processing_service.py` holds the two paths in separate `_run_llm_pipeline` / `_run_local_pipeline` methods and branches once. **Switching back is configuration-only**: set `PIPELINE_BACKEND=llm` and redeploy. No migration, no data rewrite.
-- **The local backend is the default, and is not a proven replacement.** It is faster (60ms mean vs 3611ms) and detects more reliably on the corpus (recall 1.000 vs 0.375), but its *text accuracy is unmeasurable* because the corpus carries no transcription labels. It reads more plates and also misreads some of them (`QG.260` → `0G260`). Do not treat higher coverage as higher accuracy. The default was flipped on the latency budget and the detection numbers, not on a text-accuracy result — because none exists. See `openspec/changes/measure-local-backend-accuracy/COMPARISON.md`.
+- **The local backend is the default, and its text accuracy is only partially known.** It is faster (60ms mean vs 3611ms) and detects more reliably on the corpus (recall 1.000 vs 0.375). On a 20-plate transcribed pilot it scores CER 0.367 / exact-match 0.35 — it reads nearly every plate it detects and gets roughly a third exactly right. That pilot is not a decision: it is too small, not randomly ordered, and the LLM arm was not scored on the same plates. Do not treat higher coverage as higher accuracy. See `openspec/changes/measure-local-backend-accuracy/COMPARISON.md`.
 - **Stacked-plate row splitting is off by default, deliberately.** Aspect ratio cannot distinguish a two-line plate from a single-line plate carrying a caption — both span ratios 1.4–2.4, both have an ink gap, both split unevenly — and the split read scores *higher* confidence while being wrong. `PIPELINE_OCR_SPLIT_STACKED=true` enables it for regions known to be uniformly stacked. This is an open limitation, not a bug.
 - **Latency is instrumented, not assumed.** Per-stage durations export as `lpr_pipeline_stage_duration_seconds{stage,outcome}` and end-to-end as `lpr_pipeline_duration_seconds{outcome}`. The pre-existing `lpr_processing_duration_seconds` is still recorded on both backends so they stay comparable on one series. `PIPELINE_LATENCY_BUDGET_SECONDS` (default 0.5) is the project's sub-500ms target; `PIPELINE_STAGE_BUDGETS` takes `stage=seconds` pairs.
 - **ONNX Runtime install variants are an install-time choice, not a code branch.** No module branches on the execution provider; a stage is assigned `cpu`, `cuda`, or `rocm` by configuration and an unavailable provider falls back to CPU with a logged warning. The wheels:
@@ -157,14 +157,37 @@ pip install -r lpr_app/ml/requirements-train.txt
 python -m lpr_app.ml.datasets.plate --corpus <corpus-root> --out <dataset-root>
 python -m lpr_app.ml.benchmark --data <dataset-root> --model model/plate/plate_yolox_tiny_640.onnx
 python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 40
+python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 60 --dump-label-template <dir>
+python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 60 --labels <dir>/labels.json
 ```
 
 - The benchmark exits non-zero when mean latency exceeds the budget, and reports recall
   bucketed by plate height, so a small-plate regression fails the check instead of
   being discovered in production.
 - `compare_backends.py` measures both backends on the same images and records
-  `COMPARISON.md`. It **cannot measure text accuracy**: the corpus has no transcription
-  labels, so it reports read coverage and confidence, which is not correctness.
+  `COMPARISON.md`. Without labels it reports read coverage and confidence, which is
+  not correctness. With `--labels <file>` it also scores CER and exact-match per
+  confidence band, using `recognition_scoring.py` (Levenshtein over alphanumerics
+  only — the `alphanumeric` profile never emits separators, so scoring raw strings
+  would penalise it for its own charset).
+- **Transcription labels are human-transcribed and gitignored, like the corpus.** No
+  label set ships in the repo; the corpus has boxes only (its `imgareas.lbltxt` field
+  holds the class name `plate` and nothing else). Produce one with
+  `--dump-label-template <dir>`, which writes a per-plate crop plus a `labels.json`
+  pre-filled with the local backend's own read. **Overwrite those values; do not
+  confirm them.** A blank means "not transcribed" and is skipped rather than scored
+  as a deletion — scoring it would charge the backend for a plate nobody could read.
+- **A pilot measurement exists and is not yet a decision.** On 20 hand-transcribed
+  plates: CER 0.367, exact-match 0.35. Confidence tracks correctness monotonically
+  (CER 0.68 / 0.53 / 0.04 across the 0.0–0.5 / 0.5–0.8 / 0.8–1.0 bands), so
+  `PIPELINE_OCR_MIN_CONFIDENCE` is a real lever — but 20 non-randomly-ordered plates
+  are not enough to set it on, so it stays 0.0.
+- **Per-layout accuracy is not reportable.** `layout_of()` classifies only aspect
+  ratios outside 1.5–2.6 and records the rest as `unknown`, because geometry cannot
+  tell a two-row plate from a one-row plate with a caption. On the pilot, 17 of 20
+  plates are `unknown`. Do not re-introduce a single threshold: `EG·209` (one line,
+  caption beneath, ratio 1.91) and `L802 WGK` (two rows, ratio 1.9) are
+  indistinguishable, and a 2.0 cutoff labels both "stacked".
 - **Ultralytics YOLO is AGPL-3.0** and cannot be used against this Apache-2.0 project.
   The detector is YOLOX (Apache-2.0). Do not "upgrade" the detector to a YOLO variant.
 - The corpus is frame-extracted video and **leaks**: the published split shares 10
