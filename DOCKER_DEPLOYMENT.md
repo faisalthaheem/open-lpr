@@ -405,7 +405,7 @@ server {
 For specialized deployment scenarios:
 
 - [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
-- [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
+- [LlamaCpp Deployment Guide](docs/LLAMACPP.md) - Local inference with LlamaCpp server
 - [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
 
 

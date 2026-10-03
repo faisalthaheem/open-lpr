@@ -5,7 +5,7 @@ This document explains the release process and the release notes files.
 ## Files Created for v1.1.0
 
 1. [`RELEASE_NOTES_v1.1.0.md`](docs/RELEASE_NOTES_v1.1.0.md) — Comprehensive release notes
-2. [`GITHUB_RELEASE_v1.1.0.md`](GITHUB_RELEASE_v1.1.0.md) — GitHub release page content
+2. [`docs/RELEASE_v1.1.0_announcement.md`(docs/RELEASE_v1.1.0_announcement.md) — GitHub release page content
 3. [`CHANGELOG.md`](CHANGELOG.md) — Project changelog (updated with v1.1.0 section)
 
 ## Release Process
@@ -13,7 +13,7 @@ This document explains the release process and the release notes files.
 ### 1. Commit and Push Release Files
 
 ```bash
-git add CHANGELOG.md docs/RELEASE_NOTES_v1.1.0.md GITHUB_RELEASE_v1.1.0.md RELEASE_GUIDE.md
+git add CHANGELOG.md docs/RELEASE_NOTES_v1.1.0.md docs/RELEASE_v1.1.0_announcement.md RELEASE_GUIDE.md
 git commit -m "docs: prepare v1.1.0 release notes"
 git push origin main
 ```
@@ -30,7 +30,7 @@ git push origin v1.1.0
 1. Go to https://github.com/faisalthaheem/open-lpr/releases/new
 2. Choose the `v1.1.0` tag
 3. Set release title: `v1.1.0`
-4. Copy the content from [`GITHUB_RELEASE_v1.1.0.md`](GITHUB_RELEASE_v1.1.0.md) into the description
+4. Copy the content from [`docs/RELEASE_v1.1.0_announcement.md`(docs/RELEASE_v1.1.0_announcement.md) into the description
 5. Click "Publish release"
 
 ### 4. Automated CI/CD
@@ -47,5 +47,5 @@ The GitHub Actions workflow (`.github/workflows/docker-publish.yml`) will automa
 ## Previous Releases
 
 ### v1.0.0
-- [`RELEASE_NOTES_v1.0.0.md`](RELEASE_NOTES_v1.0.0.md)
-- [`GITHUB_RELEASE_v1.0.0.md`](GITHUB_RELEASE_v1.0.0.md)
+- [`docs/RELEASE_NOTES_v1.0.0.md`(docs/RELEASE_NOTES_v1.0.0.md)
+- [`see docs/`](#)

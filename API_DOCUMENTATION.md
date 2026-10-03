@@ -310,7 +310,7 @@ python scripts/test_api.py /path/to/your/image.jpg
 For specialized deployment scenarios and additional documentation:
 
 - [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
-- [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
+- [LlamaCpp Deployment Guide](docs/LLAMACPP.md) - Local inference with LlamaCpp server
 - [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
 
 ---

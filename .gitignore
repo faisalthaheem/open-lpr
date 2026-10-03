@@ -136,6 +136,11 @@ media/*
 container-media/*
 container-data/*
 
+# Runtime logs. `*.log` above only covers files that happen to end in .log; a
+# rotated or rotated-plus-suffix log would otherwise be the one file in here
+# that does get committed.
+logs/*
+
 # Static files (collected by Django)
 staticfiles/
 model_files/

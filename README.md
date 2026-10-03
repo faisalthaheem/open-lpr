@@ -220,7 +220,7 @@ docker compose down
 - **Blackbox Exporter**: http://blackbox.localhost
 - **Canary Service**: http://canary.localhost
 
-For detailed profile documentation, see [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
+For detailed profile documentation, see [Docker Profiles Guide](docs/DOCKER_PROFILES.md).
 
 #### Removed Individual Compose Files
 
@@ -372,7 +372,7 @@ QWEN_BASE_URL=http://llamacpp-cpu:8000/v1
 QWEN_MODEL=Qwen3-VL-4B-Instruct
 ```
 
-For detailed LlamaCpp deployment instructions, see [README-llamacpp.md](README-llamacpp.md).
+For detailed LlamaCpp deployment instructions, see [LlamaCpp Deployment Guide](docs/LLAMACPP.md).
 
 </details>
 
@@ -623,7 +623,7 @@ After starting the services:
 - **Blackbox Exporter**: http://blackbox.localhost
 - **Canary Service**: http://canary.localhost
 
-For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) and [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
+For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) and [Docker Profiles Guide](docs/DOCKER_PROFILES.md).
 
 ### CI/CD Workflow
 
@@ -663,12 +663,17 @@ open-lpr/
 ├── .gitignore                   # Git ignore file
 ├── .dockerignore               # Docker ignore file
 ├── API_DOCUMENTATION.md        # Detailed REST API documentation
-├── README-DOCKER-PROFILES.md   # Docker profiles guide
-├── README-llamacpp.md         # LlamaCpp deployment guide
 ├── DOCKER_DEPLOYMENT.md        # Docker deployment guide
-├── PROMETHEUS_METRICS.md      # Prometheus metrics documentation
+├── RELEASE_GUIDE.md            # How to cut a release
 ├── CHANGELOG.md               # Project changelog
+├── AGENTS.md                  # Contributor/agent working notes
 ├── LICENSE.md                 # License file
+├── docs/                      # Topic guides and release notes
+│   ├── DOCKER_PROFILES.md    # Docker profiles guide
+│   ├── LLAMACPP.md           # LlamaCpp deployment guide
+│   ├── BUILD_SCRIPT.md       # Local image build script
+│   ├── CANARY.md             # Canary monitoring service
+│   ├── PROMETHEUS_METRICS.md # Prometheus metrics documentation
 ├── scripts/                    # Manual integration & diagnostic scripts (not unit tests)
 │   ├── test_api.py             # API testing script
 │   ├── test_setup.py           # Test setup utilities
@@ -1070,9 +1075,9 @@ For issues and questions:
 
 For specialized deployment scenarios and additional resources:
 
-- [🆕 Docker Profiles Guide](README-DOCKER-PROFILES.md) - New profile-based Docker Compose setup (Recommended)
+- [🆕 Docker Profiles Guide(docs/DOCKER_PROFILES.md) - New profile-based Docker Compose setup (Recommended)
 - [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
-- [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
+- [LlamaCpp Deployment Guide](docs/LLAMACPP.md) - Local inference with LlamaCpp server
 - [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
 - [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
 
