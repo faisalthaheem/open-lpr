@@ -24,11 +24,16 @@ export default function AvailabilityGraph() {
   const [data, setData] = useState<DataPoint[]>([]);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [notApplicable, setNotApplicable] = useState<{ backend?: string; reason?: string } | null>(null);
 
   useEffect(() => {
     getAvailability(3)
-      .then((points) => {
-        setData(points.map((p) => ({ ...p, time: formatXAxis(p.timestamp) })));
+      .then((result) => {
+        if (!result.applicable) {
+          setNotApplicable({ backend: result.backend, reason: result.reason });
+          return;
+        }
+        setData(result.points.map((p) => ({ ...p, time: formatXAxis(p.timestamp) })));
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -40,6 +45,22 @@ export default function AvailabilityGraph() {
         <h2 className="text-lg font-semibold mb-4">Service Availability (3 days)</h2>
         <div className="h-48 flex items-center justify-center text-gray-400">
           Loading availability data...
+        </div>
+      </div>
+    );
+  }
+
+  // Distinct from "unavailable": nothing is broken, the measurement just has no
+  // source here, and saying otherwise reads as an outage.
+  if (notApplicable) {
+    return (
+      <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-6 shadow-sm">
+        <h2 className="text-lg font-semibold mb-4">Service Availability (3 days)</h2>
+        <div className="h-48 flex flex-col items-center justify-center gap-1 text-gray-400 text-center px-4">
+          <span>
+            Availability tracking is not active on the {notApplicable.backend ?? 'current'} backend
+          </span>
+          <span className="text-sm">{notApplicable.reason}</span>
         </div>
       </div>
     );
