@@ -63,8 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Every upload returned HTTP 500 (`AttributeError`) when the backend received an already-open PIL image rather than a file path
 - Oversized images could trigger a decompression bomb; uploads above `UPLOAD_IMAGE_MAX_PIXELS` (40MP) are now rejected, both at upload time and on images already on disk
 - `/health/` reported "healthy" while every upload was returning 500 on the local backend, because its only measurement was an external API that the local path never calls. It now reports whichever backend is actually serving requests
-- `/api/v1/availability/` queried Prometheus on every request and reported API uptime on the local backend; it now returns `not-applicable` there
+- `/api/v1/availability/` reported API uptime on the local backend, including a series cached before the backend switch; it now returns `applicable: false` with a reason, and the SPA renders an explanatory state rather than an empty chart
 - Missing or corrupt ONNX artifacts surfaced as a failure at request time with no signal; they are now downloaded and verified on first boot
+- The `lpr-canary` container was permanently unhealthy: its healthcheck shelled out to `wget`, which `python:3.11-slim` does not ship
+- CI's real-model tests skipped silently when artifacts were absent, so the job passed while proving nothing about them. CI now fetches artifacts and fails if those test classes did not execute
 
 ## [1.4.0] - 2026-06-02
 

@@ -57,6 +57,48 @@ jobs:
         run: |
           mkdir -p media container-metrics
 
+      # The classes below decode real ONNX exports. Each exists because a
+      # synthetic fixture written to match the decoder would have agreed with the
+      # decoder and passed: the YOLOX export already exponentiates its boxes, the
+      # PP-OCR head already emits normalised probabilities, and its label layout
+      # carries a trailing space class. Without artifacts these skip, so CI proves
+      # nothing about them. No continue-on-error: a failed fetch must fail the job.
+      - name: Fetch and verify model artifacts
+        run: |
+          python -m lpr_app.pipeline.fetch_artifacts --model-dir model/plate
+
+      - name: Assert real-model tests actually ran
+        run: |
+          python - <<'PY'
+          import importlib
+          import unittest
+
+          REQUIRED = (
+              ("lpr_app.tests.test_pipeline_detection_real_model", "RealDetectorTest"),
+              ("lpr_app.tests.test_pipeline_backend_switch", "RealModelLocalBackendTest"),
+          )
+          loader = unittest.TestLoader()
+          inert = []
+          total = 0
+          for module_name, class_name in REQUIRED:
+              cls = getattr(importlib.import_module(module_name), class_name)
+              # Class-level @skipUnless sets this flag and leaves the methods intact, so
+              # counting tests would prove nothing. Read the flag on the class itself.
+              if getattr(cls, "__unittest_skip__", False):
+                  inert.append(f"{module_name}.{class_name} (class skipped)")
+              suite = loader.loadTestsFromTestCase(cls)
+              total += suite.countTestCases()
+              # Method-level skipTest() instead replaces the method with a SkippedTest.
+              inert += [t.id() for t in suite if type(t).__name__ in ("SkippedTest", "SkipTest")]
+
+          if inert:
+              raise SystemExit(
+                  f"Real-model tests did not execute: {inert} (of {total} methods). "
+                  "Model artifacts are not usable in CI."
+              )
+          print(f"Verified {len(REQUIRED)} real-model test classes ({total} methods) executed.")
+          PY
+
       - name: Run tests with coverage
         run: |
           coverage run --source='lpr_app' manage.py test
