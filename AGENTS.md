@@ -203,10 +203,10 @@ python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 60 --labels 
 Profile-based Docker Compose (deprecated individual compose files must not be used):
 
 ```bash
-docker compose --profile core --profile cpu up -d          # CPU inference
-docker compose --profile core --profile nvidia-cuda up -d  # NVIDIA GPU
-docker compose --profile core --profile amd-vulkan up -d   # AMD Vulkan GPU
-docker compose --profile core up -d                        # External API only
+docker compose --profile core up -d                        # DEFAULT: local ONNX, no GPU, no LlamaCpp
+docker compose --profile core --profile cpu up -d          # Rollback: LLM backend on CPU
+docker compose --profile core --profile nvidia-cuda up -d  # Rollback: LLM backend on NVIDIA
+docker compose --profile core --profile amd-vulkan up -d   # Rollback: LLM backend on AMD Vulkan
 ```
 
 - Images published to `ghcr.io/faisalthaheem/open-lpr`

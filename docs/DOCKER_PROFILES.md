@@ -68,15 +68,19 @@ docker compose --profile proxy up -d
 
 **Note:** Traefik uses random ports by default (e.g., 32768, 32769). Set `TRAEFIK_HTTP_PORT` and `TRAEFIK_DASHBOARD_PORT` to use specific ports (e.g., 80, 8080).
 
-### `cpu` - CPU Inference
+### `cpu` - LLM Inference on CPU (LlamaCpp)
 
 **Services included:**
 - `llamacpp-cpu` - Llama.cpp server for CPU inference
 
+**Only for `PIPELINE_BACKEND=llm`.** The default backend infers on CPU inside the
+app container and needs no profile at all, so this is the rollback path rather
+than a faster option.
+
 **When to use:**
 - Systems without GPU acceleration
 - Development and testing
-- When model inference performance is not critical
+- When LLM inference performance is not critical
 
 **Deployment:**
 ```bash
@@ -86,10 +90,12 @@ docker compose --profile core --profile cpu up -d
 **Configuration:**
 See `.env.llamacpp` for model configuration.
 
-### `amd-vulkan` - AMD GPU Inference
+### `amd-vulkan` - LLM Inference on AMD GPU (LlamaCpp)
 
 **Services included:**
 - `llamacpp-amd-vulkan` - Llama.cpp server for AMD GPU inference (Vulkan)
+
+**Only for `PIPELINE_BACKEND=llm`** — the default backend runs in the app container.
 
 **When to use:**
 - Systems with AMD GPUs supporting Vulkan
@@ -105,10 +111,12 @@ See `.env.llamacpp` for model configuration.
 docker compose --profile core --profile amd-vulkan up -d
 ```
 
-### `nvidia-cuda` - NVIDIA GPU Inference
+### `nvidia-cuda` - LLM Inference on NVIDIA GPU (LlamaCpp)
 
 **Services included:**
 - `llamacpp-nvidia-cuda` - Llama.cpp server for NVIDIA GPU inference (CUDA)
+
+**Only for `PIPELINE_BACKEND=llm`** — the default backend runs in the app container.
 
 **When to use:**
 - Systems with NVIDIA GPUs
@@ -139,17 +147,22 @@ docker compose --profile core --profile proxy up -d
 ```
 Access services via domain names.
 
-### Production with CPU Inference
+### Production, Default Local Backend
+```bash
+docker compose --profile core up -d
+```
+
+### Production with LLM Inference on CPU
 ```bash
 docker compose --profile core --profile cpu up -d
 ```
 
-### Production with NVIDIA GPU
+### Production with LLM Inference on NVIDIA GPU
 ```bash
 docker compose --profile core --profile nvidia-cuda up -d
 ```
 
-### Production with AMD GPU
+### Production with LLM Inference on AMD GPU
 ```bash
 docker compose --profile core --profile amd-vulkan up -d
 ```
