@@ -12,11 +12,14 @@ type Story = StoryObj<typeof DisclaimerBanner>;
 
 export const Default: Story = {};
 
+/**
+ * Dismissal is now component state rather than a persisted localStorage flag,
+ * so this clicks the control instead of seeding storage. The previous version
+ * set `lpr-disclaimer-dismissed`, which nothing reads any more -- and which
+ * suppressed the notice permanently for anyone who had ever dismissed it.
+ */
 export const Dismissed: Story = {
-  decorators: [
-    (Story) => {
-      localStorage.setItem('lpr-disclaimer-dismissed', '1');
-      return <Story />;
-    },
-  ],
+  play: async ({ canvasElement }) => {
+    canvasElement.querySelector<HTMLButtonElement>('button[aria-label="Dismiss"]')?.click();
+  },
 };

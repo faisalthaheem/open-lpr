@@ -72,6 +72,14 @@ def api_ocr_upload(request):
 
             processing_time_ms = int((time.time() - start_time) * 1000)
 
+            # The overall processing duration, recorded on whichever backend ran.
+            # Without this the local backend's latency would only be visible on its
+            # own histograms, and the two backends could not be compared on the one
+            # metric a dashboard already graphs.
+            MetricsHelper.record_processing_duration(
+                "completed" if result["success"] else "failed", processing_time_ms / 1000.0
+            )
+
             # Update canary-specific metrics
             if is_canary:
                 MetricsHelper.record_canary_request("success" if result["success"] else "failed")
@@ -126,6 +134,7 @@ def api_ocr_upload(request):
             MetricsHelper.record_api_error()
 
             exception_processing_time_ms = int((time.time() - start_time) * 1000)
+            MetricsHelper.record_processing_duration("error", exception_processing_time_ms / 1000.0)
 
             if is_canary:
                 MetricsHelper.record_canary_request("error")

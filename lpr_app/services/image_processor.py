@@ -36,6 +36,17 @@ class ImageProcessor:
             allowed_types = ", ".join(settings.ALLOWED_IMAGE_TYPES)
             return False, f"File type not allowed. Allowed types: {allowed_types}"
 
+        # Reject oversized dimensions from the header before decoding. Placed
+        # ahead of verify() because verify() is cheap but not free on a hostile
+        # header, and because the two checks fail differently: verify() proves
+        # the file parses, this bounds what it may expand to.
+        from ..utils.validators import check_image_dimensions
+
+        is_valid, dimension_error = check_image_dimensions(uploaded_file)
+        if not is_valid:
+            logger.warning("Rejected upload on pixel dimensions: %s", dimension_error)
+            return False, dimension_error or "Image too large"
+
         # Try to open the image to verify it's a valid image
         try:
             with Image.open(uploaded_file) as img:

@@ -1,7 +1,12 @@
-## ADDED Requirements
+# api-image-list Specification
+
+## Purpose
+Covers the image listing API surface: the paginated, filterable list endpoint, its pagination parameter validation, and the per-item response format returned to consumers.
+
+## Requirements
 
 ### Requirement: Paginated image list API endpoint
-The backend SHALL expose a `GET /api/v1/images/` endpoint returning a paginated, filterable list of uploaded images.
+The backend SHALL expose a `GET /api/v1/images/` endpoint returning a paginated, filterable list of uploaded images. Numeric pagination parameters SHALL be validated and SHALL return `400` with a descriptive error message when malformed, rather than raising an unhandled exception.
 
 #### Scenario: Default listing
 - **WHEN** a GET request is made to `/api/v1/images/` with no query parameters
@@ -22,6 +27,18 @@ The backend SHALL expose a `GET /api/v1/images/` endpoint returning a paginated,
 #### Scenario: Pagination parameters
 - **WHEN** a GET request includes `page` and/or `page_size` query parameters
 - **THEN** the backend SHALL return the requested page with up to `page_size` results (default 12, max 100)
+
+#### Scenario: Non-integer pagination parameter is rejected
+- **WHEN** a GET request includes `page` or `page_size` whose value cannot be parsed as an integer
+- **THEN** the backend SHALL return a `400` status response with an error message naming the offending parameter, and SHALL NOT return a `500`
+
+#### Scenario: Out-of-range pagination parameter is normalized
+- **WHEN** a GET request includes `page` below `1` or `page_size` outside the range `1` to `100`
+- **THEN** the backend SHALL clamp the value into the valid range rather than returning an error or an unhandled exception
+
+#### Scenario: Existing pagination links preserve validated parameters
+- **WHEN** the backend builds `next` and `previous` pagination URLs
+- **THEN** the URLs SHALL carry the validated `page` and `page_size` values actually used for the response
 
 ### Requirement: Image list response format
 Each image in the list response SHALL include `id`, `filename`, `processing_status`, `upload_timestamp`, `processing_timestamp`, `original_image_url`, `processed_image_url`, `plate_count`, `ocr_count`, and `first_ocr_text`.

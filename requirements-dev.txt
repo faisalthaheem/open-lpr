@@ -1,2 +1,12 @@
 ruff==0.8.6
 coverage==7.6.9
+
+# Builds the small ONNX artifacts the pipeline tests run against. The web app
+# imports onnxruntime, not onnx -- the runtime reads a saved graph rather than
+# constructing one -- so this is test-only and stays out of requirements.txt.
+#
+# Without it the pipeline stage tests error at import in CI with a bare
+# ModuleNotFoundError, which reads like a broken test rather than a missing
+# dependency. It is here because requirements-train.txt, which also carries onnx,
+# installs torch and is deliberately not installed to run tests.
+onnx==1.23.1
