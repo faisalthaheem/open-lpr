@@ -8,7 +8,7 @@ The `build-docker-image.sh` script is a comprehensive utility that automates the
 
 ## Features
 
-- **Multi-platform builds**: Supports `linux/amd64` and `linux/arm64` by default
+- **Multi-platform builds**: Supports `linux/amd64` by default; pass `--platforms` for others
 - **Flexible tagging**: Custom image tags and registry configuration
 - **Build caching**: Optional GitHub Actions cache integration
 - **SBOM generation**: Optional Software Bill of Materials generation
@@ -74,7 +74,7 @@ The `build-docker-image.sh` script is a comprehensive utility that automates the
 | `--owner` | `-o` | Repository owner | `faisalthaheem` |
 | `--push` | `-p` | Push image to registry after build | `false` |
 | `--no-cache` | `-c` | Disable build cache | `false` |
-| `--platforms` | | Target platforms | `linux/amd64,linux/arm64` |
+| `--platforms` | | Target platforms | `linux/amd64` |
 | `--sbom` | | Generate SBOM after build | `false` |
 | `--build-cache` | | Use build cache | `true` |
 | `--verbose` | `-v` | Verbose output | `false` |
@@ -88,7 +88,7 @@ The script uses the following default values:
 - **Registry**: `ghcr.io`
 - **Owner**: `faisalthaheem`
 - **Tag**: `latest`
-- **Platforms**: `linux/amd64,linux/arm64`
+- **Platforms**: `linux/amd64`
 - **Full Image Name**: `ghcr.io/faisalthaheem/open-lpr:latest`
 
 ## Build Process

@@ -48,17 +48,6 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>Open LPR &mdash; License Plate Recognition</span>
             <div className="flex items-center gap-4">
-              <span>
-                Powered by{' '}
-                <a
-                  href="https://github.com/QwenLM/Qwen3-VL"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-purple-600 dark:text-purple-400 hover:underline"
-                >
-                  Qwen3-VL
-                </a>
-              </span>
               <a
                 href="https://github.com/faisalthaheem/open-lpr"
                 target="_blank"

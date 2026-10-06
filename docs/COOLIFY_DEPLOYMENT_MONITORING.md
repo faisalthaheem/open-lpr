@@ -314,7 +314,7 @@ To automate image building and pushing, use the included GitHub Actions workflow
 - Changes are pushed to `main` branch
 - Monitoring-related files are modified (prometheus/, grafana/, blackbox/, or Dockerfiles)
 
-The workflow builds images for both `linux/amd64` and `linux/arm64` architectures and supports:
+The workflow builds images for `linux/amd64` and supports:
 - Automatic tagging (latest, branch names, semantic versioning)
 - GitHub Container Registry authentication
 - Build caching for faster builds

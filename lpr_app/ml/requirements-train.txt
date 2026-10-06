@@ -1,0 +1,32 @@
+# Training-only dependencies for the local plate pipeline.
+#
+# These are deliberately NOT in requirements.txt. The Django application must
+# run without them: importing lpr_app.pipeline must never pull in torch.
+# Install them explicitly when working on the detector:
+#
+#     pip install -r lpr_app/ml/requirements-train.txt
+#
+# On an AMD host, install the ROCm build of torch instead of the default:
+#
+#     pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.2
+#
+# See AGENTS.md for the containerised training workflow.
+torch==2.6.0
+torchvision==0.21.0
+# YOLOX is installed from source rather than PyPI, because its setup.py pins
+# onnx-simplifier==0.4.10 whose pinocchio build does not compile. Remove that
+# requirement and install with:
+#
+#     pip install --no-build-isolation -e <YOLOX checkout>
+#
+# Other training dependencies (all needed by YOLOX's trainer):
+pycocotools>=2.0.2
+loguru
+thop
+ninja
+tabulate
+psutil
+tensorboard
+opencv-python-headless
+tqdm
+onnx>=1.13.0

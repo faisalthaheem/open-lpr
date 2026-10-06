@@ -18,7 +18,7 @@ IMAGE_NAME="open-lpr"
 REGISTRY="ghcr.io"
 REPOSITORY_OWNER="faisalthaheem"
 TAG="latest"
-PLATFORMS="linux/amd64,linux/arm64"
+PLATFORMS="linux/amd64"
 PUSH=false
 BUILD_CACHE=true
 NO_CACHE=false
@@ -58,7 +58,7 @@ OPTIONS:
     -o, --owner OWNER       Repository owner (default: faisalthaheem)
     -p, --push              Push image to registry after build
     -c, --no-cache          Disable build cache
-    --platforms PLATFORMS   Target platforms (default: linux/amd64,linux/arm64)
+    --platforms PLATFORMS   Target platforms (default: linux/amd64)
     --sbom                  Generate SBOM after build
     --build-cache           Use build cache (default: true)
     -v, --verbose           Verbose output

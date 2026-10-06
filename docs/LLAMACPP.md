@@ -570,6 +570,6 @@ For issues and support:
 
 For comprehensive documentation and references related to LlamaCpp and ROCm deployment, see:
 
-- [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Collection of important URLs and documentation links
-- [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - General Docker deployment instructions
-- [API Documentation](API_DOCUMENTATION.md) - Complete API reference
+- [LlamaCpp and ROCm Resources](LLAMACPP_RESOURCES.md) - Collection of important URLs and documentation links
+- [Docker Deployment Guide](../DOCKER_DEPLOYMENT.md) - General Docker deployment instructions
+- [API Documentation](../API_DOCUMENTATION.md) - Complete API reference
