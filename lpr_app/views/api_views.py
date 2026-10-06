@@ -19,7 +19,7 @@ from ..metrics import get_metrics_response
 from ..models import UploadedImage
 from ..pipeline.local_backend import LLM_BACKEND, LOCAL_BACKEND
 from ..services.api_service import ApiService
-from ..services.availability import get_availability_points
+from ..services.availability import NOT_APPLICABLE_REASON, active_backend, get_availability_points
 from ..services.file_service import FileService
 from ..services.image_processing_service import ImageProcessingService
 from ..services.qwen_client import get_qwen_client
@@ -459,4 +459,16 @@ def api_availability(request):
     if error:
         return JsonResponse({"error": error}, status=503)
 
-    return JsonResponse({"data": points})
+    # Distinguishable from both `{"data": []}` (queried, nothing recorded) and a
+    # 503 (upstream failed), so the SPA can say which one it is.
+    if points is None:
+        return JsonResponse(
+            {
+                "applicable": False,
+                "backend": active_backend(),
+                "reason": NOT_APPLICABLE_REASON,
+                "data": [],
+            }
+        )
+
+    return JsonResponse({"applicable": True, "data": points})

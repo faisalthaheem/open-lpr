@@ -18,12 +18,31 @@ from datetime import timezone as dt_timezone
 from django.conf import settings
 from django.core.cache import cache
 
+from ..pipeline.local_backend import LLM_BACKEND, LOCAL_BACKEND
+
 logger = logging.getLogger(__name__)
 
 CACHE_KEY_TEMPLATE = "availability:{days}"
 DEFAULT_DAYS = 3
 QUERY_STEP_SECONDS = "300"
 UPSTREAM_TIMEOUT_SECONDS = 10
+
+# The series is derived from `lpr_api_health_status`, which is only written under
+# the LLM backend. Under `local` the metric is stale rather than absent -- a
+# previously-cached series outlives a backend switch -- so serving it would report
+# the uptime of a backend this deployment no longer runs.
+NOT_APPLICABLE_REASON = (
+    "Availability is measured from the external VLM API, which is not in the request " "path under the local backend."
+)
+
+
+def active_backend() -> str:
+    return getattr(settings, "PIPELINE_BACKEND", LOCAL_BACKEND)
+
+
+def is_applicable() -> bool:
+    return active_backend() == LLM_BACKEND
+
 
 # Cache entries outlive the refresh interval so a failed refresh keeps serving the
 # last good series rather than dropping to an error.
@@ -90,6 +109,12 @@ def refresh_availability(days: int = DEFAULT_DAYS) -> bool:
     Returns:
         True if the cache was updated, False if the fetch failed.
     """
+    # Checked before the query, not after: under `local` there is nothing to
+    # fetch, and populating the cache would leave a series for the endpoint to
+    # serve after a later switch back.
+    if not is_applicable():
+        return False
+
     points = fetch_availability_points(days)
     if points is None:
         return False
@@ -108,7 +133,15 @@ def get_availability_points(days: int = DEFAULT_DAYS):
     Returns:
         A ``(points, error)`` tuple. ``points`` is a list (possibly empty) on
         success and None with ``error`` set when the series could not be obtained.
+        When the active backend has no external API to measure, the tuple is
+        ``(None, None)`` -- check ``is_applicable()`` to tell that case apart from
+        an empty series, which means "queried, nothing recorded yet".
     """
+    # Before the cache read: a series cached under `llm` survives the switch and
+    # would otherwise be served as though it described local inference.
+    if not is_applicable():
+        return None, None
+
     key = cache_key(days)
     cached = cache.get(key)
     if cached is not None:

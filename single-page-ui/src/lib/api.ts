@@ -191,10 +191,23 @@ export interface AvailabilityPoint {
   value: number;
 }
 
-export async function getAvailability(days: number = 3): Promise<AvailabilityPoint[]> {
+export interface AvailabilityResult {
+  points: AvailabilityPoint[];
+  /** False when the metric's source does not exist under the active backend. */
+  applicable: boolean;
+  backend?: string;
+  reason?: string;
+}
+
+export async function getAvailability(days: number = 3): Promise<AvailabilityResult> {
   const base = await getApiBase();
   const res = await fetch(`${base}/api/v1/availability/?days=${days}`);
   if (!res.ok) throw new Error('Failed to fetch availability');
   const data = await res.json();
-  return data.data ?? [];
+  return {
+    points: data.data ?? [],
+    applicable: data.applicable !== false,
+    backend: data.backend,
+    reason: data.reason,
+  };
 }
