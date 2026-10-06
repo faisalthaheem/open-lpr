@@ -106,13 +106,39 @@ if [ -f "$DB_PATH" ]; then
     fi
 fi
 
-# Verify the local pipeline's model artifacts before serving traffic.
+# Fetch the local pipeline's ONNX artifacts, then verify them before serving traffic.
 #
-# PIPELINE_BACKEND defaults to local, so a deployment whose artifacts are missing
-# would start fine and then fail every upload. Failing at startup makes the cause
-# visible in the logs before requests arrive, rather than as 500s afterwards.
+# PIPELINE_BACKEND defaults to local, so a deployment without artifacts would
+# either start and fail every upload, or refuse to start and leave the cause
+# buried in a container log. Fetching here makes a fresh deployment functional
+# on first boot; verifying here makes a bad download fail loudly and early.
+#
+# The artifacts are pinned to a tag (PIPELINE_MODEL_REVISION) so a given
+# deployment version resolves to the same bytes on every future redeploy.
+#
+# Set PIPELINE_MODEL_DOWNLOAD=false to skip the download entirely -- for
+# airgapped installs that populate PIPELINE_MODEL_DIR from elsewhere. The
+# presence check below still runs, so a misconfigured airgapped deployment
+# fails with the same clear message rather than at inference time.
 if [ "$PIPELINE_BACKEND" = "local" ]; then
     MODEL_DIR="${PIPELINE_MODEL_DIR:-/app/model/plate}"
+    MODEL_DOWNLOAD="${PIPELINE_MODEL_DOWNLOAD:-true}"
+
+    if [ "$MODEL_DOWNLOAD" = "true" ]; then
+        echo "Fetching pipeline model artifacts into $MODEL_DIR..."
+        if ! python /app/lpr_app/pipeline/fetch_artifacts.py --model-dir "$MODEL_DIR"; then
+            echo "ERROR: could not fetch pipeline model artifacts into $MODEL_DIR." >&2
+            echo "Check network egress to huggingface.co, or set PIPELINE_MODEL_DOWNLOAD=false" >&2
+            echo "and populate the directory manually. To run without the weights, set" >&2
+            echo "PIPELINE_BACKEND=llm and configure QWEN_*." >&2
+            exit 1
+        fi
+        # Downloaded as root; the app runs as django via gosu below.
+        if [ "$(id -u)" = "0" ]; then
+            chown -R django:django "$MODEL_DIR"
+        fi
+    fi
+
     MISSING=""
     for REQUIRED in \
         "${PIPELINE_DETECTOR_MODEL:-plate_yolox_tiny_640.onnx}" \
@@ -126,7 +152,7 @@ if [ "$PIPELINE_BACKEND" = "local" ]; then
     done
     if [ -n "$MISSING" ]; then
         echo "ERROR: PIPELINE_BACKEND=local but these model artifacts are missing:$MISSING" >&2
-        echo "Mount or download them into PIPELINE_MODEL_DIR, or set PIPELINE_BACKEND=llm to use the external API." >&2
+        echo "Download them into PIPELINE_MODEL_DIR, or set PIPELINE_BACKEND=llm to use the external API." >&2
         exit 1
     fi
     echo "Local pipeline artifacts verified in $MODEL_DIR"
