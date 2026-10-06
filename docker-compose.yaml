@@ -34,6 +34,17 @@ services:
       - ./staticfiles:/app/staticfiles
       # Metrics persistence
       - ./container-metrics:/app/metrics
+      # Local ONNX pipeline model artifacts (detector, recogniser, dictionary).
+      # PIPELINE_BACKEND defaults to local, so docker-entrypoint.sh downloads
+      # these on first boot if absent and verifies them on every boot. Mount a
+      # persistent directory here so the ~37MB download happens once rather than
+      # on every container replacement.
+      #
+      # This is deliberately NOT read-only: the entrypoint writes here on first
+      # boot. Once populated it is only ever read, so a persistent volume is
+      # effectively read-only in steady state. Set PIPELINE_MODEL_DOWNLOAD=false
+      # and mount :ro if you populate this directory from elsewhere.
+      - ./model/plate:/app/model/plate
     # Run as root initially for setup, then entrypoint switches to django user
     user: "0:0"
     environment:
@@ -63,6 +74,19 @@ services:
       
       # Metrics persistence
       - METRICS_FILE_PATH=/app/metrics/metrics_state.json
+      
+      # Local ONNX pipeline backend (local by default; llm uses the external API)
+      - PIPELINE_BACKEND=${PIPELINE_BACKEND:-local}
+      - PIPELINE_MODEL_DIR=/app/model/plate
+      - PIPELINE_DETECTOR_MODEL=${PIPELINE_DETECTOR_MODEL:-plate_yolox_tiny_640.onnx}
+      - PIPELINE_OCR_MODEL=${PIPELINE_OCR_MODEL:-plate_ocr_ppocrv5_mobile.onnx}
+      - PIPELINE_OCR_DICT=${PIPELINE_OCR_DICT:-plate_ocr_dict.json}
+      - PIPELINE_PROVIDER=${PIPELINE_PROVIDER:-cpu}
+      - PIPELINE_LATENCY_BUDGET_SECONDS=${PIPELINE_LATENCY_BUDGET_SECONDS:-0.5}
+      # Artifact download. The revision is pinned so a given deployment version
+      # resolves to the same weights on every future redeploy.
+      - PIPELINE_MODEL_DOWNLOAD=${PIPELINE_MODEL_DOWNLOAD:-true}
+      - PIPELINE_MODEL_REVISION=${PIPELINE_MODEL_REVISION:-detector-2026.10.1}
       
       # Prometheus URL for availability proxy
       - PROMETHEUS_URL=${PROMETHEUS_URL:-http://prometheus:9090}

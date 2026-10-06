@@ -9,7 +9,10 @@
 [![GitHub Container Registry](https://img.shields.io/badge/ghcr.io-open--lpr-blue?style=flat-square)](https://github.com/faisalthaheem/open-lpr/pkgs/container/open-lpr)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-*A powerful Django-based web application with a Next.js SPA frontend that uses Qwen3-VL AI model to detect and recognize license plates in images with advanced OCR capabilities.*
+*A Django web application with a Next.js SPA frontend that detects and recognises
+licence plates in images. Plate detection and text recognition run in-process on
+ONNX models by default — no GPU, no external API. A vision-language-model backend
+remains available and is selected with one environment variable.*
 
 > **🚨 Important Stability Notice**: For production deployments, we strongly recommend using **tagged releases** instead of the mainline branch. The mainline may contain experimental features and be under active development. See the [Production Deployment](#-production-deployment) section for guidance on using stable tagged versions.
 
@@ -45,8 +48,10 @@ Experience the license plate recognition system in action without any installati
 
 ## ✨ Features
 
-- 🤖 **AI-Powered Detection**: Uses qwen3-vl-4b-instruct vision-language model for accurate license plate recognition
-- 🔍 **Advanced OCR Integration**: Extracts text from detected license plates with confidence scores
+- 🤖 **In-Process Detection**: YOLOX-tiny plate detector running on ONNX Runtime — ~60ms per image on CPU, no GPU and no external API call
+- 🔍 **On-Device OCR**: PP-OCRv5 CTC recogniser reads plate text with confidence scores; CPU inference needs only `onnxruntime`
+- 🔁 **Configurable Backend**: `PIPELINE_BACKEND=llm` switches to a Qwen3-VL vision-language model via any OpenAI-compatible endpoint. Rolling back is one environment variable — no migration, no data rewrite
+- 📏 **Latency Instrumented**: Per-stage and end-to-end durations export as Prometheus histograms against a 0.5s budget
 - 🎯 **Bounding Box Visualization**: Draws colored boxes around detected plates and OCR text
 - 📤 **Drag & Drop Upload**: Modern, user-friendly file upload interface
 - 💾 **Permanent Storage**: All uploaded and processed images are saved permanently
@@ -64,10 +69,14 @@ Experience the license plate recognition system in action without any installati
 
 <div align="center">
 
-| Backend | AI Model | Frontend | Database | Deployment |
-|---------|----------|----------|----------|------------|
-| ![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django) | ![Qwen3-VL](https://img.shields.io/badge/Qwen3--VL-4B--instruct-FF6B35?style=flat-square) | ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
-| ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python) | ![OpenAI API](https://img.shields.io/badge/OpenAI%20Compatible-412991?style=flat-square&logo=openai) | ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
+| Backend | Inference | Frontend | Database | Deployment |
+|---------|-----------|----------|----------|------------|
+| ![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django) | ![ONNX Runtime](https://img.shields.io/badge/ONNX_Runtime-412991?style=flat-square) | ![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=next.js) | ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker) |
+| ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python) | ![YOLOX + PP-OCR](https://img.shields.io/badge/YOLOX%20%2B%20PP--OCR-FF6B35?style=flat-square) | ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=flat-square&logo=tailwindcss) | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) | ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions) |
+
+Inference runs locally by default. The vision-language-model path
+(Qwen3-VL or any OpenAI-compatible endpoint) is still supported via
+`PIPELINE_BACKEND=llm`.
 
 </div>
 
@@ -76,16 +85,76 @@ Experience the license plate recognition system in action without any installati
 <details>
 <summary>Click to expand</summary>
 
+### Model Artifacts
+
+`PIPELINE_BACKEND` defaults to `local`, which needs three ONNX artifacts
+(~37MB total). **Under Docker you do not fetch these yourself** —
+`docker-entrypoint.sh` downloads and checksum-verifies them on first boot:
+
+```
+INFO fetch_artifacts plate_yolox_tiny_640.onnx downloaded and verified (20183226 bytes)
+INFO fetch_artifacts Local pipeline artifacts verified in /app/model/plate
+```
+
+Mount `./model/plate` as a **persistent volume**. Without one the directory
+lives in the container's writable layer, is discarded on every container
+replacement, and the download repeats on each redeploy — which also means a
+transient network failure at that moment fails an otherwise-healthy deploy.
+
+Artifacts are pinned to a tag (`PIPELINE_MODEL_REVISION`, default
+`detector-2026.10.1`), so a given deployment version resolves to the same bytes
+on every future redeploy. Bumping the revision is an explicit act rather than a
+side effect of someone re-uploading to the weights repository's main branch.
+
+For a non-Docker run, or to pre-populate the directory:
+
+```bash
+mkdir -p model/plate
+python lpr_app/pipeline/fetch_artifacts.py --model-dir model/plate
+```
+
+Set `PIPELINE_MODEL_DOWNLOAD=false` for airgapped installs that populate
+`PIPELINE_MODEL_DIR` from elsewhere (a bake step, an internal mirror, a bind
+mount). The presence check still runs, so a misconfigured deployment fails at
+startup with a clear message rather than at inference time.
+
+> The recogniser and its dictionary are **a set**. Decoding assumes
+> `len(dict) + 2` output classes, so substituting one without the other yields
+> silently wrong text rather than an error. Provenance and licences are
+> documented in the [weights repository](https://huggingface.co/faisalthaheem/open-lpr-models).
+
 ### Docker Deployment (Recommended)
 
-The quickest way to get started is with Docker using the new profile-based compose file, which includes everything needed for local inference without requiring any external API endpoints.
+The quickest way to get started is with Docker using the profile-based compose
+file.
 
 > **🚨 Stability Notice**: For production environments, we strongly recommend using **tagged releases** instead of the mainline branch. See the [Production Deployment](#-production-deployment) section for stable version instructions.
 
 > **🚨 Important Notice**: The individual `docker-compose-llamacpp-*.yml` files have been removed. Use the profile-based approach with `docker-compose.yaml`.
 
-#### Option 1: AMD Vulkan GPU Version (Fastest Local Inference)
-For users with AMD GPUs that support Vulkan:
+#### Option 1: CPU Only (Default, No GPU Required)
+
+The default backend needs no GPU profile at all — inference is on-CPU inside the
+app container. The `cpu`/`amd-vulkan`/`nvidia-cuda` profiles below exist only for
+the optional `PIPELINE_BACKEND=llm` path:
+
+```bash
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+mkdir -p container-data container-media staticfiles model/plate
+
+docker compose --profile core up -d
+docker compose logs -f
+```
+
+The artifacts (~37MB) download on first boot. `model/plate` is already mounted
+by `docker-compose.yaml`, so keeping it on the host means subsequent redeploys
+reuse them.
+
+#### Option 2: AMD Vulkan GPU + LlamaCpp Backend
+For users with AMD GPUs that support Vulkan, running the vision-language-model
+backend:
 
 ```bash
 # Clone the repository
@@ -108,8 +177,8 @@ docker compose --profile core --profile amd-vulkan up -d
 docker compose logs -f
 ```
 
-#### Option 2: CPU Version (Universal Compatibility)
-For users without compatible GPUs or for testing purposes:
+#### Option 3: CPU LlamaCpp Backend (Universal Compatibility)
+For running the vision-language-model backend on CPU:
 
 ```bash
 # Clone the repository
@@ -132,7 +201,7 @@ docker compose --profile core --profile cpu up -d
 docker compose logs -f
 ```
 
-#### Option 3: NVIDIA CUDA GPU Version
+#### Option 4: NVIDIA CUDA GPU + LlamaCpp Backend
 For users with NVIDIA GPUs that support CUDA:
 
 ```bash
@@ -156,8 +225,8 @@ docker compose --profile core --profile nvidia-cuda up -d
 docker compose logs -f
 ```
 
-#### Option 4: External API Only
-For users who want to use an external OpenAI-compatible API endpoint:
+#### Option 5: External API Only
+Set `PIPELINE_BACKEND=llm` to use an external OpenAI-compatible API endpoint:
 
 ```bash
 # Clone the repository
@@ -189,24 +258,24 @@ docker compose logs -f
 The main `docker-compose.yml` now uses the **merge design pattern** with profiles for flexible deployment:
 
 **Profiles Available:**
-- **core**: Core infrastructure (Traefik, OpenLPR, Prometheus, Grafana, Blackbox Exporter, Canary)
-- **cpu**: CPU-based LlamaCpp inference
-- **amd-vulkan**: AMD Vulkan GPU inference
-- **nvidia-cuda**: NVIDIA CUDA GPU inference
+- **core**: Core infrastructure (Traefik, OpenLPR, Prometheus, Grafana, Blackbox Exporter, Canary). This alone is a complete deployment — the default backend runs inference inside the app container
+- **cpu**: CPU-based LlamaCpp inference (only for `PIPELINE_BACKEND=llm`)
+- **amd-vulkan**: AMD Vulkan GPU inference (only for `PIPELINE_BACKEND=llm`)
+- **nvidia-cuda**: NVIDIA CUDA GPU inference (only for `PIPELINE_BACKEND=llm`)
 
 **Usage Examples:**
 ```bash
-# Core infrastructure + CPU inference
+# Default: core only, in-process ONNX inference, no GPU
+docker compose --profile core up -d
+
+# Vision-language-model backend on CPU
 docker compose --profile core --profile cpu up -d
 
-# Core infrastructure + NVIDIA inference
+# Vision-language-model backend on NVIDIA
 docker compose --profile core --profile nvidia-cuda up -d
 
-# Core infrastructure + AMD Vulkan inference
+# Vision-language-model backend on AMD Vulkan
 docker compose --profile core --profile amd-vulkan up -d
-
-# Core services only (for external API)
-docker compose --profile core up -d
 
 # Stop all services
 docker compose down
@@ -220,7 +289,7 @@ docker compose down
 - **Blackbox Exporter**: http://blackbox.localhost
 - **Canary Service**: http://canary.localhost
 
-For detailed profile documentation, see [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
+For detailed profile documentation, see [Docker Profiles Guide](docs/DOCKER_PROFILES.md).
 
 #### Removed Individual Compose Files
 
@@ -228,8 +297,8 @@ For detailed profile documentation, see [README-DOCKER-PROFILES.md](README-DOCKE
 
 | Removed file | Replacement command | Previous behaviour |
 | --- | --- | --- |
-| `docker-compose-llamacpp-amd-vulcan.yml` | `docker compose --profile core --profile amd-vulkan up -d` | Full local deployment with AMD GPU acceleration using Vulkan |
-| `docker-compose-llamacpp-cpu.yml` | `docker compose --profile core --profile cpu up -d` | Full local deployment using CPU for inference |
+| `docker-compose-llamacpp-amd-vulcan.yml` | `docker compose --profile core --profile amd-vulkan up -d` | Vision-language-model backend with AMD GPU acceleration using Vulkan |
+| `docker-compose-llamacpp-cpu.yml` | `docker compose --profile core --profile cpu up -d` | Vision-language-model backend using CPU for inference |
 
 ### Manual Installation
 
@@ -238,7 +307,8 @@ For development or custom deployments:
 1. **Prerequisites**
    - Python 3.10+
    - pip package manager
-   - Qwen3-VL API access
+   - *Only* for a non-Docker run: the ONNX artifacts (see [Model Artifacts](#model-artifacts))
+   - *Only* for `PIPELINE_BACKEND=llm`: access to a Qwen3-VL or other OpenAI-compatible endpoint
 
 2. **Clone the repository**
    
@@ -273,29 +343,37 @@ For development or custom deployments:
    pip install -r requirements.txt
    ```
 
-5. **Configure environment variables**
+5. **Fetch the model artifacts** (not needed when using Docker, which does this
+   on first boot)
    ```bash
-   cp .env.example .env
-   # Edit .env with your settings
+   mkdir -p model/plate
+   python lpr_app/pipeline/fetch_artifacts.py --model-dir model/plate
    ```
 
-6. **Set up database**
+6. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your settings.
+   # The default backend needs no API key; QWEN_* is only read by PIPELINE_BACKEND=llm.
+   ```
+
+7. **Set up database**
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
 
-7. **Create superuser (optional)**
+8. **Create superuser (optional)**
    ```bash
    python manage.py createsuperuser
    ```
 
-8. **Run development server**
+9. **Run development server**
    ```bash
    python manage.py runserver
    ```
 
-9. **Access the application**
+10. **Access the application**
    Open http://127.0.0.1:8000 in your browser
 
 </details>
@@ -317,21 +395,97 @@ SECRET_KEY=your-secret-key-here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# Qwen3-VL API Configuration
-QWEN_API_KEY=your-qwen-api-key
-QWEN_BASE_URL=https://your-open-api-compatible-endpoint.com/v1
-QWEN_MODEL=qwen3-vl-4b-instruct
+# Inference backend: local (default, in-process ONNX) or llm (external API).
+# 'local' requires the artifacts under PIPELINE_MODEL_DIR. Nothing else here is
+# needed for the default path -- no API key, no GPU.
+PIPELINE_BACKEND=local
 
 # File Upload Settings
 UPLOAD_FILE_MAX_SIZE=10485760  # 10MB
 MAX_BATCH_SIZE=10
 ```
 
-### Docker Environment with LlamaCpp
+### Pipeline Settings
 
-For local LlamaCpp inference deployment:
+The local backend is configured entirely by environment variables. The defaults
+are tuned for this project; the full annotated list with rationale is in
+[`.env.example`](.env.example) and [AGENTS.md](AGENTS.md).
 
-Create a `.env.llamacpp` file based on `.env.llamacpp.example`:
+| Variable | Default | Notes |
+|---|---|---|
+| `PIPELINE_BACKEND` | `local` | `local` or `llm`. Artifacts are **required** when `local`; a missing one raises rather than silently returning zero plates |
+| `PIPELINE_MODEL_DIR` | `model/plate` | Where artifacts are resolved from |
+| `PIPELINE_MODEL_DOWNLOAD` | `true` | Docker only. Fetch artifacts on first boot. `false` for airgapped installs |
+| `PIPELINE_MODEL_REVISION` | `detector-2026.10.1` | Pinned tag in the weights repo, so a deployment version resolves to the same bytes on every redeploy |
+| `PIPELINE_MODEL_REPO` | `faisalthaheem/open-lpr-models` | |
+| `PIPELINE_DETECTOR_MODEL` | `plate_yolox_tiny_640.onnx` | |
+| `PIPELINE_DETECTOR_INPUT_SIZE` | `640,640` | Recall-critical, not a speed knob — the corpus 10th-percentile plate is 36px tall, which only stays resolvable at 640 |
+| `PIPELINE_DETECTOR_CONF_THRESHOLD` | `0.3` | |
+| `PIPELINE_DETECTOR_NMS_IOU` | `0.45` | |
+| `PIPELINE_LAYOUT_THRESHOLD` | `2.0` | Aspect ratio separating stacked from single-line plates |
+| `PIPELINE_OCR_MODEL` | `plate_ocr_ppocrv5_mobile.onnx` | |
+| `PIPELINE_OCR_DICT` | `plate_ocr_dict.json` | Must match the recogniser export |
+| `PIPELINE_OCR_BATCH_SIZE` | `8` | Crops per inference |
+| `PIPELINE_OCR_CHARSET_PROFILE` | `alphanumeric` | `alphanumeric` or `no_io` |
+| `PIPELINE_OCR_SPLIT_STACKED` | `False` | Off by default; see below |
+| `PIPELINE_RECTIFY_ENABLED` | `True` | When false, `OCR_CROP_PADDING_PX` applies instead |
+| `PIPELINE_PROVIDER` | `cpu` | `cpu`, `cuda`, `rocm`. An unavailable provider falls back to CPU with a logged warning. ROCm is never required |
+| `PIPELINE_LATENCY_BUDGET_SECONDS` | `0.5` | The sub-500ms target |
+| `PIPELINE_STAGE_BUDGETS` | empty | `stage=seconds` pairs, e.g. `detect_plate=0.4` |
+
+### Upload Limits
+
+| Variable | Default | Notes |
+|---|---|---|
+| `UPLOAD_FILE_MAX_SIZE` | `1048576` | Bytes on disk |
+| `UPLOAD_IMAGE_MAX_PIXELS` | `40000000` | Decoded pixels, read from the header before decompression. `0` disables |
+
+The two are not interchangeable. A flat-colour PNG compresses by roughly 3000:1,
+so a 0.4MB upload can declare 144 megapixels and cost 430MB of RAM once decoded —
+which is what makes the size limit insufficient on its own against a
+decompression bomb. Pillow's built-in guard warns below 178 megapixels rather
+than rejecting, so it does not cover this case.
+
+40 megapixels accepts a 12MP phone photo with room to spare. The detector
+letterboxes to 640×640 regardless, so input resolution beyond this point costs
+memory without buying accuracy.
+
+**Switching backends.** Both produce an identical detections structure, so no
+API response, caller, visualizer, or metric branches on which one ran. Rolling
+back is `PIPELINE_BACKEND=llm` and a redeploy — no migration, no data rewrite.
+
+**Two limitations worth knowing before tuning.**
+
+*Stacked-plate row splitting is off by default, deliberately.* Aspect ratio
+cannot distinguish a two-line plate from a single-line plate carrying a caption:
+both span ratios 1.4–2.4, both have an ink gap, both split unevenly. The split
+read scores *higher* confidence while being wrong. Enable
+`PIPELINE_OCR_SPLIT_STACKED=true` only for regions known to be uniformly
+stacked.
+
+*Higher coverage is not higher accuracy.* On a 20-plate hand-transcribed pilot
+the local backend scores CER 0.367 / exact-match 0.35 — it reads nearly every
+plate it detects and gets roughly a third exactly right. That pilot is small,
+was not randomly ordered, and the LLM arm was not scored on the same plates, so
+it is not a comparison. See
+[`openspec/changes/measure-local-backend-accuracy/COMPARISON.md`](openspec/changes/measure-local-backend-accuracy/COMPARISON.md).
+
+### Vision-Language-Model Backend (optional)
+
+Only used when `PIPELINE_BACKEND=llm`. Any OpenAI-compatible endpoint works —
+a hosted API, vLLM, or the bundled LlamaCpp services.
+
+For a plain external endpoint, set these in `.env`:
+
+```env
+PIPELINE_BACKEND=llm
+QWEN_API_KEY=your-api-key
+QWEN_BASE_URL=https://your-open-api-compatible-endpoint.com/v1
+QWEN_MODEL=your-model-name
+```
+
+To run the bundled LlamaCpp service instead, create a `.env.llamacpp` file based
+on `.env.llamacpp.example`:
 
 ```env
 # HuggingFace Token
@@ -372,7 +526,7 @@ QWEN_BASE_URL=http://llamacpp-cpu:8000/v1
 QWEN_MODEL=Qwen3-VL-4B-Instruct
 ```
 
-For detailed LlamaCpp deployment instructions, see [README-llamacpp.md](README-llamacpp.md).
+For detailed LlamaCpp deployment instructions, see [LlamaCpp Deployment Guide](docs/LLAMACPP.md).
 
 </details>
 
@@ -623,7 +777,7 @@ After starting the services:
 - **Blackbox Exporter**: http://blackbox.localhost
 - **Canary Service**: http://canary.localhost
 
-For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) and [README-DOCKER-PROFILES.md](README-DOCKER-PROFILES.md).
+For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) and [Docker Profiles Guide](docs/DOCKER_PROFILES.md).
 
 ### CI/CD Workflow
 
@@ -634,9 +788,7 @@ The project includes a GitHub Actions workflow (`.github/workflows/docker-publis
    - Creation of version tags (v*)
    - Pull requests to main/master
 
-2. **Builds** the Docker image for multiple architectures:
-   - linux/amd64
-   - linux/arm64
+2. **Builds** the Docker image for `linux/amd64`
 
 3. **Publishes** to GitHub Container Registry with tags:
    - Branch name (e.g., `main`)
@@ -663,11 +815,10 @@ open-lpr/
 ├── .gitignore                   # Git ignore file
 ├── .dockerignore               # Docker ignore file
 ├── API_DOCUMENTATION.md        # Detailed REST API documentation
-├── README-DOCKER-PROFILES.md   # Docker profiles guide
-├── README-llamacpp.md         # LlamaCpp deployment guide
 ├── DOCKER_DEPLOYMENT.md        # Docker deployment guide
-├── PROMETHEUS_METRICS.md      # Prometheus metrics documentation
+├── RELEASE_GUIDE.md            # How to cut a release
 ├── CHANGELOG.md               # Project changelog
+├── AGENTS.md                  # Contributor/agent working notes
 ├── LICENSE.md                 # License file
 ├── scripts/                    # Manual integration & diagnostic scripts (not unit tests)
 │   ├── test_api.py             # API testing script
@@ -690,13 +841,28 @@ open-lpr/
 │   ├── admin.py                # Django admin configuration
 │   ├── apps.py                 # Django app configuration
 │   ├── models.py               # Database models
-│   ├── views.py                # Legacy monolithic views (still imported by urls.py)
-│   ├── urls.py                 # App URL patterns
 │   ├── urls.py                 # App URL patterns
 │   ├── metrics.py              # Application metrics
+│   ├── pipeline/               # Local ONNX pipeline (the default backend)
+│   │   ├── graph.py            # Stage graph: construction, validation, concurrent execution
+│   │   ├── local_backend.py    # The 'local' backend end to end
+│   │   ├── fetch_artifacts.py  # Download + checksum-verify model artifacts
+│   │   ├── stages/
+│   │   │   ├── detect.py       # YOLOX plate detector
+│   │   │   ├── rectify.py      # Perspective correction
+│   │   │   └── ocr.py          # PP-OCR CTC recogniser
+│   │   └── runtime/onnx.py     # ONNX Runtime session construction
+│   ├── ml/                     # Training and evaluation ONLY. Never imported by the web app.
+│   │   ├── datasets/           # Dataset conversion (Imanno -> COCO)
+│   │   ├── training/           # Detector training config
+│   │   ├── export_onnx.py      # Checkpoint -> ONNX
+│   │   ├── benchmark.py        # Latency + recall benchmark
+│   │   ├── compare_backends.py # Measure both backends on the same images
+│   │   ├── label_teacher.py    # Pseudo-label a corpus with the VLM backend
+│   │   └── evaluate.py         # Streamlit model comparison UI
 │   ├── services/               # Business logic
 │   │   ├── __init__.py
-│   │   ├── qwen_client.py      # Qwen3-VL API client
+│   │   ├── qwen_client.py      # VLM API client (only used when PIPELINE_BACKEND=llm)
 │   │   ├── image_processor.py  # Image processing utilities
 │   │   ├── bbox_visualizer.py  # Bounding box visualization
 │   │   ├── api_service.py      # API service layer
@@ -707,11 +873,10 @@ open-lpr/
 │   │   ├── metrics_helpers.py  # Metrics helper functions
 │   │   ├── response_helpers.py # Response helper functions
 │   │   └── validators.py      # Validation utilities
-│   ├── views/                 # View modules
+│   ├── views/                 # View modules (API-only; no templates, no web UI)
 │   │   ├── __init__.py
 │   │   ├── api_views.py       # API view functions
-│   │   ├── file_views.py      # File handling views
-│   │   └── web_views.py       # Web interface views
+│   │   └── file_views.py      # File handling views
 │   ├── management/             # Django management commands
 │   │   ├── __init__.py
 │   │   └── commands/
@@ -747,13 +912,21 @@ open-lpr/
 ├── container-data/             # Docker container data persistence
 ├── container-media/            # Docker container media persistence
 ├── staticfiles/               # Collected static files
-├── media/                     # Uploaded images
-│   ├── LLAMACPP_RESOURCES.md  # LlamaCpp and ROCm resources
+├── model/plate/              # ONNX artifacts (gitignored; fetch per Quick Start)
+│   ├── plate_yolox_tiny_640.onnx
+│   ├── plate_ocr_ppocrv5_mobile.onnx
+│   └── plate_ocr_dict.json
+├── docs/                     # Topic guides, screenshots, release notes
+│   ├── DOCKER_PROFILES.md    # Docker profiles guide
+│   ├── LLAMACPP.md           # LlamaCpp deployment guide
+│   ├── LLAMACPP_RESOURCES.md # LlamaCpp and ROCm resources
+│   ├── BUILD_SCRIPT.md       # Local image build script
+│   ├── CANARY.md             # Canary monitoring service
+│   ├── PROMETHEUS_METRICS.md # Prometheus metrics documentation
 │   ├── open-lpr-index.png
 │   ├── open-lpr-detection-result.png
 │   ├── open-lpr-detection-details.png
-│   ├── open-lpr-processed-image.png
-│   └── RELEASE_NOTES_v1.0.1.md
+│   └── open-lpr-processed-image.png
 ├── traefik/                   # Traefik reverse proxy configuration
 │   ├── traefik.yml            # Traefik static configuration
 │   ├── dynamic/               # Dynamic configuration directory
@@ -782,7 +955,7 @@ open-lpr/
 ├── .github/                  # GitHub workflows
 │   └── workflows/             # CI/CD configurations
 ├── plans/                     # Project planning documents
-└── vllm-rocm/                # vLLM ROCm configuration
+└── canary/                   # Canary monitoring service (own Dockerfile)
 ```
 
 </details>
@@ -792,15 +965,51 @@ open-lpr/
 <details>
 <summary>Click to expand</summary>
 
-Use the provided test script to verify API functionality:
+### Unit Tests
+
+The suite is run with Django's test runner and needs no running server:
 
 ```bash
-# Test with default image locations
-python scripts/test_api.py
-
-# Test with specific image
-python scripts/test_api.py /path/to/your/image.jpg
+pip install -r requirements-dev.txt   # ruff + coverage, dev only
+python manage.py test
 ```
+
+`scripts/` holds manual integration and diagnostic harnesses. They are
+deliberately outside Django's test discovery — they need a running server or a
+live model, so they are not unit tests:
+
+```bash
+python scripts/test_api.py                          # against a default image location
+python scripts/test_api.py /path/to/your/image.jpg  # against a specific image
+```
+
+### Lint and Format
+
+```bash
+ruff check .
+ruff format --check .
+```
+
+CI runs lint, format check, and tests with a coverage gate on every push and pull
+request, and builds the Docker images on `main` and version tags.
+
+### Model Evaluation
+
+Benchmarking latency and recall against a labelled dataset, and comparing the
+two backends on the same images:
+
+```bash
+pip install -r lpr_app/ml/requirements-train.txt
+
+python -m lpr_app.ml.benchmark --data <dataset-root> --model model/plate/plate_yolox_tiny_640.onnx
+python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 40
+```
+
+`benchmark.py` exits non-zero when mean latency exceeds the budget, and reports
+recall bucketed by plate height so a small-plate regression fails the check
+instead of being discovered in production. `lpr_app/ml/` is training-only and is
+never imported by the web app — which is why `torch` is not in
+`requirements.txt`.
 
 </details>
 
@@ -897,6 +1106,16 @@ docker pull ghcr.io/faisalthaheem/open-lpr:$LATEST_STABLE
 5. **Set up media file serving** (Traefik/AWS S3)
 6. **Use HTTPS** with SSL certificate
 7. **Pin to specific versions** (see version selection above)
+8. **Set `PIPELINE_BACKEND` explicitly** rather than relying on the default, so
+   the deployment config states which backend is intended.
+9. **Ensure a persistent volume for `model/plate`** if using the default
+   backend. Without one the artifacts are re-downloaded on every container
+   replacement, and a transient network failure at that moment fails the deploy.
+
+On a managed platform (Coolify, Compose UI) the entrypoint downloads the
+artifacts itself, so no artifact upload is needed — only the persistent volume.
+To bake them into an image instead, run `fetch_artifacts.py` in a build stage
+and set `PIPELINE_MODEL_DOWNLOAD=false`.
 
 ### Version Management Strategy
 
@@ -960,22 +1179,50 @@ services:
 
 ### Common Issues
 
-1. **API Connection Failed**
-   - Check QWEN_API_KEY in `.env`
-   - Verify QWEN_BASE_URL is accessible
+1. **Container exits immediately, "could not fetch pipeline model artifacts"**
+   - The download needs egress to `huggingface.co`. On an airgapped host, set
+     `PIPELINE_MODEL_DOWNLOAD=false` and populate `PIPELINE_MODEL_DIR` from
+     elsewhere — a bake step, an internal mirror, or a bind mount.
+   - Confirm `./model/plate` is a **persistent volume**. Without one the
+     directory is discarded on every container replacement, so the download
+     repeats each deploy and a transient network failure fails an otherwise
+     healthy deploy.
+   - The recogniser and dictionary are a set — a mismatched pair produces
+     plausible but wrong text, not an error.
+   - To run without the weights at all, set `PIPELINE_BACKEND=llm` and
+     configure `QWEN_*`.
+
+2. **"model artifacts are missing" despite `PIPELINE_MODEL_DOWNLOAD=false`**
+   - The presence check still runs in that mode, deliberately: an airgapped
+     deployment that was not populated fails at startup with a clear message
+   - rather than at inference time. Check the paths in the error — they name
+     exactly which files are absent from `PIPELINE_MODEL_DIR`.
+
+3. **No plates detected, or every plate read wrong**
+   - Verify checksums against the weights repository `manifest.json` first — a
+     truncated download is the usual cause.
+   - Check `PIPELINE_DETECTOR_INPUT_SIZE` is still `640,640`. Plates near 36px
+     tall are not resolvable at lower resolutions.
+
+4. **API Connection Failed** (`PIPELINE_BACKEND=llm` only)
+   - Check `QWEN_API_KEY` in `.env`
+   - Verify `QWEN_BASE_URL` is accessible
    - Check network connectivity
 
-2. **Image Upload Failed**
+5. **Image Upload Failed**
    - Verify file format (JPEG/PNG/WEBP only)
-   - Check file size (within configured limit)
+   - Check file size (within `UPLOAD_FILE_MAX_SIZE`)
+   - "Image too large: WxH (N megapixels)" means `UPLOAD_IMAGE_MAX_PIXELS` was
+     exceeded. The check reads the image header, so a file can be inside the size
+     limit and still be rejected on dimensions — see [Upload Limits](#upload-limits)
    - Ensure media directory permissions
 
-3. **Processing Errors**
+6. **Processing Errors**
    - Check Django logs: `tail -f django.log`
    - Verify API response format
    - Check image processing dependencies
 
-4. **Static Files Not Loading**
+7. **Static Files Not Loading**
    - Run `python manage.py collectstatic`
    - Check STATIC_URL in settings
    - Verify web server static file configuration
@@ -1054,7 +1301,7 @@ For issues and questions:
 <details>
 <summary>Click to expand</summary>
 
-- [Qwen3-VL](https://github.com/QwenLM/Qwen-VL) for the powerful vision-language model
+- [Qwen3-VL](https://github.com/QwenLM/Qwen-VL) for the optional vision-language-model backend
 - [Django](https://www.djangoproject.com/) for the robust web framework
 - [Next.js](https://nextjs.org/) for the React-based SPA frontend
 - [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS framework
@@ -1070,11 +1317,14 @@ For issues and questions:
 
 For specialized deployment scenarios and additional resources:
 
-- [🆕 Docker Profiles Guide](README-DOCKER-PROFILES.md) - New profile-based Docker Compose setup (Recommended)
+- [Model Weights & Provenance](https://huggingface.co/faisalthaheem/open-lpr-models) - The ONNX artifacts, their checksums, licences, and training provenance
+- [Docker Profiles Guide](docs/DOCKER_PROFILES.md) - Profile-based Docker Compose setup (Recommended)
+- [Backend Accuracy Comparison](openspec/changes/measure-local-backend-accuracy/COMPARISON.md) - Measured CER and exact-match, and what the numbers do and do not support
 - [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
-- [README-llamacpp.md](README-llamacpp.md) - Local inference with LlamaCpp server
+- [LlamaCpp Deployment Guide](docs/LLAMACPP.md) - Local inference with LlamaCpp server (only for `PIPELINE_BACKEND=llm`)
 - [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
 - [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
+- [Prometheus Metrics](docs/PROMETHEUS_METRICS.md) - Including per-stage pipeline latency histograms
 
 </details>
 

@@ -61,4 +61,4 @@ No breaking changes. All v1.0.0 endpoints remain compatible.
 
 Multi-arch: linux/amd64 + linux/arm64
 
-**Full Release Notes**: See [RELEASE_NOTES_v1.1.0.md](docs/RELEASE_NOTES_v1.1.0.md) and [CHANGELOG.md](CHANGELOG.md)
+**Full Release Notes**: See [RELEASE_NOTES_v1.1.0.md](RELEASE_NOTES_v1.1.0.md) and [CHANGELOG.md](../CHANGELOG.md)

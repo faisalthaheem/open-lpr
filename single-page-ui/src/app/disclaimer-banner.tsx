@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
+/**
+ * Upload notice.
+ *
+ * Deliberately not persisted as "dismissed". An earlier version wrote
+ * `lpr-disclaimer-dismissed` to localStorage, so a user who dismissed the
+ * banner once never saw it again -- meaning an image uploaded months later
+ * carried no notice at the time it was uploaded. Dismissal is now per session
+ * only: reloading the page shows the notice again.
+ */
 export default function DisclaimerBanner() {
   const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem("lpr-disclaimer-dismissed") === "1") {
-        setVisible(false);
-      }
-    } catch {}
-  }, []);
 
   if (!visible) return null;
 
@@ -40,14 +41,12 @@ export default function DisclaimerBanner() {
               for <strong>training purposes</strong>. We are not responsible for
               any consequences arising from the use of this system.
             </p>
+            <p>
+              By uploading an image you confirm you have the right to submit it.
+            </p>
           </div>
           <button
-            onClick={() => {
-              setVisible(false);
-              try {
-                localStorage.setItem("lpr-disclaimer-dismissed", "1");
-              } catch {}
-            }}
+            onClick={() => setVisible(false)}
             className="shrink-0 text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200"
             aria-label="Dismiss"
           >

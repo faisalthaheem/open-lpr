@@ -106,11 +106,11 @@ Images are available for both linux/amd64 and linux/arm64 architectures.
 
 ## 📚 Documentation
 
-- [Main README](README.md) - Project overview and quick start guide
-- [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
-- [LlamaCpp Deployment Guide](README-llamacpp.md) - Local inference with LlamaCpp server
-- [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
-- [LlamaCpp Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs and documentation links
+- [Main README](../README.md) - Project overview and quick start guide
+- [Docker Deployment Guide](../DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
+- [LlamaCpp Deployment Guide](LLAMACPP.md) - Local inference with LlamaCpp server
+- [API Documentation](../API_DOCUMENTATION.md) - Complete REST API reference
+- [LlamaCpp Resources](LLAMACPP_RESOURCES.md) - Important URLs and documentation links
 
 ## 🔄 Migration Notes
 
@@ -135,7 +135,7 @@ Future releases will include:
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [contributing guidelines](README.md#-contributing) for details.
+We welcome contributions! Please see our [contributing guidelines](../README.md#-contributing) for details.
 
 ## 📄 License
 
@@ -187,7 +187,7 @@ nano .env.llamacpp
 docker-compose -f docker-compose-llamacpp-cpu.yml up -d
 ```
 
-For more detailed installation instructions, see the [README](README.md).
+For more detailed installation instructions, see the [README](../README.md).
 
 ---
 

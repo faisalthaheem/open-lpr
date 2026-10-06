@@ -8,3 +8,4 @@ prometheus-client==0.19.0
 APScheduler==3.11.2
 django-apscheduler==0.7.0
 django-cors-headers==4.9.0
+onnxruntime==1.30.0
