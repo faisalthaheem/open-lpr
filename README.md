@@ -788,9 +788,7 @@ The project includes a GitHub Actions workflow (`.github/workflows/docker-publis
    - Creation of version tags (v*)
    - Pull requests to main/master
 
-2. **Builds** the Docker image for multiple architectures:
-   - linux/amd64
-   - linux/arm64
+2. **Builds** the Docker image for `linux/amd64`
 
 3. **Publishes** to GitHub Container Registry with tags:
    - Branch name (e.g., `main`)

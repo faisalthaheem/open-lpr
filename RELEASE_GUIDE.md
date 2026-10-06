@@ -36,7 +36,7 @@ git push origin v1.1.0
 ### 4. Automated CI/CD
 
 The GitHub Actions workflow (`.github/workflows/docker-publish.yml`) will automatically:
-- Build the Docker image for **linux/amd64** and **linux/arm64**
+- Build the Docker image for **linux/amd64**
 - Publish to GitHub Container Registry with tags:
   - `ghcr.io/faisalthaheem/open-lpr:latest`
   - `ghcr.io/faisalthaheem/open-lpr:v1.1.0`

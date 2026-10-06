@@ -208,7 +208,7 @@ docker compose --profile core up -d                        # External API only
 
 - Images published to `ghcr.io/faisalthaheem/open-lpr`
 - **All Docker images are built and published by GitHub Actions CI.** Docker Compose files (`docker-compose.yaml`) only reference pre-built images from GHCR — never use `build:` directives in compose files.
-- CI: `.github/workflows/docker-publish.yml` builds multi-arch (amd64/arm64) on push to main and version tags
+- CI: `.github/workflows/docker-publish.yml` builds `linux/amd64` on push to main and version tags. arm64 was dropped: the deployment host is amd64, no requirement for it was ever documented, and the SPA's arm64 leg failed under qemu emulation (`Illegal instruction` during `npm ci`). Re-adding it means the `platforms:` list in every `docker-publish*.yml` plus a fix for the emulation crash
 - Container runs as `django` user via `gosu` (see `docker-entrypoint.sh`)
 - `docker-entrypoint.sh` runs migrate + collectstatic + optional createsuperuser on every start
 - `fonts-noto` and `fonts-noto-cjk` are installed in the Docker image for Unicode text rendering (Arabic, CJK, etc.) on bounding box visualizations
@@ -258,7 +258,7 @@ When the user asks to "deploy the change", follow these steps in order:
   gh run list --limit 1                          # Get latest run ID
   gh run watch <run-id>                          # Stream logs
   ```
-- The CI builds multi-arch Docker images and publishes to `ghcr.io/faisalthaheem/open-lpr`
+- The CI builds amd64 Docker images and publishes to `ghcr.io/faisalthaheem/open-lpr`
 - If the build fails, read the logs with `gh run view <run-id> --log-failed`, fix errors, commit and push again
 
 ### 4. Pull latest images on prod server
