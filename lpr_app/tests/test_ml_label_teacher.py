@@ -19,7 +19,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 from PIL import Image
 
 from lpr_app.ml.label_teacher import (
@@ -30,6 +30,7 @@ from lpr_app.ml.label_teacher import (
     discover_images,
     load_shard,
     merge_shards,
+    teacher_provenance,
 )
 
 
@@ -409,3 +410,59 @@ class MergeTests(SimpleTestCase):
         with tempfile.TemporaryDirectory() as raw:
             with self.assertRaises(SystemExit):
                 merge_shards(Path(raw) / "no-queue", Path(raw) / "out")
+
+
+class TeacherProvenanceTests(SimpleTestCase):
+    """The merge must succeed without a client, and must say so honestly.
+
+    `merge_shards` runs in its own process after the labelling workers exited,
+    so there is no client object to hand it. That was previously an undefined
+    name, which meant every merge crashed. The fix makes the parameter optional
+    -- these tests exist so the crash cannot come back, and so the provenance is
+    not quietly claiming more certainty than it has.
+    """
+
+    def test_works_with_no_client_at_all(self):
+        provenance = teacher_provenance()
+
+        self.assertIsNone(provenance["client_class"])
+        self.assertIn("separate process", provenance["client_class_note"])
+
+    def test_records_the_client_class_when_one_is_available(self):
+        provenance = teacher_provenance(client=object())
+
+        self.assertEqual(provenance["client_class"], "object")
+
+    @override_settings(QWEN_MODEL="test/model-v1", QWEN_BASE_URL="http://teacher.invalid/v1")
+    def test_records_model_and_endpoint(self):
+        # The reason this exists: the first labelling pass recorded no model
+        # anywhere, leaving 2,634 training boxes unattributable.
+        provenance = teacher_provenance()
+
+        self.assertEqual(provenance["model"], "test/model-v1")
+        self.assertEqual(provenance["base_url"], "http://teacher.invalid/v1")
+
+    def test_prompt_hashes_are_recorded(self):
+        """Same model, different prompts, different boxes.
+
+        Without the hashes a label set cannot be tied to the prompt that made it.
+        """
+        provenance = teacher_provenance()
+
+        self.assertEqual(len(provenance["detection_prompt_sha256"]), 16)
+        self.assertEqual(len(provenance["ocr_prompt_sha256"]), 16)
+        self.assertNotEqual(provenance["detection_prompt_sha256"], provenance["ocr_prompt_sha256"])
+
+    def test_merge_report_carries_provenance(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "a.jpg").write_bytes(b"x")
+            build_shards([root / "a.jpg"], root / "queue", 1)
+            out = root / "out"
+            out.mkdir()
+            append_record(out / "teacher_pass1.shard000.jsonl", {"image": str(root / "a.jpg"), "status": "ok"})
+
+            report, _ = merge_shards(root / "queue", out)
+
+            self.assertIn("teacher", report)
+            self.assertIsNone(report["teacher"]["client_class"])

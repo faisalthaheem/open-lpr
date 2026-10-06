@@ -57,6 +57,7 @@ python -m lpr_app.ml.label_teacher merge \\
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -164,6 +165,51 @@ def append_record(shard_file: Path, record: dict) -> None:
         handle.write(json.dumps(record, sort_keys=True) + "\n")
         handle.flush()
         os.fsync(handle.fileno())
+
+
+def teacher_provenance(client=None) -> dict:
+    """Identify the teacher that produced a set of labels.
+
+    A pseudo-label set with no recorded teacher is close to worthless: the labels
+    cannot be reproduced, the model cannot be audited, and a later reader cannot
+    tell a weak teacher from a weak detector. That is not hypothetical -- the
+    first community labelling pass recorded no model anywhere, so 2,634 of 4,440
+    training boxes were left unattributable and had to be settled by asking the
+    operator. Recorded here so it cannot recur.
+
+    `client` is optional because the merge runs in its own process, after the
+    workers that did the labelling have exited. There is no client to hand it, so
+    `client_class` is recorded as None rather than guessed. Everything else is
+    read from settings, which is what the workers themselves read -- merge and
+    worker read the same configuration, so the model recorded here is the model
+    the workers used, as long as they shared an environment. That assumption is
+    stated in the returned note rather than left implicit.
+    """
+    from django.conf import settings
+
+    from lpr_app.services.qwen_client import DETECTION_PROMPT, OCR_PROMPT
+
+    model = getattr(settings, "QWEN_MODEL", None) or os.environ.get("QWEN_MODEL")
+    base_url = getattr(settings, "QWEN_BASE_URL", None) or os.environ.get("QWEN_BASE_URL")
+    return {
+        "model": model,
+        "base_url": base_url,
+        "client_class": type(client).__name__ if client is not None else None,
+        "detection_prompt_sha256": hashlib.sha256(DETECTION_PROMPT.encode()).hexdigest()[:16],
+        "ocr_prompt_sha256": hashlib.sha256(OCR_PROMPT.encode()).hexdigest()[:16],
+        "min_plate_height": settings.MIN_PLATE_HEIGHT,
+        "plate_height_fraction": settings.PLATE_HEIGHT_FRACTION,
+        "note": (
+            "Prompt and threshold hashes are included because the same model with different "
+            "prompts yields different boxes."
+        ),
+        "client_class_note": (
+            "None means the merge ran in a separate process from the labelling workers, which had already "
+            "exited. Model and base_url are read from the merging environment, which is the workers' "
+            "configuration only if both shared one. Verify against the worker's own environment before "
+            "treating this as authoritative."
+        ),
+    }
 
 
 def label_one(image_path: str, client=None, scratch_dir: Path | None = None) -> dict:
@@ -421,6 +467,8 @@ def merge_shards(queue_dir: Path, out_dir: Path, max_error_rate: float = 0.05) -
     error_rate = errors / len(records) if records else 1.0
 
     report = {
+        # No client to pass: the merge runs after the labelling workers exited.
+        "teacher": teacher_provenance(),
         "shards": len(shards),
         "images_expected": expected,
         "images_seen": len(records),
