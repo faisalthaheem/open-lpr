@@ -225,7 +225,9 @@ services:
       - openlpr-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider --quiet http://localhost:9100/metrics || exit 1"]
+      # The canary image is python:3.11-slim and ships no wget, so a wget
+      # healthcheck fails forever and the container is permanently unhealthy.
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:9100/metrics')\" || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
