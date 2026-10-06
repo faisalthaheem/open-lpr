@@ -24,7 +24,28 @@ The Docker deployment includes:
 
 This project provides multiple Docker Compose files for different deployment scenarios:
 
-### 1. LlamaCpp with AMD GPU (Recommended for Production)
+> The default backend runs detection and OCR with in-process ONNX models and needs
+> no GPU, no LlamaCpp, and no inference profile — `docker compose --profile core up -d`
+> is the supported production setup. The LlamaCpp options below are the rollback
+> path to the vision-language-model backend (`PIPELINE_BACKEND=llm`), not a faster
+> variant of the default. Note that local inference is *also* on-CPU, so "CPU"
+> below always refers to the LLM backend specifically.
+
+### 1. Local ONNX Backend (Default, Recommended for Production)
+No GPU and no LlamaCpp container. Artifacts (~37MB) download on first boot.
+
+```bash
+git clone https://github.com/faisalthaheem/open-lpr.git
+cd open-lpr
+
+cp .env.llamacpp.example .env.llamacpp   # still required as the compose env_file
+mkdir -p container-data container-media staticfiles model/plate
+
+docker compose --profile core up -d
+docker compose logs -f
+```
+
+### 2. LlamaCpp with AMD GPU (LLM Backend)
 
 For users with AMD GPUs that support Vulkan:
 
@@ -42,7 +63,7 @@ nano .env.llamacpp
 # Create necessary directories
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
-# Start the application with AMD Vulkan GPU support
+# Start the LLM backend with AMD Vulkan GPU support
 docker compose --profile core --profile amd-vulkan up -d
 
 # Check the logs to ensure everything is running correctly
@@ -55,7 +76,7 @@ docker compose --profile core --profile amd-vulkan logs -f
 - Sufficient GPU memory (8GB+ recommended)
 - HuggingFace token for model download
 
-### 2. LlamaCpp with CPU (Universal Compatibility)
+### 3. LlamaCpp with CPU (LLM Backend, Universal Compatibility)
 
 For users without compatible GPUs or for testing purposes:
 
@@ -73,7 +94,7 @@ nano .env.llamacpp
 # Create necessary directories
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
-# Start the application with CPU support
+# Start the LLM backend with CPU support
 docker compose --profile core --profile cpu up -d
 
 # Check the logs to ensure everything is running correctly
@@ -85,7 +106,7 @@ docker compose --profile core --profile cpu logs -f
 - Multi-core CPU for better performance
 - HuggingFace token for model download
 
-### 3. Standard Docker with External API
+### 4. Standard Docker with External API (LLM Backend)
 
 For users who want to use an external OpenAI-compatible API endpoint:
 
@@ -103,8 +124,8 @@ nano .env
 # Create necessary directories
 mkdir -p container-data container-media staticfiles
 
-# Start the application
-docker-compose up -d
+# Start the LLM backend against the external API
+docker compose --profile core up -d
 
 # Check the logs to ensure everything is running correctly
 docker-compose logs -f

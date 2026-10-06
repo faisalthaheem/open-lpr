@@ -152,9 +152,10 @@ The artifacts (~37MB) download on first boot. `model/plate` is already mounted
 by `docker-compose.yaml`, so keeping it on the host means subsequent redeploys
 reuse them.
 
-#### Option 2: AMD Vulkan GPU + LlamaCpp Backend
-For users with AMD GPUs that support Vulkan, running the vision-language-model
-backend:
+#### Option 2: LLM Backend on AMD Vulkan GPU
+Rollback path only. Use this to serve inference from a VLM instead of the default
+in-process ONNX models, which requires `PIPELINE_BACKEND=llm`. On-CPU local
+inference needs no GPU profile and no LlamaCpp — see Option 1.
 
 ```bash
 # Clone the repository
@@ -170,15 +171,16 @@ nano .env.llamacpp
 # Create necessary directories
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
-# Start the application with AMD Vulkan GPU support
+# LLM backend on AMD Vulkan GPU
 docker compose --profile core --profile amd-vulkan up -d
 
 # Check the logs to ensure everything is running correctly
 docker compose logs -f
 ```
 
-#### Option 3: CPU LlamaCpp Backend (Universal Compatibility)
-For running the vision-language-model backend on CPU:
+#### Option 3: LLM Backend on CPU (Universal Compatibility)
+Rollback path only. Use this to serve inference from a VLM instead of the default
+in-process ONNX models, which requires `PIPELINE_BACKEND=llm`.
 
 ```bash
 # Clone the repository
@@ -194,15 +196,17 @@ nano .env.llamacpp
 # Create necessary directories
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
-# Start the application with CPU support
+# LLM backend on CPU
 docker compose --profile core --profile cpu up -d
 
 # Check the logs to ensure everything is running correctly
 docker compose logs -f
 ```
 
-#### Option 4: NVIDIA CUDA GPU + LlamaCpp Backend
-For users with NVIDIA GPUs that support CUDA:
+#### Option 4: LLM Backend on NVIDIA CUDA GPU
+Rollback path only. Use this to serve inference from a VLM instead of the default
+in-process ONNX models, which requires `PIPELINE_BACKEND=llm`. On-CPU local
+inference needs no GPU profile and no LlamaCpp — see Option 1.
 
 ```bash
 # Clone the repository
@@ -218,15 +222,18 @@ nano .env.llamacpp
 # Create necessary directories
 mkdir -p model_files model_files_cache container-data container-media staticfiles
 
-# Start the application with NVIDIA CUDA GPU support
+# LLM backend on NVIDIA CUDA GPU
 docker compose --profile core --profile nvidia-cuda up -d
 
 # Check the logs to ensure everything is running correctly
 docker compose logs -f
 ```
 
-#### Option 5: External API Only
-Set `PIPELINE_BACKEND=llm` to use an external OpenAI-compatible API endpoint:
+#### Option 5: LLM Backend via External API
+Rollback path only. Use `PIPELINE_BACKEND=llm` to serve inference from an external
+OpenAI-compatible API endpoint rather than the default in-process ONNX models.
+Uses the same `core` profile as Option 1 — no inference container either way, only
+the backend differs.
 
 ```bash
 # Clone the repository
@@ -258,23 +265,27 @@ docker compose logs -f
 The main `docker-compose.yml` now uses the **merge design pattern** with profiles for flexible deployment:
 
 **Profiles Available:**
-- **core**: Core infrastructure (Traefik, OpenLPR, Prometheus, Grafana, Blackbox Exporter, Canary). This alone is a complete deployment — the default backend runs inference inside the app container
-- **cpu**: CPU-based LlamaCpp inference (only for `PIPELINE_BACKEND=llm`)
-- **amd-vulkan**: AMD Vulkan GPU inference (only for `PIPELINE_BACKEND=llm`)
-- **nvidia-cuda**: NVIDIA CUDA GPU inference (only for `PIPELINE_BACKEND=llm`)
+- **core**: Core infrastructure (OpenLPR, SPA, Prometheus, Grafana, Blackbox Exporter, Canary). This alone is a complete deployment — the default backend runs inference inside the app container
+- **cpu**: LLM inference on CPU via LlamaCpp (only for `PIPELINE_BACKEND=llm`)
+- **amd-vulkan**: LLM inference on AMD Vulkan GPU via LlamaCpp (only for `PIPELINE_BACKEND=llm`)
+- **nvidia-cuda**: LLM inference on NVIDIA GPU via LlamaCpp (only for `PIPELINE_BACKEND=llm`)
+
+Note that "CPU inference" is ambiguous here and worth being precise about: the
+default backend already infers on CPU inside the app container and needs no
+profile at all. The `cpu` profile means the *LLM* backend served by LlamaCpp.
 
 **Usage Examples:**
 ```bash
-# Default: core only, in-process ONNX inference, no GPU
+# Default: local ONNX inference in-process, no GPU and no LlamaCpp
 docker compose --profile core up -d
 
-# Vision-language-model backend on CPU
+# Rollback: LLM backend on CPU
 docker compose --profile core --profile cpu up -d
 
-# Vision-language-model backend on NVIDIA
+# Rollback: LLM backend on NVIDIA
 docker compose --profile core --profile nvidia-cuda up -d
 
-# Vision-language-model backend on AMD Vulkan
+# Rollback: LLM backend on AMD Vulkan
 docker compose --profile core --profile amd-vulkan up -d
 
 # Stop all services
@@ -297,8 +308,8 @@ For detailed profile documentation, see [Docker Profiles Guide](docs/DOCKER_PROF
 
 | Removed file | Replacement command | Previous behaviour |
 | --- | --- | --- |
-| `docker-compose-llamacpp-amd-vulcan.yml` | `docker compose --profile core --profile amd-vulkan up -d` | Vision-language-model backend with AMD GPU acceleration using Vulkan |
-| `docker-compose-llamacpp-cpu.yml` | `docker compose --profile core --profile cpu up -d` | Vision-language-model backend using CPU for inference |
+| `docker-compose-llamacpp-amd-vulcan.yml` | `docker compose --profile core --profile amd-vulkan up -d` | LLM backend on AMD GPU acceleration via Vulkan |
+| `docker-compose-llamacpp-cpu.yml` | `docker compose --profile core --profile cpu up -d` | LLM backend using CPU for inference |
 
 ### Manual Installation
 
@@ -728,16 +739,19 @@ This project provides a unified Docker Compose file with profiles for different 
 #### Quick Reference
 
 ```bash
-# Core infrastructure + CPU inference
+# Default: local ONNX inference in-process, no GPU and no LlamaCpp
+docker compose --profile core up -d
+
+# Rollback: LLM backend on CPU
 docker compose --profile core --profile cpu up -d
 
-# Core infrastructure + NVIDIA inference
+# Rollback: LLM backend on NVIDIA
 docker compose --profile core --profile nvidia-cuda up -d
 
-# Core infrastructure + AMD Vulkan inference
+# Rollback: LLM backend on AMD Vulkan
 docker compose --profile core --profile amd-vulkan up -d
 
-# Core services only (for external API)
+# Rollback: LLM backend via external API
 docker compose --profile core up -d
 
 # Stop all services
@@ -746,7 +760,7 @@ docker compose down
 
 #### Environment Configuration
 
-For local inference deployments, copy and configure the environment file:
+For LLM-backend deployments via LlamaCpp, copy and configure the environment file:
 
 ```bash
 # Copy the example environment file
