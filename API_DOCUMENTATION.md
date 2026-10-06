@@ -243,14 +243,70 @@ Use the health check endpoint to verify API availability:
 
 **GET** `/health/`
 
+The response is **backend-conditional**. `backend` is always present, so a client can
+tell which inference path is actually serving requests before reading anything else.
+
+Under `PIPELINE_BACKEND=local` (the default):
+
 ```json
 {
     "status": "healthy",
-    "api_healthy": true,
+    "backend": "local",
+    "artifacts_healthy": true,
     "database_healthy": true,
-    "timestamp": "2023-12-07T15:30:45.123456"
+    "timestamp": "2026-10-06T04:14:52.802966+00:00"
 }
 ```
+
+There is no `api_healthy` field, because there is no external API to probe. When
+artifacts are missing or corrupt, the response additionally carries
+`artifacts_missing` and/or `artifacts_corrupt` naming the files, and the status is
+`503`. `artifacts_unverified: true` means the checksum manifest could not be
+fetched — integrity is then unknown rather than known-bad, and the status stays healthy.
+
+Under `PIPELINE_BACKEND=llm`:
+
+```json
+{
+    "status": "healthy",
+    "backend": "llm",
+    "api_healthy": true,
+    "database_healthy": true,
+    "timestamp": "2026-10-06T04:14:52.802966+00:00"
+}
+```
+
+> **Breaking change.** `api_healthy` is absent under the local backend. A client that
+> reads it must branch on `backend` first. This is deliberate: keeping the field but
+> filling it with artifact state would give a field named `api_healthy` a second
+> meaning, which is the misreading this change exists to prevent. Failing loudly is
+> the safer outcome.
+
+## Availability
+
+**GET** `/api/v1/availability/`
+
+The series is derived from `lpr_api_health_status`, which is only written when the VLM
+API is probed. Under the local backend there is no such probe, so the endpoint reports
+that rather than serving a series that does not describe this deployment:
+
+```json
+{
+    "applicable": false,
+    "backend": "local",
+    "reason": "Availability is measured from the external VLM API, which is not in the request path under the local backend.",
+    "data": []
+}
+```
+
+`applicable` is what distinguishes this from the other two cases, both of which are
+also HTTP 200 with an empty `data`:
+
+| Response | Meaning |
+|----------|---------|
+| `applicable: false` | Nothing to measure under the active backend |
+| `applicable: true, data: []` | Queried successfully; nothing recorded in the window |
+| HTTP 503 | Prometheus was unreachable |
 
 ## Rate Limiting
 

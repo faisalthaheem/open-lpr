@@ -44,7 +44,15 @@ class HealthLightEndpointTest(TestCase):
 
 
 @override_settings(MEDIA_ROOT="/tmp/test_lpr_health_media/")
+@override_settings(PIPELINE_BACKEND="llm")
 class AvailabilityEndpointTest(TestCase):
+    """These exercise the Prometheus-backed path.
+
+    The backend is pinned rather than left to the default: `local` has no
+    external API to measure and correctly reports not-applicable, which is
+    covered separately in `test_availability_backend`.
+    """
+
     def setUp(self):
         self.client = Client()
         # The availability endpoint serves from the cache; clear it so tests
