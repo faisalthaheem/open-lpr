@@ -29,20 +29,33 @@ def check_image_dimensions(image_file: Any) -> tuple[bool, str | None]:
     it only warns under 178 megapixels, which is well past what a plate photo
     needs, and it is a warning rather than a rejection.
 
+    Accepts a file-like object or an already-open ``PIL.Image.Image``. Callers
+    on the decode path already hold one, and re-opening it is both wasteful and
+    wrong: a PIL image is not file-like and has no ``read``, so calling
+    ``Image.open`` on one raises AttributeError rather than returning a verdict.
+    That reached production as a 500 on every upload, because the tests covering
+    this function only ever passed file-like objects and never the call site
+    added alongside them.
+
     Returns (is_valid, error_message).
     """
-    try:
-        with Image.open(image_file) as img:
-            width, height = img.size
-    except UnidentifiedImageError:
-        # Not an image at all. Left for the caller's existing validity check to
-        # report, so the user sees one message about undecodable files rather
-        # than two.
-        return True, None
-    except (OSError, ValueError, Image.DecompressionBombError) as exc:
-        # A header this malformed is the caller's "invalid image" case too.
-        logger.warning("Could not read image header for dimension check: %s", exc)
-        return True, None
+    if isinstance(image_file, Image.Image):
+        # Already open, so .size came from the header and cost nothing to parse.
+        # This path is exactly as cheap as the file-like one.
+        width, height = image_file.size
+    else:
+        try:
+            with Image.open(image_file) as img:
+                width, height = img.size
+        except UnidentifiedImageError:
+            # Not an image at all. Left for the caller's existing validity check
+            # to report, so the user sees one message about undecodable files
+            # rather than two.
+            return True, None
+        except (OSError, ValueError, Image.DecompressionBombError) as exc:
+            # A header this malformed is the caller's "invalid image" case too.
+            logger.warning("Could not read image header for dimension check: %s", exc)
+            return True, None
 
     max_pixels = settings.UPLOAD_IMAGE_MAX_PIXELS
     pixels = width * height

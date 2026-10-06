@@ -17,6 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from ..metrics import get_metrics_response
 from ..models import UploadedImage
+from ..pipeline.local_backend import LLM_BACKEND, LOCAL_BACKEND
 from ..services.api_service import ApiService
 from ..services.availability import get_availability_points
 from ..services.file_service import FileService
@@ -156,18 +157,48 @@ def api_ocr_upload(request):
 def api_health_check(request):
     """
     Health check endpoint for the API.
+
+    Reports whichever inference backend is actually serving requests. Under the
+    local backend it deliberately does not probe the VLM endpoint: that service
+    is not in the request path, so probing it describes something other than
+    whether this deployment works.
+
+    This is not a theoretical concern. The first production deploy of the local
+    backend returned HTTP 500 on every upload while this endpoint reported
+    healthy, because the only thing it measured was an external API.
     """
     try:
         with PerformanceTracker("api_request"):
-            # Check Qwen3-VL API
-            api_start_time = time.time()
-            client = get_qwen_client()
-            api_healthy = client.health_check()
-            api_duration = time.time() - api_start_time
+            backend = getattr(django_settings, "PIPELINE_BACKEND", LOCAL_BACKEND)
+            backend_healthy = True
+            api_duration = 0.0
+            payload: dict[str, object] = {"backend": backend}
 
-            # Update API health status metric
-            MetricsHelper.update_api_health_status(api_healthy)
-            MetricsHelper.record_api_request_duration(api_duration)
+            if backend == LLM_BACKEND:
+                api_start_time = time.time()
+                client = get_qwen_client()
+                backend_healthy = client.health_check()
+                api_duration = time.time() - api_start_time
+
+                # Update API health status metric. Only meaningful here: this
+                # metric is the sole input to the availability series, which is
+                # why that series does not apply under the local backend.
+                MetricsHelper.update_api_health_status(backend_healthy)
+                MetricsHelper.record_api_request_duration(api_duration)
+                payload["api_healthy"] = backend_healthy
+            else:
+                from ..pipeline.artifact_health import check_integrity
+
+                integrity = check_integrity()
+                backend_healthy = bool(integrity.get("ok"))
+                payload["artifacts_healthy"] = backend_healthy
+
+                # Only surface the offending filenames when there is a problem.
+                for key in ("missing", "corrupt"):
+                    if integrity.get(key):
+                        payload[f"artifacts_{key}"] = integrity[key]
+                if integrity.get("unverified"):
+                    payload["artifacts_unverified"] = True
 
             # Check database connection
             from django.db import connection
@@ -177,12 +208,12 @@ def api_health_check(request):
                 result = cursor.fetchone()
                 db_healthy = result is not None and result[0] == 1
 
-            status_code = 200 if api_healthy and db_healthy else 503
+            status_code = 200 if backend_healthy and db_healthy else 503
 
             return JsonResponse(
                 {
                     "status": "healthy" if status_code == 200 else "unhealthy",
-                    "api_healthy": api_healthy,
+                    **payload,
                     "database_healthy": db_healthy,
                     "timestamp": timezone.now().isoformat(),
                 },
@@ -191,7 +222,11 @@ def api_health_check(request):
 
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
-        MetricsHelper.update_api_health_status(False)
+        # Only meaningful under the LLM backend; recording False here would
+        # overwrite the availability series with a value that says nothing about
+        # the local pipeline.
+        if getattr(django_settings, "PIPELINE_BACKEND", LOCAL_BACKEND) == LLM_BACKEND:
+            MetricsHelper.update_api_health_status(False)
         MetricsHelper.record_api_error()
 
         return JsonResponse(

@@ -157,3 +157,151 @@ class AvailabilityEndpointTest(TestCase):
         response = self.client.get("/api/v1/availability/?days=9")
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["error"], "Prometheus unavailable")
+
+
+@override_settings(MEDIA_ROOT="/tmp/test_lpr_health_media/")
+class BackendAwareHealthTest(TestCase):
+    """Health must describe the backend that is actually serving requests.
+
+    The failure this prevents is specific and has happened: the local backend
+    shipped and returned HTTP 500 on every upload, while this endpoint reported
+    healthy because it was measuring an external API that was not in the request
+    path.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.addCleanup(cache.clear)
+        self.client = Client()
+
+    def _integrity(self, **overrides):
+        base = {"ok": True, "missing": [], "corrupt": []}
+        base.update(overrides)
+        return base
+
+    @override_settings(PIPELINE_BACKEND="local")
+    def test_local_backend_makes_no_vlm_call(self):
+        """The load-bearing assertion: no VLM client is even constructed.
+
+        Asserting on the response alone would pass even if the probe ran and its
+        result were discarded, which is the behaviour that has to stop.
+        """
+        with (
+            patch("lpr_app.pipeline.artifact_health.check_integrity", return_value=self._integrity()),
+            patch("lpr_app.views.api_views.get_qwen_client") as client,
+        ):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 200)
+        client.assert_not_called()
+
+    @override_settings(PIPELINE_BACKEND="local")
+    def test_local_backend_reports_artifacts_and_no_api_healthy(self):
+        with patch(
+            "lpr_app.pipeline.artifact_health.check_integrity",
+            return_value=self._integrity(),
+        ):
+            response = self.client.get("/health/")
+
+        data = response.json()
+        self.assertEqual(data["backend"], "local")
+        self.assertTrue(data["artifacts_healthy"])
+        self.assertTrue(data["database_healthy"])
+        self.assertNotIn("api_healthy", data)
+
+    @override_settings(PIPELINE_BACKEND="local")
+    def test_local_backend_unhealthy_when_artifacts_missing(self):
+        with patch(
+            "lpr_app.pipeline.artifact_health.check_integrity",
+            return_value=self._integrity(ok=False, missing=["plate_yolox_tiny_640.onnx"]),
+        ):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 503)
+        data = response.json()
+        self.assertFalse(data["artifacts_healthy"])
+        self.assertIn("plate_yolox_tiny_640.onnx", data["artifacts_missing"])
+
+    @override_settings(PIPELINE_BACKEND="local")
+    def test_local_backend_names_corrupt_artifacts(self):
+        with patch(
+            "lpr_app.pipeline.artifact_health.check_integrity",
+            return_value=self._integrity(ok=False, corrupt=["plate_ocr_dict.json"]),
+        ):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("plate_ocr_dict.json", response.json()["artifacts_corrupt"])
+
+    @override_settings(PIPELINE_BACKEND="local")
+    def test_unverified_manifest_is_still_healthy(self):
+        """Unknown integrity must not be reported as broken."""
+        with patch(
+            "lpr_app.pipeline.artifact_health.check_integrity",
+            return_value=self._integrity(unverified=True),
+        ):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["artifacts_unverified"])
+
+    @override_settings(PIPELINE_BACKEND="local")
+    def test_no_artifact_detail_when_healthy(self):
+        """Empty lists would be noise on every successful poll."""
+        with patch("lpr_app.pipeline.artifact_health.check_integrity", return_value=self._integrity()):
+            data = self.client.get("/health/").json()
+
+        self.assertNotIn("artifacts_missing", data)
+        self.assertNotIn("artifacts_corrupt", data)
+
+    @override_settings(PIPELINE_BACKEND="llm")
+    def test_llm_backend_probes_api_as_before(self):
+        client = MagicMock()
+        client.health_check.return_value = True
+        with patch("lpr_app.views.api_views.get_qwen_client", return_value=client):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["backend"], "llm")
+        self.assertTrue(data["api_healthy"])
+        client.health_check.assert_called_once()
+
+    @override_settings(PIPELINE_BACKEND="llm")
+    def test_llm_backend_unhealthy_when_api_down(self):
+        client = MagicMock()
+        client.health_check.return_value = False
+        with patch("lpr_app.views.api_views.get_qwen_client", return_value=client):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(response.json()["api_healthy"])
+
+    @override_settings(PIPELINE_BACKEND="llm")
+    def test_llm_backend_does_not_report_artifacts(self):
+        client = MagicMock()
+        client.health_check.return_value = True
+        with (
+            patch("lpr_app.views.api_views.get_qwen_client", return_value=client),
+            patch("lpr_app.pipeline.artifact_health.check_integrity") as integrity,
+        ):
+            data = self.client.get("/health/").json()
+
+        self.assertNotIn("artifacts_healthy", data)
+        integrity.assert_not_called()
+
+    @override_settings(PIPELINE_BACKEND="local")
+    def test_database_failure_reported_under_local_backend(self):
+        """A dead database is unhealthy on either backend.
+
+        The exception path returns status and error rather than
+        database_healthy -- that predates this change and is left alone.
+        """
+        with (
+            patch("lpr_app.pipeline.artifact_health.check_integrity", return_value=self._integrity()),
+            patch("django.db.connection.cursor", side_effect=Exception("DB down")),
+        ):
+            response = self.client.get("/health/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["status"], "unhealthy")
