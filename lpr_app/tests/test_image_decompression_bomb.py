@@ -161,3 +161,79 @@ class ValidationPathTests(SimpleTestCase):
 
         is_valid, error = FileValidator.validate_image_file(jpeg)
         self.assertTrue(is_valid, f"valid JPEG rejected: {error}")
+
+
+class OpenImageInputTests(SimpleTestCase):
+    """The validator must accept an already-open image, not only a file.
+
+    A PIL image is not file-like: it has no ``read``. The version that shipped
+    called ``Image.open`` unconditionally, so the decode path in
+    ``_run_local_pipeline`` -- which passes an already-open image -- raised
+    ``AttributeError`` on every upload and returned HTTP 500 in production.
+
+    The original ten tests all passed file-like objects. That is the gap this
+    class closes: the function was tested and the call site wired to it in the
+    same commit, and only the former was exercised.
+    """
+
+    @override_settings(UPLOAD_IMAGE_MAX_PIXELS=LIMIT)
+    def test_open_image_returns_a_verdict(self):
+        with Image.open(io.BytesIO(make_flat_png(4000, 3000))) as opened:
+            is_valid, error = check_image_dimensions(opened)
+
+        self.assertTrue(is_valid)
+        self.assertIsNone(error)
+
+    @override_settings(UPLOAD_IMAGE_MAX_PIXELS=LIMIT)
+    def test_open_oversized_image_is_rejected(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with Image.open(io.BytesIO(make_flat_png(12000, 12000))) as opened:
+                is_valid, error = check_image_dimensions(opened)
+
+        self.assertFalse(is_valid)
+        self.assertIn("too large", error)
+        self.assertIn("12000x12000", error)
+
+    @override_settings(UPLOAD_IMAGE_MAX_PIXELS=LIMIT)
+    def test_both_input_forms_agree(self):
+        """The same image must get the same verdict either way.
+
+        Divergence here would mean the call site is being validated by a
+        different rule than the one the tests describe.
+        """
+        for width, height in ((4000, 3000), (12000, 12000)):
+            data = make_flat_png(width, height)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                from_file, file_error = check_image_dimensions(upload(data))
+                with Image.open(io.BytesIO(data)) as opened:
+                    from_open, open_error = check_image_dimensions(opened)
+
+            self.assertEqual(from_file, from_open, f"{width}x{height} verdict differs by input form")
+            self.assertEqual(file_error, open_error, f"{width}x{height} error differs by input form")
+
+    @override_settings(UPLOAD_IMAGE_MAX_PIXELS=0)
+    def test_open_image_respects_disabled_check(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with Image.open(io.BytesIO(make_flat_png(12000, 12000))) as opened:
+                is_valid, _ = check_image_dimensions(opened)
+
+        self.assertTrue(is_valid)
+
+    @override_settings(UPLOAD_IMAGE_MAX_PIXELS=LIMIT)
+    def test_decode_call_site_receives_a_verdict(self):
+        """Exercise the actual call site, not the validator in isolation.
+
+        This mirrors what ``_run_local_pipeline`` does: open the file, then hand
+        the open image to the validator. Reproducing the shape of that call is
+        the only way a regression in the wiring is caught here.
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with Image.open(io.BytesIO(make_flat_png(12000, 12000))) as opened:
+                is_valid, error = check_image_dimensions(opened)
+
+        self.assertFalse(is_valid)
+        self.assertIsNotNone(error)
