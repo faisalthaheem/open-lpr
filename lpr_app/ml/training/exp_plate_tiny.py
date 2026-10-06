@@ -67,6 +67,10 @@ class Exp(MyExp):
         # Unrelated to the converter module name. This is a directory inside the
         # YOLOX checkout; the code that *writes* it is
         # lpr_app/ml/datasets/imanno_to_coco.py, and they are free to differ.
+        # Overridden by tools/train.py via -f, which is how the merged set is
+        # selected. The default stays the corpus-only layout so a plain run
+        # reproduces the original detector rather than silently using whatever
+        # dataset happens to be present.
         self.data_dir = "datasets/plate"
         self.train_ann = "train2017.json"
         self.val_ann = "val2017.json"
