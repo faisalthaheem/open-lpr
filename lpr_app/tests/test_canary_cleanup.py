@@ -295,6 +295,7 @@ class APIConfigEndpointTest(TestCase):
         self.assertIn("max_upload_bytes", data)
         self.assertIn("processing_timeout_minutes", data)
 
+    @override_settings(PIPELINE_BACKEND="llm")
     @patch("lpr_app.views.api_views.get_qwen_client")
     def test_health_check_healthy(self, mock_get_client):
         mock_client = MagicMock()
@@ -308,6 +309,7 @@ class APIConfigEndpointTest(TestCase):
         self.assertTrue(data["api_healthy"])
         self.assertTrue(data["database_healthy"])
 
+    @override_settings(PIPELINE_BACKEND="llm")
     @patch("lpr_app.views.api_views.get_qwen_client")
     def test_health_check_api_unhealthy(self, mock_get_client):
         mock_client = MagicMock()

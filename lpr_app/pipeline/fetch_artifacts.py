@@ -205,3 +205,43 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def verify_artifacts(model_dir: Path, base: str, names: list[str], timeout: float = 10.0) -> dict:
+    """Check whether every artifact is present and matches its published checksum.
+
+    This is a read-only counterpart to :func:`ensure_artifacts`: it never
+    downloads and never writes, so it is safe to call from a request path. It
+    exists because download-time verification only proves the bytes arrived
+    intact at that moment. Corruption introduced afterwards -- a truncated
+    volume write, a tampered or recycled volume -- is invisible to it, and the
+    recogniser paired with a mismatched dictionary produces plausible-looking
+    text rather than an error.
+
+    Returns a dict with ``ok`` (bool) and, when not ok, ``missing`` and
+    ``corrupt`` lists naming the offending artifacts.
+    """
+    missing = [n for n in names if not (model_dir / n).is_file()]
+    if missing:
+        # No point hashing: the manifest fetch is the network call, and a
+        # missing file is already a decisive answer.
+        return {"ok": False, "missing": missing, "corrupt": []}
+
+    try:
+        checksums = fetch_manifest(base, timeout)
+    except Exception as exc:
+        # Cannot reach the manifest, so integrity is unknown rather than bad.
+        # Reporting this as corruption would page someone for a DNS failure.
+        log.warning("Could not fetch manifest for integrity check: %s", exc)
+        return {"ok": True, "unverified": True, "missing": [], "corrupt": []}
+
+    corrupt = []
+    for name in names:
+        try:
+            if _sha256(model_dir / name) != checksums[name]:
+                corrupt.append(name)
+        except OSError as exc:
+            log.warning("Could not hash %s: %s", name, exc)
+            corrupt.append(name)
+
+    return {"ok": not corrupt, "missing": [], "corrupt": corrupt}
