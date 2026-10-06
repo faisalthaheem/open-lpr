@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-06
+
 ### Added
 - Recognition scoring: `lpr_app/ml/recognition_scoring.py` computes CER and exact-match over alphanumerics only, per layout and per confidence band, and `compare_backends.py` accepts `--labels` to use it. Blank labels are skipped rather than charged to a backend as full-length deletions
 - `compare_backends.py --dump-label-template <dir>` writes a per-plate crop plus a `labels.json` to transcribe, which is how the corpus's missing ground truth gets produced
@@ -21,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `METRICS_FILE_PATH` environment variable, so Prometheus metrics state is configurable outside Docker
 - `AVAILABILITY_REFRESH_SECONDS` setting controlling the background refresh interval for the cached availability series
 - `reset_qwen_client()` helper for tests that need to change client configuration
+- Artifact download and checksum verification (`fetch_artifacts.py`), run automatically on first boot by `docker-entrypoint.sh`, with the revision pinned via `PIPELINE_MODEL_REVISION`
+- `artifact_health` runtime integrity check, cached per process, surfaced on `/health/` as `artifacts_healthy`
 
 ### Changed
 - **`PIPELINE_BACKEND` now defaults to `local`.** Images are detected and read by in-process ONNX models by default, at ~60ms per image against the LLM backend's ~3600ms — the only path that fits the project's sub-500ms budget. Measured on the corpus, the local backend also detects more reliably (recall 1.000 vs 0.375 at IoU 0.3) and reads more plates (0.95 vs 0.375 of detections).
@@ -37,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed leftover `DEBUG:` logging from request and inference paths; the `lpr_app` logger is now `INFO`
 - Deleted `docker-compose-llamacpp-cpu.yml` and `docker-compose-llamacpp-amd-vulcan.yml`; use the profile-based `docker-compose.yaml`
 - Manual integration and diagnostic scripts moved to `scripts/`, out of test discovery
+- Docker Compose mounts `model/plate` as a persistent volume rather than read-only, so verified artifacts survive container replacement
+- CI publishes `amd64` images only; the `arm64` build is no longer produced (deployment host is amd64, and the SPA's arm64 leg failed under qemu emulation)
 
 ### Fixed
 - `compare_backends.py` classified plate layout by aspect ratio at a 2.0 cutoff, labelling `EG·209` — one line with an `ICT-ISLAMABAD` caption beneath it, ratio 1.91 — as stacked, and so attributing most of the corpus to the stacked bucket. Geometry cannot separate a two-row plate from a captioned single-row plate, so `layout_of()` now declines outside 1.5–2.6 and reports those as `unknown` rather than guessing
@@ -54,6 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Media paths are now bucketed by the same aware clock as `upload_timestamp`, so `uploads/YYYY/MM/DD/` agrees with the recorded date regardless of server timezone
 - `/api/v1/availability/` queried Prometheus synchronously on every request, occupying a worker for up to 10s; it now serves from a cache refreshed on a schedule
 - Local test runs logged `Permission denied: '/app'` when persisting metrics
+- Every upload returned HTTP 500 (`AttributeError`) when the backend received an already-open PIL image rather than a file path
+- Oversized images could trigger a decompression bomb; uploads above `UPLOAD_IMAGE_MAX_PIXELS` (40MP) are now rejected, both at upload time and on images already on disk
+- `/health/` reported "healthy" while every upload was returning 500 on the local backend, because its only measurement was an external API that the local path never calls. It now reports whichever backend is actually serving requests
+- `/api/v1/availability/` queried Prometheus on every request and reported API uptime on the local backend; it now returns `not-applicable` there
+- Missing or corrupt ONNX artifacts surfaced as a failure at request time with no signal; they are now downloaded and verified on first boot
 
 ## [1.4.0] - 2026-06-02
 
