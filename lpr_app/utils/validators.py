@@ -8,9 +8,55 @@ import logging
 import mimetypes
 from typing import Any
 
+from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
+from PIL import Image, UnidentifiedImageError
 
 logger = logging.getLogger(__name__)
+
+
+def check_image_dimensions(image_file: Any) -> tuple[bool, str | None]:
+    """Reject images whose declared dimensions exceed the pixel budget.
+
+    The check reads only the header. ``Image.open`` parses the dimensions
+    without decompressing pixel data, so this costs a few hundred bytes of I/O
+    and refuses the image before it can allocate anything -- which is the only
+    point at which refusing is cheap.
+
+    Bounding file size alone does not bound memory: a PNG of one flat colour
+    compresses by roughly 3000:1, so a sub-megabyte upload can declare 144
+    megapixels and cost 430MB of RAM once decoded. Pillow has its own guard but
+    it only warns under 178 megapixels, which is well past what a plate photo
+    needs, and it is a warning rather than a rejection.
+
+    Returns (is_valid, error_message).
+    """
+    try:
+        with Image.open(image_file) as img:
+            width, height = img.size
+    except UnidentifiedImageError:
+        # Not an image at all. Left for the caller's existing validity check to
+        # report, so the user sees one message about undecodable files rather
+        # than two.
+        return True, None
+    except (OSError, ValueError, Image.DecompressionBombError) as exc:
+        # A header this malformed is the caller's "invalid image" case too.
+        logger.warning("Could not read image header for dimension check: %s", exc)
+        return True, None
+
+    max_pixels = settings.UPLOAD_IMAGE_MAX_PIXELS
+    pixels = width * height
+
+    if max_pixels and pixels > max_pixels:
+        megapixels = pixels / 1_000_000
+        limit_megapixels = max_pixels / 1_000_000
+        return (
+            False,
+            f"Image too large: {width}x{height} ({megapixels:.1f} megapixels). "
+            f"Maximum is {limit_megapixels:.0f} megapixels.",
+        )
+
+    return True, None
 
 
 class FileValidator:
@@ -38,6 +84,13 @@ class FileValidator:
         # Check file size is not empty
         if uploaded_file.size == 0:
             return False, "File is empty"
+
+        # Reject oversized pixel dimensions from the header, before anything is
+        # decompressed. See check_image_dimensions for why file size is not a
+        # sufficient bound on memory.
+        is_valid, dimension_error = check_image_dimensions(uploaded_file)
+        if not is_valid:
+            return False, dimension_error
 
         # Validate file type
         content_type = uploaded_file.content_type or mimetypes.guess_type(uploaded_file.name)[0]

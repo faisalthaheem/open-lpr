@@ -215,9 +215,17 @@ class ImageProcessingService:
         from PIL import Image
 
         from ..pipeline.local_backend import LocalBackendError
+        from ..utils.validators import check_image_dimensions
 
         try:
+            # Re-check dimensions here rather than trusting the upload-time
+            # check. convert("RGB") below is the first point at which pixel data
+            # is actually decoded, and this path can also be reached for images
+            # already on disk rather than freshly validated uploads.
             with Image.open(image_path) as opened:
+                is_valid, dimension_error = check_image_dimensions(opened)
+                if not is_valid:
+                    raise LocalBackendError(dimension_error or "image too large")
                 image = opened.convert("RGB")
         except OSError as exc:
             raise LocalBackendError(f"could not open {image_path}: {exc}") from exc

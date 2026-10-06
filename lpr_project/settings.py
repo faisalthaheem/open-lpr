@@ -125,6 +125,20 @@ UPLOAD_FILE_MAX_SIZE = config("UPLOAD_FILE_MAX_SIZE", default=1048576, cast=int)
 # Allowed file types for upload
 ALLOWED_IMAGE_TYPES = ["jpeg", "jpg", "png", "webp"]
 
+# Maximum decoded pixels accepted for an upload, checked from the image header
+# before any pixel data is decompressed.
+#
+# UPLOAD_FILE_MAX_SIZE bounds the bytes on disk, which is not the same thing. A
+# PNG of one flat colour compresses by roughly 3000:1, so a 0.4MB upload can
+# declare 144 megapixels and cost 430MB of RAM once decoded. Pillow's own guard
+# only warns below 178 megapixels and errors above it, which is far past what
+# any single plate photograph needs.
+#
+# 40 megapixels covers a 12MP phone photo (4000x3000) with room to spare. The
+# detector letterboxes to 640x640 regardless, so input resolution beyond this
+# buys no accuracy -- it only costs memory.
+UPLOAD_IMAGE_MAX_PIXELS = config("UPLOAD_IMAGE_MAX_PIXELS", default=40_000_000, cast=int)
+
 # Detection pipeline settings
 MIN_PLATE_HEIGHT = config("MIN_PLATE_HEIGHT", default=30, cast=int)
 PLATE_HEIGHT_FRACTION = config("PLATE_HEIGHT_FRACTION", default=0.05, cast=float)

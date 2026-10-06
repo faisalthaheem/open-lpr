@@ -230,7 +230,8 @@ Key variables (see `.env.example` and `.env.llamacpp.example` for full list):
 - `MEDIA_PATH` — Media storage (default: `./media`, Docker: `./container-media`)
 - `METRICS_FILE_PATH` — Prometheus metrics state file (default: `metrics_state.json` beside the database; Docker: `/app/metrics/metrics_state.json`)
 - `AVAILABILITY_REFRESH_SECONDS` — Background refresh interval for the cached availability series (default: `60`)
-- `UPLOAD_FILE_MAX_SIZE` — Default 250KB in settings.py (10MB in Docker compose)
+- `UPLOAD_FILE_MAX_SIZE` — Default 250KB in settings.py (10MB in Docker compose). Bounds bytes on disk, **not memory**
+- `UPLOAD_IMAGE_MAX_PIXELS` — Default 40,000,000. Decoded pixels, read from the image header before any decompression. Needed because a flat-colour PNG compresses ~3000:1, so a 0.4MB upload can declare 144MP and cost 430MB of RAM; Pillow's own guard only *warns* under 178MP. 0 disables. Applies in `validators.check_image_dimensions`, called from both the upload validators and `_run_local_pipeline` — do not rely on the upload-time check alone, since that path can also read images already on disk
 
 ### SPA Frontend (runtime via Docker environment)
 
