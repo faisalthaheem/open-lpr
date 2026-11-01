@@ -1,5 +1,5 @@
 Django==5.2.14
-Pillow==12.3.0
+Pillow==13.0.0
 openai==3.22.1
 python-decouple==3.8
 python-dotenv==1.2.2
