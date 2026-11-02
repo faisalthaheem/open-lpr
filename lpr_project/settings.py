@@ -211,6 +211,14 @@ PIPELINE_DETECTOR_INPUT_SIZE = config(
 PIPELINE_DETECTOR_CONF_THRESHOLD = config("PIPELINE_DETECTOR_CONF_THRESHOLD", default=0.3, cast=float)
 PIPELINE_DETECTOR_NMS_IOU = config("PIPELINE_DETECTOR_NMS_IOU", default=0.45, cast=float)
 
+# Detection floors the local backend's validator applies, separate from the
+# LLM-era DETECTION_* settings. YOLOX scores genuine plates in the 0.3-0.5 band
+# (prod: 8 readable plates dropped at 0.5) and stacked plates sit at aspect
+# 1.0-1.5 (prod: "DGA9430" dropped at 1.5), so the local path needs its own
+# floors and the LLM path keeps the ones it was tuned for.
+PIPELINE_DETECTION_MIN_CONFIDENCE = config("PIPELINE_DETECTION_MIN_CONFIDENCE", default=0.35, cast=float)
+PIPELINE_DETECTION_MIN_PLATE_ASPECT = config("PIPELINE_DETECTION_MIN_PLATE_ASPECT", default=1.0, cast=float)
+
 # Plate layouts: "stacked" (two rows) or "single_line". Decided from the
 # detection's aspect ratio against this threshold, not configured per region.
 PIPELINE_LAYOUT_THRESHOLD = config("PIPELINE_LAYOUT_THRESHOLD", default=2.0, cast=float)
@@ -221,6 +229,10 @@ PIPELINE_OCR_DICT = config("PIPELINE_OCR_DICT", default="plate_ocr_dict.json", c
 # and splitting is enabled.
 PIPELINE_OCR_BATCH_SIZE = config("PIPELINE_OCR_BATCH_SIZE", default=8, cast=int)
 PIPELINE_OCR_CHARSET_PROFILE = config("PIPELINE_OCR_CHARSET_PROFILE", default="alphanumeric", cast=str)
+# Available profiles: alphanumeric, no_io, arabic, thai, cyrillic, chinese,
+# korean, latin_extended, all. The script profiles exist because the shipped
+# recogniser is multilingual and the profile is the only thing censoring its
+# output; a deployment serving Thai plates must not run "alphanumeric".
 # Off by default: on this corpus, splitting reads captions as a second line more
 # often than it rescues genuinely stacked plates. See the OCR stage docstring.
 PIPELINE_OCR_SPLIT_STACKED = config("PIPELINE_OCR_SPLIT_STACKED", default=False, cast=bool)
@@ -259,6 +271,61 @@ def _parse_stage_budgets(value: str) -> dict[str, float]:
 
 
 PIPELINE_STAGE_BUDGETS = config("PIPELINE_STAGE_BUDGETS", default="", cast=_parse_stage_budgets)
+
+
+def _parse_layout_ratios(value: str) -> dict[str, float]:
+    """Parse ``layout=ratio`` pairs, e.g. ``stacked=2.5,single_line=2.5``.
+
+    A malformed entry is ignored, matching the stage-budget parser: a layout
+    with no parsed ratio falls back to the rectify stage's own default.
+    """
+    ratios: dict[str, float] = {}
+    for entry in value.split(","):
+        name, separator, ratio = entry.partition("=")
+        name = name.strip()
+        if not separator or not name:
+            continue
+        try:
+            ratios[name] = float(ratio)
+        except ValueError:
+            continue
+    return ratios
+
+
+# Rectifier target aspect per layout. The defaults are wide for both layouts on
+# measured evidence: a narrow stacked target truncated reads on plates the
+# layout classifier routes to "stacked" by aspect ratio, which it cannot do
+# reliably (see the rectify stage docstring).
+PIPELINE_RECTIFY_LAYOUT_RATIOS = config(
+    "PIPELINE_RECTIFY_LAYOUT_RATIOS",
+    default="stacked=2.5,single_line=2.5",
+    cast=_parse_layout_ratios,
+)
+
+
+def _parse_layout_ratios(value: str) -> dict[str, float]:
+    """Parse ``layout=ratio`` pairs, e.g. ``stacked=2.5,single_line=2.5``.
+
+    Same tolerance as the stage budgets: a malformed entry is ignored, and a
+    layout with no parsed ratio falls through to the stage's own default.
+    """
+    ratios: dict[str, float] = {}
+    for entry in value.split(","):
+        name, separator, ratio = entry.partition("=")
+        name = name.strip()
+        if not separator or not name:
+            continue
+        try:
+            ratios[name] = float(ratio)
+        except ValueError:
+            continue
+    return ratios
+
+
+# Rectification target aspects per layout. Empty means the stage defaults,
+# which are deliberately wide for both layouts -- see the note in the rectify
+# stage on why a narrow stacked target truncates reads.
+PIPELINE_RECTIFY_LAYOUT_RATIOS = config("PIPELINE_RECTIFY_LAYOUT_RATIOS", default="", cast=_parse_layout_ratios)
 
 PROCESSING_TIMEOUT_MINUTES = config("PROCESSING_TIMEOUT_MINUTES", default=5, cast=int)
 MAX_RETRIES = config("MAX_RETRIES", default=2, cast=int)

@@ -134,13 +134,16 @@ records filename, SHA-256, upstream identity, and license for each.
 | `PIPELINE_DETECTOR_INPUT_SIZE` | `640,640` | Recall-critical, not a speed knob — see below |
 | `PIPELINE_DETECTOR_CONF_THRESHOLD` | `0.3` | |
 | `PIPELINE_DETECTOR_NMS_IOU` | `0.45` | |
+| `PIPELINE_DETECTION_MIN_CONFIDENCE` | `0.35` | Local-backend validator floor; the LLM-era `DETECTION_MIN_CONFIDENCE=0.5` killed YOLOX detections that score 0.31–0.44 |
+| `PIPELINE_DETECTION_MIN_PLATE_ASPECT` | `1.0` | Local-backend floor; stacked plates sit at aspect 1.0–1.5 and the LLM-era 1.5 dropped them |
 | `PIPELINE_LAYOUT_THRESHOLD` | `2.0` | Aspect ratio separating stacked from single-line |
 | `PIPELINE_OCR_MODEL` | `plate_ocr_ppocrv5_mobile.onnx` | |
 | `PIPELINE_OCR_DICT` | `plate_ocr_dict.json` | |
 | `PIPELINE_OCR_BATCH_SIZE` | `8` | Crops per inference |
-| `PIPELINE_OCR_CHARSET_PROFILE` | `alphanumeric` | `alphanumeric` or `no_io` |
+| `PIPELINE_OCR_CHARSET_PROFILE` | `alphanumeric` | `alphanumeric`, `no_io`, `arabic`, `thai`, `cyrillic`, `chinese`, `korean`, `latin_extended`, `all`. The recogniser is multilingual; the profile is the only censor — a non-Latin region running `alphanumeric` gets its script stripped |
 | `PIPELINE_OCR_SPLIT_STACKED` | `False` | Off by default; see above |
 | `PIPELINE_RECTIFY_ENABLED` | `True` | When false, `OCR_CROP_PADDING_PX` applies instead |
+| `PIPELINE_RECTIFY_LAYOUT_RATIOS` | `stacked=2.5,single_line=2.5` | Rectifier target aspect per layout. Both wide: a narrow stacked target (the old 1.6) truncated every read routed to it |
 | `PIPELINE_PROVIDER` | `cpu` | `cpu`, `cuda`, `rocm`; falls back to CPU with a warning |
 | `PIPELINE_LATENCY_BUDGET_SECONDS` | `0.5` | The sub-500ms target |
 | `PIPELINE_STAGE_BUDGETS` | empty | `stage=seconds` pairs, e.g. `detect_plate=0.4` |
@@ -149,6 +152,28 @@ records filename, SHA-256, upstream identity, and license for each.
 with a 36px 10th percentile; at 640px input a 36px plate is still resolvable by a
 stride-8 head, and at 416px it would not be. Measured recall at 640px is 1.000 on
 plates under 40px. Do not lower it for speed without re-measuring that bucket.
+
+**The local backend's validator floors and rectify targets were re-measured against
+prod in 2026-11, and the old values were the failure.** Replaying the 33 post-deploy
+prod uploads against their served reads: the LLM-era validator floors
+(`DETECTION_MIN_CONFIDENCE=0.5`, `DETECTION_MIN_PLATE_ASPECT=1.5`) dropped 8 readable
+plates — YOLOX legitimately scores real plates 0.31–0.44 and stacked plates sit at
+aspect 1.0–1.5 — so the local path uses its own `PIPELINE_DETECTION_MIN_CONFIDENCE`
+(0.35) and `PIPELINE_DETECTION_MIN_PLATE_ASPECT` (1.0) and the LLM path keeps the
+originals. The old narrow stacked rectify target (1.6) truncated every read routed to
+it, including single-line plates the aspect classifier cannot tell apart from stacked
+ones (CER 0.708/exact 0.09 at 1.6 vs 0.119/0.55 at 2.5 on 11 ground-truth plates;
+Iranian two-row plates read `15 LUE 23` at 2.5 and a single character at 1.6). Both
+targets are 2.5 now. `PIPELINE_OCR_CHARSET_PROFILE` also used to be accepted by the
+backend constructor and dropped before reaching the OCR stage, so every deployment ran
+`alphanumeric` regardless of configuration. Charset profiles now include the scripts
+the multilingual recogniser decodes (`arabic`, `thai`, `cyrillic`, `chinese`, `korean`,
+`latin_extended`, `all`); under `alphanumeric` any non-Latin glyph the model does
+decode is stripped. On the observed Thai plate the model itself decoded the Thai
+prefix as a Latin `M`/`n` at 48px input, so profiles are necessary for non-Latin
+regions, not sufficient — model script accuracy is the training track's problem.
+Do not wire configuration through a constructor again without a test that asserts
+it reaches the stage.
 
 ### Training and evaluation
 

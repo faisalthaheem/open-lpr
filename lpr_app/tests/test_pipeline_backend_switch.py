@@ -36,6 +36,7 @@ from lpr_app.pipeline.local_backend import (
 )
 from lpr_app.pipeline.stages.detect import Detection
 from lpr_app.pipeline.stages.ocr import RecognitionResult
+from lpr_app.services.detection_validator import DetectionValidator
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MODEL_DIR = REPO_ROOT / "model" / "plate"
@@ -137,6 +138,16 @@ class SettingsSelectionTest(SimpleTestCase):
         from lpr_project.settings import _parse_stage_budgets
 
         self.assertEqual(_parse_stage_budgets(""), {})
+
+    def test_layout_ratios_parse_from_configuration(self):
+        from lpr_project.settings import _parse_layout_ratios
+
+        self.assertEqual(
+            _parse_layout_ratios("stacked=2.5,single_line=2.5"),
+            {"stacked": 2.5, "single_line": 2.5},
+        )
+        self.assertEqual(_parse_layout_ratios("stacked=wide,bogus"), {})
+        self.assertEqual(_parse_layout_ratios(""), {})
 
     def test_provider_defaults_to_cpu(self):
         from django.conf import settings
@@ -340,15 +351,38 @@ class SettingsConstructionTest(SimpleTestCase):
         self.assertEqual(backend.detector.model_path, "/srv/models/plate_yolox_tiny_640.onnx")
         self.assertEqual(backend.recogniser.dict_path, "/srv/models/plate_ocr_dict.json")
 
-    def test_validator_thresholds_come_from_settings(self):
+    def test_validator_thresholds_come_from_pipeline_settings(self):
+        """The local backend validates with its own floors, not the LLM-era ones."""
         with override_settings(
             PIPELINE_MODEL_DIR=str(MODEL_DIR),
-            DETECTION_MIN_CONFIDENCE=0.42,
-            DETECTION_MIN_PLATE_ASPECT=2.0,
+            PIPELINE_DETECTION_MIN_CONFIDENCE=0.42,
+            PIPELINE_DETECTION_MIN_PLATE_ASPECT=2.0,
+            DETECTION_MIN_CONFIDENCE=0.5,
+            DETECTION_MIN_PLATE_ASPECT=1.5,
         ):
             backend = build_local_backend_from_settings()
         self.assertEqual(backend.validator.min_confidence, 0.42)
         self.assertEqual(backend.validator.min_plate_aspect, 2.0)
+
+    def test_validator_floors_default_below_the_llm_era_ones(self):
+        backend = build_local_backend_from_settings()
+        self.assertLess(backend.validator.min_confidence, DetectionValidator.DEFAULT_MIN_CONFIDENCE)
+        self.assertLess(backend.validator.min_plate_aspect, DetectionValidator.DEFAULT_MIN_PLATE_ASPECT)
+
+    def test_charset_profile_reaches_the_recogniser(self):
+        """It used to be accepted by the backend and dropped, silently censoring
+        every non-Latin read down to alphanumerics."""
+        with override_settings(PIPELINE_MODEL_DIR=str(MODEL_DIR), PIPELINE_OCR_CHARSET_PROFILE="thai"):
+            backend = build_local_backend_from_settings()
+        self.assertEqual(backend.recogniser.charset_profile, "thai")
+
+    def test_rectify_layout_ratios_reach_the_rectifier(self):
+        with override_settings(
+            PIPELINE_MODEL_DIR=str(MODEL_DIR),
+            PIPELINE_RECTIFY_LAYOUT_RATIOS={"stacked": 2.0, "single_line": 3.5},
+        ):
+            backend = build_local_backend_from_settings()
+        self.assertEqual(backend.rectifier.layout_ratios, {"stacked": 2.0, "single_line": 3.5})
 
     def test_stage_budgets_are_passed_through(self):
         with override_settings(

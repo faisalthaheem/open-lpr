@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **The local backend silently ignored `PIPELINE_OCR_CHARSET_PROFILE`.** The setting was accepted by `LocalPlateBackend` and dropped before reaching the OCR stage, so every deployment ran the `alphanumeric` profile and any non-Latin glyph the recogniser decoded was stripped from the response. The profile now reaches the stage; tests assert it does
+- **The local backend validated YOLOX detections with the LLM-era floors and dropped real plates.** `DETECTION_MIN_CONFIDENCE=0.5` killed detections that legitimately score 0.31–0.44 (8 readable plates in the post-deploy prod window) and `DETECTION_MIN_PLATE_ASPECT=1.5` killed stacked plates at aspect 1.0–1.5. The local path now uses its own `PIPELINE_DETECTION_MIN_CONFIDENCE` (default `0.35`) and `PIPELINE_DETECTION_MIN_PLATE_ASPECT` (default `1.0`); the LLM path keeps the original settings
+
+### Changed
+- **Rectifier target aspects are wide for both layouts** (`stacked=2.5`, `single_line=2.5`, configurable via `PIPELINE_RECTIFY_LAYOUT_RATIOS`). The old stacked target of 1.6 truncated every read routed to it — CER 0.708 / exact-match 0.09 against 0.119 / 0.55 at 2.5 on prod ground truth, including single-line plates with captions that the aspect-ratio classifier cannot separate from stacked ones. On the same 11-plate ground-truth set the new defaults improve served reads from CER 0.183 / exact 0.33 to 0.119 / 0.55
+- Charset profiles now cover the scripts the multilingual recogniser decodes: `arabic`, `thai`, `cyrillic`, `chinese`, `korean`, `latin_extended`, and `all` (no character filter, separators removed), alongside `alphanumeric` and `no_io`
+
+### Known limitations
+- On the observed prod Thai plate the recogniser itself decodes the Thai prefix as a Latin letter at the fixed 48px input height, with any profile; charset profiles are necessary for non-Latin regions, not sufficient. Model script accuracy is a training-track concern
+
 ## [1.5.0] - 2026-10-06
 
 ### Added
