@@ -31,8 +31,16 @@ def box_plate(image, x, y, w, h, **extra):
 class LayoutRatioTest(TestCase):
     """Aspect ratios are configuration, not a single global constant."""
 
-    def test_stacked_and_single_line_differ(self):
-        self.assertNotEqual(DEFAULT_LAYOUT_RATIOS["stacked"], DEFAULT_LAYOUT_RATIOS["single_line"])
+    def test_every_layout_target_is_wide(self):
+        """Both targets stay wide (>= 2.0), deliberately.
+
+        The old stacked target (1.6) truncated reads on every plate routed to
+        it, and the aspect-ratio classifier routes single-line-with-caption
+        plates to "stacked" routinely. Measured on prod ground truth: CER 0.708
+        at 1.6 versus 0.119 at 2.5.
+        """
+        for layout, ratio in DEFAULT_LAYOUT_RATIOS.items():
+            self.assertGreaterEqual(ratio, 2.0, f"{layout} target must stay wide")
 
     def test_target_size_follows_layout_ratio(self):
         stage = RectifyPlateStage(layout="single_line", output_size=(320, 100))
@@ -40,11 +48,14 @@ class LayoutRatioTest(TestCase):
         self.assertEqual(h, 100)
         self.assertAlmostEqual(w / h, DEFAULT_LAYOUT_RATIOS["single_line"], places=1)
 
-    def test_stacked_layout_is_not_forced_into_single_row_proportion(self):
-        stage = RectifyPlateStage(layout="stacked", output_size=(320, 100))
+    def test_stacked_layout_gets_its_own_configured_target(self):
+        """Each layout resolves its own configured ratio."""
+        stage = RectifyPlateStage(
+            layout="stacked", output_size=(320, 100), layout_ratios={"stacked": 2.0, "single_line": 3.0}
+        )
         stacked_w, _ = stage.target_size_for("stacked")
         single_w, _ = stage.target_size_for("single_line")
-        self.assertLess(stacked_w, single_w, "a stacked plate must not be stretched to single-line width")
+        self.assertEqual((stacked_w, single_w), (200, 300))
 
     def test_ratio_is_configurable(self):
         stage = RectifyPlateStage(layout="single_line", layout_ratios={"single_line": 4.3})
@@ -124,7 +135,7 @@ class SkewCorrectionTest(TestCase):
         corners = ((30.0, 40.0), (170.0, 60.0), (170.0, 100.0), (30.0, 80.0))
         result = stage.rectify({"image": make_image(200, 120), "corners": corners})
         self.assertEqual(result.corners, corners)
-        self.assertEqual(result.crop.size, (300, 100))
+        self.assertEqual(result.crop.size, stage.target_size_for("single_line"))
 
     def test_rectification_preserves_content_area(self):
         stage = RectifyPlateStage(output_size=(320, 100), layout="single_line")

@@ -69,6 +69,31 @@ STACKED_LAYOUT = "stacked"
 SINGLE_LINE_LAYOUT = "single_line"
 
 
+def _codepoints(*ranges: tuple[int, int]) -> str:
+    """Concatenate the characters of half-open Unicode codepoint ranges."""
+    return "".join(chr(c) for start, end in ranges for c in range(start, end))
+
+
+# Script blocks the shipped multilingual recogniser decodes. The mechanism this
+# guards: the recogniser emits non-Latin glyphs, and the alphanumeric profile
+# strips every one of them -- a plate the model reads in Thai can never be
+# served under "alphanumeric". (The observed prod Thai plate "ตก 8534" was served
+# as "M8534" is a second, separate failure: at 48px input the mobile model itself
+# decoded the Thai prefix as a Latin "M"/"n". Fixing the profile is necessary for
+# non-Latin regions, not sufficient -- the model's script accuracy needs the
+# fine-tune track.)
+ARABIC_CHARS = _codepoints((0x0600, 0x0700))  # Arabic, Supplement, Extended-A; digits and diacritics included
+THAI_CHARS = _codepoints((0x0E00, 0x0E5C))
+CYRILLIC_CHARS = _codepoints((0x0400, 0x0530))
+CJK_CHARS = _codepoints((0x4E00, 0xA000))
+HANGUL_CHARS = _codepoints((0x1100, 0x1200), (0x3130, 0x3190), (0xA960, 0xA980), (0xAC00, 0xD7A4))
+LATIN_EXTENDED_CHARS = (
+    DEFAULT_CHARSET
+    + _codepoints((0x00C0, 0x00D7), (0x00D8, 0x00F7), (0x00F8, 0x0250))
+    + "ə"  # U+0259, the lowercase of Azerbaijani Ə (U+018F, in the range above)
+)
+
+
 @dataclass
 class CharsetProfile:
     """The characters a region actually uses on its plates.
@@ -76,18 +101,25 @@ class CharsetProfile:
     ``name`` is for configuration and metrics. ``characters`` is the permitted
     set. ``strip_separators`` controls whether spacing and punctuation found in
     the raw decode is removed, which is usually desirable since plates use
-    separators inconsistently.
+    separators inconsistently. ``allow_all`` disables the character filter
+    entirely, for deployments that want the recogniser's full multilingual
+    output with nothing stripped.
     """
 
     name: str
     characters: str = DEFAULT_CHARSET
     strip_separators: bool = True
+    allow_all: bool = False
 
     def allowed(self) -> set[str]:
         return set(self.characters)
 
     def sanitise(self, text: str) -> str:
         """Drop anything outside the profile and, by default, separators."""
+        if self.allow_all:
+            if self.strip_separators:
+                return "".join(c for c in text if not c.isspace())
+            return text
         allowed = self.allowed()
         kept = [c for c in text if c in allowed]
         if not self.strip_separators:
@@ -99,6 +131,16 @@ DEFAULT_PROFILES = {
     "alphanumeric": CharsetProfile("alphanumeric", DEFAULT_CHARSET),
     # A profile for regions whose plates never use I or O, as many US states do.
     "no_io": CharsetProfile("no_io", "".join(c for c in DEFAULT_CHARSET if c not in "IO"), strip_separators=True),
+    # Script profiles: each is Latin alphanumerics plus one script, because
+    # every plate series in service mixes digits and Latin with a local script.
+    "arabic": CharsetProfile("arabic", DEFAULT_CHARSET + ARABIC_CHARS),
+    "thai": CharsetProfile("thai", DEFAULT_CHARSET + THAI_CHARS),
+    "cyrillic": CharsetProfile("cyrillic", DEFAULT_CHARSET + CYRILLIC_CHARS),
+    "chinese": CharsetProfile("chinese", DEFAULT_CHARSET + CJK_CHARS),
+    "korean": CharsetProfile("korean", DEFAULT_CHARSET + HANGUL_CHARS),
+    "latin_extended": CharsetProfile("latin_extended", LATIN_EXTENDED_CHARS),
+    # Nothing is dropped: the recogniser's raw decode, separators removed.
+    "all": CharsetProfile("all", strip_separators=True, allow_all=True),
 }
 
 
@@ -350,6 +392,7 @@ class PlateOCRStage(Stage):
         stacked_threshold: float = 2.0,
         min_confidence: float = 0.0,
         batch_size: int = DEFAULT_OCR_BATCH_SIZE,
+        charset_profile: str = "alphanumeric",
     ) -> None:
         super().__init__(context)
         self.model_path = model_path
@@ -365,6 +408,11 @@ class PlateOCRStage(Stage):
         self.batch_size = max(1, int(batch_size))
         self.charset: list[str] = []
         self.profiles = dict(DEFAULT_PROFILES)
+        # The configured profile. It used to be accepted by the backend and
+        # dropped here, so every deployment ran "alphanumeric" no matter what it
+        # configured -- the profile a request does not name must be the one in
+        # settings, not a hardcoded constant.
+        self.charset_profile = self.use_profile(charset_profile).name
         self._loaded_dict = False
 
     def use_profile(self, name: str) -> CharsetProfile:
@@ -411,7 +459,7 @@ class PlateOCRStage(Stage):
         if not plates:
             return []
 
-        chosen = profile or self.profiles["alphanumeric"]
+        chosen = profile or self.use_profile(self.charset_profile)
 
         # Flatten plates into rows, remembering which plate each row belongs to.
         rows: list[Image.Image] = []
@@ -459,7 +507,7 @@ class PlateOCRStage(Stage):
 
     def _profile_for(self, data: dict[str, Any]) -> CharsetProfile:
         profile_name = data.get("charset_profile") or self.context.config.get("charset_profile")
-        return self.use_profile(profile_name) if profile_name else self.profiles["alphanumeric"]
+        return self.use_profile(profile_name) if profile_name else self.use_profile(self.charset_profile)
 
     def _rows_for(self, crop: Image.Image, layout: str) -> list[Image.Image]:
         """One crop, or two when the plate is stacked."""

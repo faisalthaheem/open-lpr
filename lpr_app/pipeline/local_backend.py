@@ -199,6 +199,7 @@ class LocalPlateBackend:
         rectify_enabled: bool = True,
         rectify_output_size: tuple[int, int] = (320, 100),
         rectify_min_area: float = 64.0,
+        rectify_layout_ratios: dict[str, float] | None = None,
         provider: str = "cpu",
         crop_padding_px: int = 25,
         validator: DetectionValidator | None = None,
@@ -215,12 +216,14 @@ class LocalPlateBackend:
             output_size=rectify_output_size,
             min_area=rectify_min_area,
             enabled=rectify_enabled,
+            layout_ratios=rectify_layout_ratios,
         )
         self.recogniser = PlateOCRStage(
             model_path=ocr_model,
             dict_path=ocr_dict,
             batch_size=ocr_batch_size,
             split_stacked=ocr_split_stacked,
+            charset_profile=ocr_charset_profile,
         )
         self.validator = validator or DetectionValidator()
         self.crop_padding_px = int(crop_padding_px)
@@ -327,13 +330,19 @@ def build_local_backend_from_settings() -> LocalPlateBackend:
         ocr_charset_profile=settings.PIPELINE_OCR_CHARSET_PROFILE,
         ocr_split_stacked=settings.PIPELINE_OCR_SPLIT_STACKED,
         rectify_enabled=settings.PIPELINE_RECTIFY_ENABLED,
+        rectify_layout_ratios=settings.PIPELINE_RECTIFY_LAYOUT_RATIOS or None,
         provider=settings.PIPELINE_PROVIDER,
         crop_padding_px=settings.OCR_CROP_PADDING_PX,
+        # The local backend gets its own detection floors. The LLM-era
+        # DETECTION_* defaults (0.5 confidence, 1.5 aspect) were tuned for a
+        # vision model that reports calibrated confidence, and they silently
+        # killed real plates on the YOLOX path: measured in prod, YOLOX scores
+        # genuine plates 0.31-0.44 and stacked plates sit at aspect 1.0-1.5.
         validator=DetectionValidator(
-            min_confidence=settings.DETECTION_MIN_CONFIDENCE,
+            min_confidence=settings.PIPELINE_DETECTION_MIN_CONFIDENCE,
             min_box_area_fraction=settings.DETECTION_MIN_BOX_AREA_FRACTION,
             max_box_area_fraction=settings.DETECTION_MAX_BOX_AREA_FRACTION,
-            min_plate_aspect=settings.DETECTION_MIN_PLATE_ASPECT,
+            min_plate_aspect=settings.PIPELINE_DETECTION_MIN_PLATE_ASPECT,
             max_plate_aspect=settings.DETECTION_MAX_PLATE_ASPECT,
         ),
         stage_budgets=settings.PIPELINE_STAGE_BUDGETS,

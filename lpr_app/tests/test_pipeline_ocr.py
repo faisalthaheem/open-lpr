@@ -13,6 +13,7 @@ from PIL import Image
 from lpr_app.pipeline.stages.base import StageError
 from lpr_app.pipeline.stages.ocr import (
     DEFAULT_CHARSET,
+    DEFAULT_PROFILES,
     CharsetProfile,
     PlateOCRStage,
     _as_probabilities,
@@ -225,6 +226,51 @@ class CharsetTest(TestCase):
         with self.assertRaises(StageError) as ctx:
             PlateOCRStage().use_profile("martian")
         self.assertIn("martian", str(ctx.exception))
+
+    def test_script_profiles_keep_their_own_script(self):
+        """Every shipped script profile must keep its own glyphs, Latin, and digits.
+
+        Under "alphanumeric" any non-Latin glyph the multilingual recogniser
+        decodes is stripped before the response is built; a deployment serving a
+        non-Latin region must select that region's profile.
+        """
+        samples = {
+            "thai": "ตก 8534",
+            "arabic": "ص ب 9 1 2 3",
+            "cyrillic": "А123ВС",
+            "chinese": "苏A88888",
+            "korean": "부산1234",
+            "latin_extended": "ĞİŞğ01",
+        }
+        for name, sample in samples.items():
+            profile = DEFAULT_PROFILES[name]
+            kept = profile.sanitise(sample)
+            self.assertTrue(
+                any(c.isalpha() and c not in DEFAULT_CHARSET for c in kept),
+                f"{name} stripped its own script: {sample!r} -> {kept!r}",
+            )
+            digits = [c for c in sample if c.isdigit()]
+            for digit in digits:
+                self.assertIn(digit, kept)
+
+    def test_all_profile_keeps_everything_and_strips_separators(self):
+        profile = DEFAULT_PROFILES["all"]
+        self.assertEqual(profile.sanitise("ตก 8534"), "ตก8534")
+        self.assertEqual(profile.sanitise("AB-12 CD"), "AB-12CD")
+
+    def test_stage_built_with_a_profile_uses_it_by_default(self):
+        """A profile passed at construction must survive to read time.
+
+        It used to be accepted by the backend and dropped, so every deployment
+        ran "alphanumeric" regardless of what it configured.
+        """
+        stage = PlateOCRStage(charset_profile="thai")
+        self.assertEqual(stage.charset_profile, "thai")
+        self.assertEqual(stage._profile_for({}).name, "thai")
+        self.assertEqual(stage.use_profile(stage.charset_profile).sanitise("ตก 8534"), "ตก8534")
+
+    def test_stage_defaults_to_alphanumeric(self):
+        self.assertEqual(PlateOCRStage()._profile_for({}).name, "alphanumeric")
 
 
 class CharsetFileTest(TestCase):

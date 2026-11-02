@@ -25,9 +25,19 @@ logger = logging.getLogger(__name__)
 # single-line US/EU plates between 2.6 and 3.4. A single global ratio would
 # squeeze one group or waste resolution on the other, so ratios are
 # configuration and a layout is declared per region.
+#
+# Both targets are wide, deliberately. The old stacked target (1.6) was measured
+# on prod ground truth and it truncated reads on every plate routed to it:
+# geometry cannot tell a two-row plate from a single-line plate carrying a
+# caption (both span ratios 1.4-2.0), so the layout label misroutes single-line
+# plates into the stacked target routinely, and a 1.6 target also starves the
+# two rows of a genuinely stacked plate of horizontal resolution. At a wide
+# target both groups read: on the 2026-11 prod set, CER 0.708/exact 0.09 at 1.6
+# versus CER 0.119/exact 0.55 at 2.5, and Iranian two-row plates read "15 LUE 23"
+# at 2.5 where 1.6 returned a single character.
 DEFAULT_LAYOUT_RATIOS = {
-    "stacked": 1.6,
-    "single_line": 3.0,
+    "stacked": 2.5,
+    "single_line": 2.5,
 }
 
 DEFAULT_OUTPUT_SIZE = (320, 100)
