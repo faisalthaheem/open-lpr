@@ -352,10 +352,11 @@ class StageContractTest(TestCase):
         self.assertEqual(stage.inputs, ("plate_crop",))
         self.assertEqual(stage.outputs, ("ocr",))
 
-    def test_splitting_is_off_by_default(self):
-        """Documented decision: splitting appends captions more often than it
-        rescues stacked plates on this corpus."""
-        self.assertFalse(PlateOCRStage().split_stacked)
+    def test_splitting_is_on_by_default(self):
+        """Documented decision (2026-11 prod replay): the split completes every
+        genuinely stacked read it touches, and read_plates' arbitration reverts
+        any split that cuts real text or reads worse than the whole crop."""
+        self.assertTrue(PlateOCRStage().split_stacked)
 
     def test_missing_crop_is_rejected(self):
         with self.assertRaises(StageError):
@@ -471,3 +472,102 @@ class BatchBoundTest(TestCase):
 
     def test_batch_size_is_at_least_one(self):
         self.assertEqual(PlateOCRStage(batch_size=0).batch_size, 1)
+
+
+class ScriptedRecogniser:
+    """Fake recogniser returning a scripted (text, confidence) per row.
+
+    Scripts are consumed in invocation order: the first inference call takes
+    the first script, and so on. That matches how ``read_plates`` orders its
+    calls -- plate rows batched first, then one standalone inference per
+    split plate for the whole-crop arbitration read.
+    """
+
+    def __init__(self, scripts, labels=("", "A", "B", "C", "D")):
+        self.scripts = list(scripts)
+        self.labels = labels
+        self.labels_per_step = len(labels)
+        self.calls: list[int] = []
+        self.input_names = ("x",)
+        self.input_shapes = (("x", ("N", 3, 48, "W")),)
+        self.output_names = PlateOCRStage.ONNX_OUTPUTS
+        self.session = self
+
+    def run(self, output_names, feed):
+        tensor = feed["x"]
+        batch = int(tensor.shape[0])
+        self.calls.append(batch)
+        script = self.scripts.pop(0)
+        assert len(script) == batch, (script, batch)
+        # One timestep per 8px of shared width, as PP-OCR emits.
+        steps = int(tensor.shape[3]) // 8
+        raw = np.zeros((batch, steps, self.labels_per_step), dtype=np.float32)
+        for row, (text, probability) in enumerate(script):
+            step = 0
+            for char in text:
+                if step >= steps:
+                    break
+                label = self.labels.index(char)
+                spread = (1.0 - probability) / (self.labels_per_step - 1)
+                raw[row, step, :] = spread
+                raw[row, step, label] = probability
+                # A blank timestep between characters, as greedy CTC expects.
+                step += 2
+            # Remaining steps stay all-zero: uniform, so argmax is the blank.
+        return [raw]
+
+
+class SplitArbitrationTest(TestCase):
+    """A split is kept only when it beats a standalone whole-crop read."""
+
+    def _stage(self, scripts, **kwargs):
+        stage = PlateOCRStage(split_stacked=True, batch_size=8, **kwargs)
+        stage.charset = ["", "A", "B", "C", "D"]
+        stage._loaded_dict = True
+        stage._session = ScriptedRecogniser(scripts, labels=stage.charset)
+        return stage
+
+    def _stacked(self, stage):
+        return stage.read_plates([(plate_image(208, 109, text_rows=2), "stacked")])[0]
+
+    def test_split_wins_when_rows_are_full_and_more_confident(self):
+        stage = self._stage([[("A", 0.9), ("A", 0.9)], [("A", 0.7)]])
+        result = self._stacked(stage)
+        self.assertEqual(result.text, "AA")
+        self.assertEqual(result.rows, ["A", "A"])
+
+    def test_split_at_equal_confidence_keeps_the_split(self):
+        stage = self._stage([[("A", 0.8), ("A", 0.8)], [("A", 0.8)]])
+        self.assertEqual(self._stacked(stage).text, "AA")
+
+    def test_split_with_an_empty_row_falls_back_to_the_whole_read(self):
+        """An empty row means the split cut through text: the prod BME365 case,
+        where a caption cut produced rows ['', 'YBME6'] and lost a 0.996 read."""
+        stage = self._stage([[("", 0.0), ("A", 0.9)], [("B", 0.8)]])
+        result = self._stacked(stage)
+        self.assertEqual(result.text, "B")
+        self.assertEqual(result.rows, ["B"])
+
+    def test_split_below_whole_confidence_falls_back(self):
+        stage = self._stage([[("A", 0.5), ("A", 0.5)], [("B", 0.6)]])
+        result = self._stacked(stage)
+        self.assertEqual(result.text, "B")
+
+    def test_the_whole_read_is_its_own_single_crop_inference(self):
+        """Batching the whole crop with its rows pads it to the rows' width,
+        and the bidirectional head reads the padding back into the text."""
+        stage = self._stage([[("A", 0.9), ("A", 0.9)], [("A", 0.7)]])
+        self._stacked(stage)
+        self.assertEqual(stage._session.calls, [2, 1])
+
+    def test_a_single_line_plate_pays_no_extra_inference(self):
+        stage = self._stage([[("A", 0.9)]])
+        stage.read_plates([(plate_image(208, 109), "single_line")])
+        self.assertEqual(stage._session.calls, [1])
+
+    def test_a_stacked_crop_that_does_not_separate_pays_no_extra_inference(self):
+        """split_two_rows returning None means one row, so no arbitration."""
+        stage = self._stage([[("A", 0.9)]])
+        # One text row is one ink band: no gap to split on.
+        stage.read_plates([(plate_image(208, 109, text_rows=1), "stacked")])
+        self.assertEqual(stage._session.calls, [1])

@@ -159,10 +159,12 @@ class SettingsSelectionTest(SimpleTestCase):
 
         self.assertEqual(settings.PIPELINE_OCR_CHARSET_PROFILE, "alphanumeric")
 
-    def test_stacked_splitting_is_off_by_default(self):
+    def test_stacked_splitting_is_on_by_default(self):
         from django.conf import settings
 
-        self.assertFalse(settings.PIPELINE_OCR_SPLIT_STACKED)
+        # 2026-11 prod replay: the split completed every stacked read it
+        # touched, and read_plates arbitration reverts splits that cut text.
+        self.assertTrue(settings.PIPELINE_OCR_SPLIT_STACKED)
 
 
 class ServiceBranchTest(SimpleTestCase):
@@ -397,6 +399,35 @@ class SettingsConstructionTest(SimpleTestCase):
             backend = build_local_backend_from_settings()
         self.assertEqual(backend.detector.context.provider, "rocm")
         self.assertEqual(backend.recogniser.context.provider, "rocm")
+
+    def test_native_scale_pass_reaches_the_detector(self):
+        with override_settings(PIPELINE_MODEL_DIR=str(MODEL_DIR), PIPELINE_DETECTOR_NATIVE_SCALE_PASS=False):
+            backend = build_local_backend_from_settings()
+        self.assertFalse(backend.detector.native_scale_pass)
+
+    def test_native_scale_pass_defaults_on(self):
+        backend = build_local_backend_from_settings()
+        self.assertTrue(backend.detector.native_scale_pass)
+
+    def test_max_box_area_fraction_defaults_looser_than_the_llm_era_ceiling(self):
+        """A plate filling the frame is a normal "placa" crop; the LLM-era 0.5
+        ceiling silently dropped one at 74% area in prod."""
+        backend = build_local_backend_from_settings()
+        self.assertGreater(backend.validator.max_box_area_fraction, DetectionValidator.DEFAULT_MAX_BOX_AREA_FRACTION)
+
+    def test_max_box_area_fraction_is_configurable(self):
+        with override_settings(PIPELINE_MODEL_DIR=str(MODEL_DIR), PIPELINE_DETECTION_MAX_BOX_AREA_FRACTION=0.5):
+            backend = build_local_backend_from_settings()
+        self.assertEqual(backend.validator.max_box_area_fraction, 0.5)
+
+    def test_split_stacked_defaults_on(self):
+        backend = build_local_backend_from_settings()
+        self.assertTrue(backend.recogniser.split_stacked)
+
+    def test_split_stacked_is_configurable(self):
+        with override_settings(PIPELINE_MODEL_DIR=str(MODEL_DIR), PIPELINE_OCR_SPLIT_STACKED=False):
+            backend = build_local_backend_from_settings()
+        self.assertFalse(backend.recogniser.split_stacked)
 
 
 class TimingTest(SimpleTestCase):

@@ -86,11 +86,22 @@ class DetectionResult:
         return [d.to_dict() for d in self.detections]
 
 
-def letterbox(image: Image.Image, size: tuple[int, int]) -> tuple[np.ndarray, float, tuple[float, float]]:
+def letterbox(
+    image: Image.Image,
+    size: tuple[int, int],
+    max_scale: float | None = None,
+) -> tuple[np.ndarray, float, tuple[float, float]]:
     """Resize preserving aspect ratio and pad to ``size``.
 
     Returns the CHW float array the detector expects, the scale factor, and the
     (pad_x, pad_y) applied, which together invert the transform.
+
+    ``max_scale`` caps the resize at 1.0 when given, so a small image is pasted
+    onto the canvas at native pixel scale instead of being blown up. The cap
+    exists because the model was trained at native scale: inflating a thumbnail
+    inflates its plate out of the training distribution, and measured detection
+    confidence collapses (a 190px crop scored 0.15 letterboxed-to-640 and 0.76
+    pasted at 1:1).
     """
     target_w, target_h = size
     src_w, src_h = image.size
@@ -98,6 +109,8 @@ def letterbox(image: Image.Image, size: tuple[int, int]) -> tuple[np.ndarray, fl
         raise StageError(f"cannot letterbox a {src_w}x{src_h} image")
 
     scale = min(target_w / src_w, target_h / src_h)
+    if max_scale is not None:
+        scale = min(scale, max_scale)
     new_w = max(1, int(round(src_w * scale)))
     new_h = max(1, int(round(src_h * scale)))
 
@@ -288,6 +301,7 @@ class PlateDetectionStage(Stage):
         conf_threshold: float = 0.3,
         nms_iou: float = 0.45,
         layout_threshold: float = 2.0,
+        native_scale_pass: bool = True,
     ) -> None:
         super().__init__(context)
         self.model_path = model_path
@@ -295,6 +309,7 @@ class PlateDetectionStage(Stage):
         self.conf_threshold = float(conf_threshold)
         self.nms_iou = float(nms_iou)
         self.layout_threshold = float(layout_threshold)
+        self.native_scale_pass = native_scale_pass
 
     def run(self, data: dict[str, Any]) -> dict[str, Any]:
         image = data.get("image")
@@ -306,14 +321,28 @@ class PlateDetectionStage(Stage):
         if self._session is None:
             self.load()
 
-        tensor, scale, pad = letterbox(image, self.input_size)
+        detections = self._detect_at_letterbox_scale(image)
+
+        if self.native_scale_pass:
+            extra = self._detect_at_native_scale(image)
+            if extra:
+                detections = suppress_duplicates(
+                    detections + extra,
+                    iou_threshold=self.nms_iou,
+                    layout_threshold=self.layout_threshold,
+                )
+        return {"detections": detections}
+
+    def _infer(self, tensor: np.ndarray) -> np.ndarray:
         feed = {self._session.input_names[0]: tensor}
-
         outputs = run_session(self._session, feed, self.ONNX_OUTPUTS, stage_name=self.name)
-        raw = next(iter(outputs.values()))
+        return np.asarray(next(iter(outputs.values())))
 
-        detections = decode_yolox(
-            np.asarray(raw),
+    def _detect_at_letterbox_scale(self, image: Image.Image) -> list[Detection]:
+        """The single pass the pipeline has always run: fill the input, pad to square."""
+        tensor, scale, pad = letterbox(image, self.input_size)
+        return decode_yolox(
+            self._infer(tensor),
             scale,
             pad,
             image.size,
@@ -322,4 +351,27 @@ class PlateDetectionStage(Stage):
             nms_iou=self.nms_iou,
             layout_threshold=self.layout_threshold,
         )
-        return {"detections": detections}
+
+    def _detect_at_native_scale(self, image: Image.Image) -> list[Detection]:
+        """A second pass for images the letterbox pass had to enlarge.
+
+        A thumbnail plate is a plate; blowing it up to fill a 640 input moves it
+        out of the scale range the detector was trained on. Pasting it onto the
+        canvas at 1:1 keeps it in range. The pass only runs when the first pass
+        would upscale (small images), so full-size images pay one inference, not
+        two.
+        """
+        target = min(self.input_size)
+        if max(image.size) >= target:
+            return []
+        tensor, scale, pad = letterbox(image, self.input_size, max_scale=1.0)
+        return decode_yolox(
+            self._infer(tensor),
+            scale,
+            pad,
+            image.size,
+            input_size=self.input_size,
+            conf_threshold=self.conf_threshold,
+            nms_iou=self.nms_iou,
+            layout_threshold=self.layout_threshold,
+        )

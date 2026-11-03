@@ -210,6 +210,13 @@ PIPELINE_DETECTOR_INPUT_SIZE = config(
 )
 PIPELINE_DETECTOR_CONF_THRESHOLD = config("PIPELINE_DETECTOR_CONF_THRESHOLD", default=0.3, cast=float)
 PIPELINE_DETECTOR_NMS_IOU = config("PIPELINE_DETECTOR_NMS_IOU", default=0.45, cast=float)
+# Second detection pass at native pixel scale for images smaller than the model
+# input. The letterbox pass enlarges a 190px thumbnail to fill 640, and the
+# plate it carries lands far outside the scales the detector was trained on:
+# prod thumbnails of full-frame plate photos scored 0.15-0.31 letterboxed and
+# 0.76-0.84 pasted at 1:1. Only images the letterbox pass must upscale pay the
+# second inference.
+PIPELINE_DETECTOR_NATIVE_SCALE_PASS = config("PIPELINE_DETECTOR_NATIVE_SCALE_PASS", default=True, cast=bool)
 
 # Detection floors the local backend's validator applies, separate from the
 # LLM-era DETECTION_* settings. YOLOX scores genuine plates in the 0.3-0.5 band
@@ -218,6 +225,12 @@ PIPELINE_DETECTOR_NMS_IOU = config("PIPELINE_DETECTOR_NMS_IOU", default=0.45, ca
 # floors and the LLM path keeps the ones it was tuned for.
 PIPELINE_DETECTION_MIN_CONFIDENCE = config("PIPELINE_DETECTION_MIN_CONFIDENCE", default=0.35, cast=float)
 PIPELINE_DETECTION_MIN_PLATE_ASPECT = config("PIPELINE_DETECTION_MIN_PLATE_ASPECT", default=1.0, cast=float)
+# The local ceiling is much looser than the LLM-era 0.5 fraction because a
+# plate filling the frame is a normal upload ("placa" photos are the plate
+# cropped to the frame edge), not the hood-hallucination signature the 0.5
+# ceiling was built to catch. Prod: a full-frame Pennsylvania plate at 74% area
+# was silently dropped by the LLM-era ceiling.
+PIPELINE_DETECTION_MAX_BOX_AREA_FRACTION = config("PIPELINE_DETECTION_MAX_BOX_AREA_FRACTION", default=0.9, cast=float)
 
 # Plate layouts: "stacked" (two rows) or "single_line". Decided from the
 # detection's aspect ratio against this threshold, not configured per region.
@@ -233,9 +246,16 @@ PIPELINE_OCR_CHARSET_PROFILE = config("PIPELINE_OCR_CHARSET_PROFILE", default="a
 # korean, latin_extended, all. The script profiles exist because the shipped
 # recogniser is multilingual and the profile is the only thing censoring its
 # output; a deployment serving Thai plates must not run "alphanumeric".
-# Off by default: on this corpus, splitting reads captions as a second line more
-# often than it rescues genuinely stacked plates. See the OCR stage docstring.
-PIPELINE_OCR_SPLIT_STACKED = config("PIPELINE_OCR_SPLIT_STACKED", default=False, cast=bool)
+# On by default as of 2026-11, on prod evidence that supersedes the pilot's
+# warning. Replaying the last 4 weeks of prod uploads, the split completed every
+# genuinely stacked read it touched (Turkish "34 GBK 43" recovered from a
+# truncated "34GBK", confidence 0.81 -> 0.94), and read_plates' split
+# arbitration -- keep the split only when every row reads non-empty and beats
+# a standalone whole-crop read -- reverted every single-line plate the split
+# touched to its whole read (a captioned "BME365" 0.996 that split had cut to
+# "YBME6" 0.326). The pilot's failure mode, a caption read as a second line,
+# now falls back to the whole read.
+PIPELINE_OCR_SPLIT_STACKED = config("PIPELINE_OCR_SPLIT_STACKED", default=True, cast=bool)
 
 # When rectification is enabled the perspective transform establishes the crop
 # boundary, so OCR_CROP_PADDING_PX is not applied. When disabled, padding is.

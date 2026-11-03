@@ -71,7 +71,7 @@ kept out of Django's test discovery — do not name a new unit test in a way tha
 - Detection uses a two-phase pipeline: Phase 1 detects plate bounding boxes, Phase 2 runs OCR on cropped regions. Prompts are in `qwen_client.py`.
 - **Two backends, one output shape.** `PIPELINE_BACKEND` selects `local` (default) or `llm`. Both return the identical detections collection — `[{"plate": {"confidence", "coordinates"}, "ocr": [{"text", "confidence", "coordinates"}]}]` — so no caller, API, visualizer, or metric branches on which ran. `image_processing_service.py` holds the two paths in separate `_run_llm_pipeline` / `_run_local_pipeline` methods and branches once. **Switching back is configuration-only**: set `PIPELINE_BACKEND=llm` and redeploy. No migration, no data rewrite.
 - **The local backend is the default, and its text accuracy is only partially known.** It is faster (60ms mean vs 3611ms) and detects more reliably on the corpus (recall 1.000 vs 0.375). On a 20-plate transcribed pilot it scores CER 0.367 / exact-match 0.35 — it reads nearly every plate it detects and gets roughly a third exactly right. That pilot is not a decision: it is too small, not randomly ordered, and the LLM arm was not scored on the same plates. Do not treat higher coverage as higher accuracy. See `openspec/changes/measure-local-backend-accuracy/COMPARISON.md`.
-- **Stacked-plate row splitting is off by default, deliberately.** Aspect ratio cannot distinguish a two-line plate from a single-line plate carrying a caption — both span ratios 1.4–2.4, both have an ink gap, both split unevenly — and the split read scores *higher* confidence while being wrong. `PIPELINE_OCR_SPLIT_STACKED=true` enables it for regions known to be uniformly stacked. This is an open limitation, not a bug.
+- **Stacked-plate row splitting is on by default (2026-11), guarded by decode-time arbitration.** Aspect ratio cannot distinguish a two-line plate from a single-line plate carrying a caption — both span ratios 1.4–2.4 — so geometry cannot gate the split. The gate is at decode time instead: `read_plates` also reads a split plate's whole crop (as its own single-crop inference, because batch padding to the rows' width corrupts the whole read through the bidirectional head), and keeps the split only when every row reads non-empty and the rows beat the whole-crop confidence. On the 2026-11 prod replay the split completed every stacked read it touched (Turkish `34 GBK 43` recovered from `34GBK`, conf 0.81→0.94) and arbitration reverted every single-line plate it cut (`BME365` 0.996 kept over the split's `YBME6` 0.326). `PIPELINE_OCR_SPLIT_STACKED=false` restores one-line recognition.
 - **Latency is instrumented, not assumed.** Per-stage durations export as `lpr_pipeline_stage_duration_seconds{stage,outcome}` and end-to-end as `lpr_pipeline_duration_seconds{outcome}`. The pre-existing `lpr_processing_duration_seconds` is still recorded on both backends so they stay comparable on one series. `PIPELINE_LATENCY_BUDGET_SECONDS` (default 0.5) is the project's sub-500ms target; `PIPELINE_STAGE_BUDGETS` takes `stage=seconds` pairs.
 - **ONNX Runtime install variants are an install-time choice, not a code branch.** No module branches on the execution provider; a stage is assigned `cpu`, `cuda`, or `rocm` by configuration and an unavailable provider falls back to CPU with a logged warning. The wheels:
   - CPU (default, and the supported deployment target): `pip install onnxruntime`
@@ -134,14 +134,16 @@ records filename, SHA-256, upstream identity, and license for each.
 | `PIPELINE_DETECTOR_INPUT_SIZE` | `640,640` | Recall-critical, not a speed knob — see below |
 | `PIPELINE_DETECTOR_CONF_THRESHOLD` | `0.3` | |
 | `PIPELINE_DETECTOR_NMS_IOU` | `0.45` | |
+| `PIPELINE_DETECTOR_NATIVE_SCALE_PASS` | `True` | Second detection pass at native pixel scale for images smaller than the model input. Upscaling a thumbnail to fill 640 moves its plate outside the detector's training scales (prod: 0.15–0.31 → 0.76–0.84 confidence at 1:1). Only images the letterbox pass must upscale pay the second inference |
 | `PIPELINE_DETECTION_MIN_CONFIDENCE` | `0.35` | Local-backend validator floor; the LLM-era `DETECTION_MIN_CONFIDENCE=0.5` killed YOLOX detections that score 0.31–0.44 |
 | `PIPELINE_DETECTION_MIN_PLATE_ASPECT` | `1.0` | Local-backend floor; stacked plates sit at aspect 1.0–1.5 and the LLM-era 1.5 dropped them |
+| `PIPELINE_DETECTION_MAX_BOX_AREA_FRACTION` | `0.9` | Local ceiling; looser than the LLM-era 0.5 because a full-frame "placa" crop is a normal upload, not a hood hallucination |
 | `PIPELINE_LAYOUT_THRESHOLD` | `2.0` | Aspect ratio separating stacked from single-line |
 | `PIPELINE_OCR_MODEL` | `plate_ocr_ppocrv5_mobile.onnx` | |
 | `PIPELINE_OCR_DICT` | `plate_ocr_dict.json` | |
 | `PIPELINE_OCR_BATCH_SIZE` | `8` | Crops per inference |
 | `PIPELINE_OCR_CHARSET_PROFILE` | `alphanumeric` | `alphanumeric`, `no_io`, `arabic`, `thai`, `cyrillic`, `chinese`, `korean`, `latin_extended`, `all`. The recogniser is multilingual; the profile is the only censor — a non-Latin region running `alphanumeric` gets its script stripped |
-| `PIPELINE_OCR_SPLIT_STACKED` | `False` | Off by default; see above |
+| `PIPELINE_OCR_SPLIT_STACKED` | `True` | On by default (2026-11); guarded by decode-time arbitration in `read_plates` — see Key Patterns |
 | `PIPELINE_RECTIFY_ENABLED` | `True` | When false, `OCR_CROP_PADDING_PX` applies instead |
 | `PIPELINE_RECTIFY_LAYOUT_RATIOS` | `stacked=2.5,single_line=2.5` | Rectifier target aspect per layout. Both wide: a narrow stacked target (the old 1.6) truncated every read routed to it |
 | `PIPELINE_PROVIDER` | `cpu` | `cpu`, `cuda`, `rocm`; falls back to CPU with a warning |
@@ -174,6 +176,20 @@ prefix as a Latin `M`/`n` at 48px input, so profiles are necessary for non-Latin
 regions, not sufficient — model script accuracy is the training track's problem.
 Do not wire configuration through a constructor again without a test that asserts
 it reaches the stage.
+
+**A second prod replay (4 weeks, 51 uploads) drove three more fixes.** Thumbnails
+smaller than the model input were being upscaled to fill the 640 letterbox, moving
+their plates outside the detector's training scales: a native-scale canvas pass
+(`PIPELINE_DETECTOR_NATIVE_SCALE_PASS`) lifted four full-frame plate photos from
+0.15–0.37 detection confidence to 0.74–0.84, and tiling/upscale/contrast variants
+were all measured at or below it. The LLM-era validator ceiling
+(`DETECTION_MAX_BOX_AREA_FRACTION=0.5`) silently dropped a full-frame Pennsylvania
+plate at 74% area — the local path now uses its own 0.9 ceiling. And stacked row
+splitting was flipped on with the `read_plates` arbitration described in Key
+Patterns. Remaining misses on that corpus are detector-model limits (a dim Twitch
+full-frame plate scoring 0.00 at every scale and preprocessing variant; a Thai
+motorcycle portrait-stack; a clean plate where the detector fires on the grille at
+0.10) and belong to the annotation/training track, not to code.
 
 ### Training and evaluation
 
