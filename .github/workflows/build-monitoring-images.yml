@@ -9,9 +9,9 @@ on:
       - 'prometheus/**'
       - 'grafana/**'
       - 'blackbox/**'
-      - 'Dockerfile.prometheus'
-      - 'Dockerfile.grafana'
-      - 'Dockerfile.blackbox'
+      - 'docker/Dockerfile.prometheus'
+      - 'docker/Dockerfile.grafana'
+      - 'docker/Dockerfile.blackbox'
   pull_request:
     branches:
       - main
@@ -20,9 +20,9 @@ on:
       - 'prometheus/**'
       - 'grafana/**'
       - 'blackbox/**'
-      - 'Dockerfile.prometheus'
-      - 'Dockerfile.grafana'
-      - 'Dockerfile.blackbox'
+      - 'docker/Dockerfile.prometheus'
+      - 'docker/Dockerfile.grafana'
+      - 'docker/Dockerfile.blackbox'
   workflow_dispatch:  # Allow manual triggering
 
 env:
@@ -67,7 +67,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.prometheus
+          file: ./docker/Dockerfile.prometheus
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -113,7 +113,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.grafana
+          file: ./docker/Dockerfile.grafana
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -159,7 +159,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.blackbox
+          file: ./docker/Dockerfile.blackbox
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

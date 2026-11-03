@@ -4,6 +4,9 @@
 
 set -e
 
+# Run from the repository root regardless of the caller's directory
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
 # Configuration
 REGISTRY="ghcr.io/faisalthaheem"
 VERSION=${1:-latest}
@@ -55,13 +58,13 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Build Prometheus
-build_image "prometheus" "Dockerfile.prometheus"
+build_image "prometheus" "docker/Dockerfile.prometheus"
 
 # Build Grafana
-build_image "grafana" "Dockerfile.grafana"
+build_image "grafana" "docker/Dockerfile.grafana"
 
 # Build Blackbox Exporter
-build_image "blackbox" "Dockerfile.blackbox"
+build_image "blackbox" "docker/Dockerfile.blackbox"
 
 echo "=========================================="
 echo -e "${GREEN}All monitoring images built successfully!${NC}"
@@ -78,7 +81,7 @@ if [ "$PUSH" = "true" ]; then
     echo "You can now deploy to Coolify using these images."
 else
     echo "To push images to the registry, run:"
-    echo "  ./build-monitoring-images.sh ${VERSION} true"
+    echo "  ./scripts/build-monitoring-images.sh ${VERSION} true"
     echo ""
     echo "To test locally:"
     echo "  docker-compose up -d"

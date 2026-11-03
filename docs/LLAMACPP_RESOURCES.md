@@ -51,4 +51,4 @@ This document contains important URLs and resources for deploying OpenLPR with L
 For more information about OpenLPR deployment with LlamaCpp:
 - [README-llamacpp.md](LLAMACPP.md) - Comprehensive deployment guide
 - [docker-compose.yaml](../docker-compose.yaml) - Profile-based Docker Compose configuration (use `--profile core --profile cpu` or `--profile core --profile amd-vulkan`)
-- [DOCKER_DEPLOYMENT.md](../DOCKER_DEPLOYMENT.md) - General Docker deployment documentation
+- [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) - General Docker deployment documentation

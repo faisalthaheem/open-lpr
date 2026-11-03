@@ -45,10 +45,10 @@ Three custom images are available:
 
 ```bash
 # Build images locally (test version)
-./build-monitoring-images.sh v1.0.0-test false
+./scripts/build-monitoring-images.sh v1.0.0-test false
 
 # Build and push to registry (for production)
-./build-monitoring-images.sh v1.0.0 true
+./scripts/build-monitoring-images.sh v1.0.0 true
 ```
 
 The script will:
@@ -183,7 +183,7 @@ When you need to update monitoring configurations:
 1. Edit `prometheus/prometheus.yml`
 2. Rebuild and push the Prometheus image:
    ```bash
-   ./build-monitoring-images.sh v1.0.1 true
+   ./scripts/build-monitoring-images.sh v1.0.1 true
    ```
 3. Update Coolify to use the new image version (e.g., `v1.0.1`)
 4. Redeploy
@@ -193,7 +193,7 @@ When you need to update monitoring configurations:
 1. Edit files in `grafana/provisioning/`
 2. Rebuild and push the Grafana image:
    ```bash
-   ./build-monitoring-images.sh v1.0.1 true
+   ./scripts/build-monitoring-images.sh v1.0.1 true
    ```
 3. Update Coolify to use the new image version
 4. Redeploy
@@ -203,7 +203,7 @@ When you need to update monitoring configurations:
 1. Edit `blackbox/blackbox.yml`
 2. Rebuild and push the Blackbox image:
    ```bash
-   ./build-monitoring-images.sh v1.0.1 true
+   ./scripts/build-monitoring-images.sh v1.0.1 true
    ```
 3. Update Coolify to use the new image version
 4. Redeploy

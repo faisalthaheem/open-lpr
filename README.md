@@ -89,7 +89,7 @@ Inference runs locally by default. The vision-language-model path
 
 `PIPELINE_BACKEND` defaults to `local`, which needs three ONNX artifacts
 (~37MB total). **Under Docker you do not fetch these yourself** —
-`docker-entrypoint.sh` downloads and checksum-verifies them on first boot:
+`scripts/docker-entrypoint.sh` downloads and checksum-verifies them on first boot:
 
 ```
 INFO fetch_artifacts plate_yolox_tiny_640.onnx downloaded and verified (20183226 bytes)
@@ -734,7 +734,7 @@ docker pull ghcr.io/faisalthaheem/open-lpr:v1.1.0-beta.1
 
 > **🚨 Important**: Individual compose files are now deprecated. Please use the new profile-based approach with the main `docker-compose.yml` file.
 
-This project provides a unified Docker Compose file with profiles for different deployment scenarios. For detailed deployment instructions, see the [Quick Start](#-quick-start) section and [Docker Deployment Guide](DOCKER_DEPLOYMENT.md).
+This project provides a unified Docker Compose file with profiles for different deployment scenarios. For detailed deployment instructions, see the [Quick Start](#-quick-start) section and [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md).
 
 #### Quick Reference
 
@@ -791,7 +791,7 @@ After starting the services:
 - **Blackbox Exporter**: http://blackbox.localhost
 - **Canary Service**: http://canary.localhost
 
-For comprehensive deployment instructions, including production configurations, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) and [Docker Profiles Guide](docs/DOCKER_PROFILES.md).
+For comprehensive deployment instructions, including production configurations, see [docs/DOCKER_DEPLOYMENT.md](docs/DOCKER_DEPLOYMENT.md) and [Docker Profiles Guide](docs/DOCKER_PROFILES.md).
 
 ### CI/CD Workflow
 
@@ -828,23 +828,30 @@ open-lpr/
 ├── .env.llamacpp               # LlamaCpp environment variables (create from .env.llamacpp.example)
 ├── .gitignore                   # Git ignore file
 ├── .dockerignore               # Docker ignore file
-├── API_DOCUMENTATION.md        # Detailed REST API documentation
-├── DOCKER_DEPLOYMENT.md        # Docker deployment guide
-├── RELEASE_GUIDE.md            # How to cut a release
-├── CHANGELOG.md               # Project changelog
 ├── AGENTS.md                  # Contributor/agent working notes
 ├── LICENSE.md                 # License file
-├── scripts/                    # Manual integration & diagnostic scripts (not unit tests)
+├── docker/                     # Monitoring image definitions (Prometheus, Grafana, Blackbox)
+│   ├── Dockerfile.prometheus
+│   ├── Dockerfile.grafana
+│   └── Dockerfile.blackbox
+├── docs/                       # Documentation
+│   ├── API_DOCUMENTATION.md    # Detailed REST API documentation
+│   ├── DOCKER_DEPLOYMENT.md    # Docker deployment guide
+│   ├── RELEASE_GUIDE.md        # How to cut a release
+│   └── CHANGELOG.md            # Project changelog
+├── scripts/                    # Build, dev, and diagnostic scripts (not unit tests)
+│   ├── docker-entrypoint.sh    # Docker entrypoint script
+│   ├── build-docker-image.sh   # Docker image build script
+│   ├── build-monitoring-images.sh # Monitoring image build script
+│   ├── verify-monitoring-setup.sh # Monitoring setup verification script
+│   ├── start-llamacpp-cpu.sh   # LlamaCpp CPU startup script
+│   ├── spa-dev.py              # Backend + SPA development launcher
 │   ├── test_api.py             # API testing script
 │   ├── test_setup.py           # Test setup utilities
 │   ├── test-llamacpp-integration.py # LlamaCpp integration test script
 │   └── test_metrics.py         # Metrics testing script
-├── verify-monitoring-setup.sh  # Monitoring setup verification script
 ├── docker-compose.yaml          # Profile-based Docker Compose configuration
-├── docker-entrypoint.sh         # Docker entrypoint script
 ├── Dockerfile                  # Docker image definition
-├── start-llamacpp-cpu.sh     # LlamaCpp CPU startup script
-├── build-docker-image.sh      # Docker image build script
 ├── lpr_project/               # Django project settings
 │   ├── __init__.py
 │   ├── settings.py             # Django configuration
@@ -1336,8 +1343,8 @@ For specialized deployment scenarios and additional resources:
 - [Backend Accuracy Comparison](openspec/changes/measure-local-backend-accuracy/COMPARISON.md) - Measured CER and exact-match, and what the numbers do and do not support
 - [LlamaCpp and ROCm Resources](docs/LLAMACPP_RESOURCES.md) - Important URLs for local LlamaCpp deployment
 - [LlamaCpp Deployment Guide](docs/LLAMACPP.md) - Local inference with LlamaCpp server (only for `PIPELINE_BACKEND=llm`)
-- [Docker Deployment Guide](DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
-- [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
+- [Docker Deployment Guide](docs/DOCKER_DEPLOYMENT.md) - Comprehensive Docker deployment instructions
+- [API Documentation](docs/API_DOCUMENTATION.md) - Complete REST API reference
 - [Prometheus Metrics](docs/PROMETHEUS_METRICS.md) - Including per-stage pipeline latency histograms
 
 </details>
