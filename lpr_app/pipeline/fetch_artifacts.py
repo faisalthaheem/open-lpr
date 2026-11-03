@@ -1,6 +1,6 @@
 """Fetch the local pipeline's ONNX artifacts, verifying checksums.
 
-Called from docker-entrypoint.sh so a fresh deployment becomes functional
+Called from scripts/docker-entrypoint.sh so a fresh deployment becomes functional
 without an operator first running a download step by hand. Uses only the
 standard library: the runtime image is python:3.11-slim, which ships neither
 curl nor wget, and adding one for ~37MB of downloads would grow the image for

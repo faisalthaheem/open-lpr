@@ -33,35 +33,35 @@ The `build-docker-image.sh` script is a comprehensive utility that automates the
 
 ```bash
 # Build local image with latest tag
-./build-docker-image.sh
+./scripts/build-docker-image.sh
 
 # Show help
-./build-docker-image.sh --help
+./scripts/build-docker-image.sh --help
 ```
 
 ### Advanced Usage
 
 ```bash
 # Build with custom tag
-./build-docker-image.sh --tag v1.2.3
+./scripts/build-docker-image.sh --tag v1.2.3
 
 # Build and push to registry
-./build-docker-image.sh --tag v1.2.3 --push
+./scripts/build-docker-image.sh --tag v1.2.3 --push
 
 # Build for specific platform only
-./build-docker-image.sh --platforms linux/amd64
+./scripts/build-docker-image.sh --platforms linux/amd64
 
 # Build without cache
-./build-docker-image.sh --no-cache
+./scripts/build-docker-image.sh --no-cache
 
 # Generate SBOM
-./build-docker-image.sh --sbom
+./scripts/build-docker-image.sh --sbom
 
 # Verbose output
-./build-docker-image.sh --verbose
+./scripts/build-docker-image.sh --verbose
 
 # Custom registry and owner
-./build-docker-image.sh --registry docker.io --owner myusername --tag myapp
+./scripts/build-docker-image.sh --registry docker.io --owner myusername --tag myapp
 ```
 
 ## Command Line Options
@@ -156,8 +156,8 @@ The script is designed to work seamlessly in CI/CD environments:
 ```yaml
 - name: Build Docker image
   run: |
-    chmod +x build-docker-image.sh
-    ./build-docker-image.sh --tag ${{ github.sha }} --push
+    chmod +x scripts/build-docker-image.sh
+    ./scripts/build-docker-image.sh --tag ${{ github.sha }} --push
 ```
 
 ### GitLab CI
@@ -165,8 +165,8 @@ The script is designed to work seamlessly in CI/CD environments:
 ```yaml
 build_image:
   script:
-    - chmod +x build-docker-image.sh
-    - ./build-docker-image.sh --tag $CI_COMMIT_SHA --push
+    - chmod +x scripts/build-docker-image.sh
+    - ./scripts/build-docker-image.sh --tag $CI_COMMIT_SHA --push
 ```
 
 ## Troubleshooting
@@ -182,7 +182,7 @@ build_image:
 2. **Permission denied**
    ```bash
    # Make script executable
-   chmod +x build-docker-image.sh
+   chmod +x scripts/build-docker-image.sh
    ```
 
 3. **Registry login required**
@@ -200,7 +200,7 @@ build_image:
 Enable verbose output for detailed debugging:
 
 ```bash
-./build-docker-image.sh --verbose
+./scripts/build-docker-image.sh --verbose
 ```
 
 ## Comparison with GitHub Actions

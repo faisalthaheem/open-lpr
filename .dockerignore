@@ -79,14 +79,12 @@ test_*.py
 tests/
 
 # Docker
-# Exclude main Dockerfile but note that Dockerfile.* for monitoring images
-# are excluded here but used separately for building custom images
+# Exclude main Dockerfile; the monitoring Dockerfiles under docker/ are used
+# separately for building custom images and must not enter the app image
 Dockerfile
 docker-compose*
 .dockerignore
-Dockerfile.prometheus
-Dockerfile.grafana
-Dockerfile.blackbox
+docker/
 
 # CI/CD
 .github/

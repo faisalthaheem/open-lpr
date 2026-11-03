@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Run from the repository root regardless of the caller's directory
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
 echo "=== LPR Monitoring Setup Verification ==="
 echo
 

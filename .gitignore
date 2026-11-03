@@ -155,3 +155,6 @@ metrics_state.json
 plans/*
 
 .playwright-mcp/*
+
+# session scratch images (diagnostic crops dumped into the repo root)
+_tmp_opencode_*

@@ -21,9 +21,9 @@ import sys
 import threading
 import time
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-VENV_DIR = os.path.join(SCRIPT_DIR, ".venv")
-SPA_DIR = os.path.join(SCRIPT_DIR, "single-page-ui")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VENV_DIR = os.path.join(PROJECT_ROOT, ".venv")
+SPA_DIR = os.path.join(PROJECT_ROOT, "single-page-ui")
 
 HAS_CURSES = False
 try:
@@ -438,7 +438,7 @@ def main():
     print()
 
     cleanup_nextjs_dev_state()
-    backend_proc = start_process(backend_cmd, SCRIPT_DIR, backend_env)
+    backend_proc = start_process(backend_cmd, PROJECT_ROOT, backend_env)
     spa_proc = start_process(spa_cmd, SPA_DIR, spa_env)
 
     bt = threading.Thread(

@@ -253,8 +253,8 @@ docker compose --profile core --profile amd-vulkan up -d   # Rollback: LLM backe
 - Images published to `ghcr.io/faisalthaheem/open-lpr`
 - **All Docker images are built and published by GitHub Actions CI.** Docker Compose files (`docker-compose.yaml`) only reference pre-built images from GHCR — never use `build:` directives in compose files.
 - CI: `.github/workflows/docker-publish.yml` builds `linux/amd64` on push to main and version tags. arm64 was dropped: the deployment host is amd64, no requirement for it was ever documented, and the SPA's arm64 leg failed under qemu emulation (`Illegal instruction` during `npm ci`). Re-adding it means the `platforms:` list in every `docker-publish*.yml` plus a fix for the emulation crash
-- Container runs as `django` user via `gosu` (see `docker-entrypoint.sh`)
-- `docker-entrypoint.sh` runs migrate + collectstatic + optional createsuperuser on every start
+- Container runs as `django` user via `gosu` (see `scripts/docker-entrypoint.sh`)
+- `scripts/docker-entrypoint.sh` runs migrate + collectstatic + optional createsuperuser on every start
 - `fonts-noto` and `fonts-noto-cjk` are installed in the Docker image for Unicode text rendering (Arabic, CJK, etc.) on bounding box visualizations
 
 ## Environment Variables

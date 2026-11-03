@@ -10,7 +10,7 @@ on:
       - 'lpr_project/**'
       - 'requirements.txt'
       - 'Dockerfile'
-      - 'docker-entrypoint.sh'
+      - 'scripts/docker-entrypoint.sh'
       - 'docker-compose.yml'
       - '.github/workflows/docker-publish.yml'
     tags:
@@ -24,7 +24,7 @@ on:
       - 'lpr_project/**'
       - 'requirements.txt'
       - 'Dockerfile'
-      - 'docker-entrypoint.sh'
+      - 'scripts/docker-entrypoint.sh'
       - 'docker-compose.yml'
       - '.github/workflows/docker-publish.yml'
 
