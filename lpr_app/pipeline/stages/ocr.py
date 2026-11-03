@@ -10,15 +10,21 @@ annotated corpus is bimodal: roughly 45% are stacked two-line (ratio well under
 A stacked plate must not be recognised in one pass, or the rows concatenate into
 an unreadable string.
 
-That much is true, and `split_two_rows` implements it. But inspection of the
-corpus shows the stacked case cannot be *identified* reliably here: genuinely
-stacked plates such as `VA9/2229` and `L802 WGK` overlap in aspect ratio with
-single-line plates carrying a caption, such as `QG.260` with `ISLAMABAD`
-beneath it at ratio 1.88. Aspect ratio, ink-gap presence, and row-height balance
-all fail to separate them. Splitting is therefore **off by default**, because
-enabling it appends captions to results more often than it rescues stacked
-plates. `split_stacked=True` enables it for regions where plates are known to be
-uniformly stacked.
+That much is true, and `split_two_rows` implements it. The corpus cannot fully
+identify the stacked case: genuinely stacked plates such as `VA9/2229` and
+`L802 WGK` overlap in aspect ratio with single-line plates carrying a caption,
+such as `QG.260` with `ISLAMABAD` beneath it at ratio 1.88. Aspect ratio,
+ink-gap presence, and row-height balance all fail to separate them, so the
+split is guarded at decode time by arbitration in `read_plates`: a split is
+kept only when every row reads non-empty and the rows beat a standalone
+whole-crop read.
+
+Splitting is **on by default as of 2026-11**, on production evidence: replaying
+the last 4 weeks of prod uploads, the split completed every stacked read it
+touched (Turkish `34 GBK 43` recovered from a truncated `34GBK`, confidence
+0.81 -> 0.94) and arbitration returned every single-line plate to its whole
+read (`BME365` 0.996, which a raw split had cut to `YBME6` 0.326).
+`split_stacked=False` restores the old one-line behaviour.
 
 **The character set is not one set.** A single hardcoded alphabet is wrong as a
 global truth: many US states omit I and O, and regions differ in which
@@ -329,10 +335,10 @@ def split_two_rows(
     - presence of an ink gap -- both have one
     - row height ratio -- both produce an imbalanced split
 
-    So splitting is opt-in via ``split_stacked`` and defaults off. Turning it on
-    reads the caption as a second line and appends it to the result. Resolving
-    this properly needs a layout classifier trained on captioned examples, which
-    the corpus does not provide; see the open items in DETECTOR.md.
+    So splitting is opt-out via ``split_stacked`` and defaults on, guarded not
+    by geometry -- geometry cannot separate the two cases -- but by decode-time
+    arbitration in ``read_plates``, which reverts a split that cuts real text or
+    reads worse than the whole crop.
     """
     grey = np.asarray(image.convert("L"), dtype=np.float32)
     height = grey.shape[0]
@@ -388,7 +394,7 @@ class PlateOCRStage(Stage):
         dict_path: str | None = None,
         input_height: int = DEFAULT_INPUT_HEIGHT,
         max_input_width: int = DEFAULT_MAX_INPUT_WIDTH,
-        split_stacked: bool = False,
+        split_stacked: bool = True,
         stacked_threshold: float = 2.0,
         min_confidence: float = 0.0,
         batch_size: int = DEFAULT_OCR_BATCH_SIZE,
@@ -455,6 +461,20 @@ class PlateOCRStage(Stage):
           oversized.
 
         Row order is preserved when combining a stacked plate's rows.
+
+        **Split arbitration.** A plate that split into rows is also read whole,
+        and the split result is kept only when every row read is non-empty and
+        the split's mean confidence is at least the whole-crop confidence.
+        Without this, a single-line plate whose box aspect made the layout
+        classifier call it stacked loses its read to the split: a prod
+        ``BME365`` (0.996 whole) became ``YBME6`` (0.326) when the split cut
+        the frame caption off the plate's first characters. The whole read runs
+        as its own single-crop inference, never batched with the rows it
+        competes with: rows of a 250x100 crop are much wider than the crop
+        itself, and padding the crop to their width degraded its standalone
+        ``BME365`` 0.996 into ``BME3`` 0.45 through the bidirectional head.
+        A genuinely stacked plate keeps its split because it reads strictly
+        better in rows.
         """
         if not plates:
             return []
@@ -477,14 +497,26 @@ class PlateOCRStage(Stage):
 
         results: list[RecognitionResult] = []
         for index in range(len(plates)):
+            indices = [row_index for row_index, owner in enumerate(owners) if owner == index]
             texts: list[str] = []
             confidences: list[float] = []
-            for row_index, owner in enumerate(owners):
-                if owner != index:
-                    continue
-                text, confidence = decoded[row_index]
-                texts.append(text)
-                confidences.append(confidence)
+            if len(indices) > 1:
+                # Split plate: arbitrate against a standalone whole-crop read.
+                crop = plates[index][0]
+                whole_text, whole_confidence = self._decode_chunk([crop])[0]
+                row_texts = [decoded[row_index][0] for row_index in indices]
+                row_confidence = float(np.mean([decoded[row_index][1] for row_index in indices]))
+                # A row that decodes empty means the split cut through text, and
+                # a split that reads below the whole crop was not the true row
+                # layout. Either way, trust the whole read.
+                split_wins = all(text.strip() for text in row_texts) and row_confidence >= whole_confidence
+                if not split_wins:
+                    texts = [whole_text]
+                    confidences = [whole_confidence]
+
+            if not texts:
+                texts = [decoded[row_index][0] for row_index in indices]
+                confidences = [decoded[row_index][1] for row_index in indices]
 
             combined_raw = "".join(texts)
             cleaned = chosen.sanitise(combined_raw)

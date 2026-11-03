@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from unittest import TestCase
+from unittest.mock import patch
 
 import numpy as np
 from PIL import Image
@@ -265,3 +266,114 @@ class StageContractTest(TestCase):
 
         with self.assertRaises(StageError):
             PlateDetectionStage().run({})
+
+
+class LetterboxMaxScaleTest(TestCase):
+    """``max_scale`` pastes a small image onto the canvas at native size."""
+
+    def test_max_scale_caps_upscaling(self):
+        tensor, scale, _pad = letterbox(make_image(100, 50), (640, 640), max_scale=1.0)
+        self.assertEqual(scale, 1.0)
+        self.assertEqual(tensor.shape, (1, 3, 640, 640))
+
+    def test_without_the_cap_small_images_are_enlarged(self):
+        _tensor, scale, _pad = letterbox(make_image(100, 50), (640, 640))
+        self.assertAlmostEqual(scale, 6.4)
+
+    def test_capped_content_keeps_its_native_pixel_size(self):
+        """The paste, not a resize, fills the canvas: a 100x50 white square
+        occupies exactly 100x50 canvas pixels."""
+        image = Image.new("RGB", (100, 50), (255, 255, 255))
+        tensor, _scale, _pad = letterbox(image, (640, 640), max_scale=1.0)
+        white = tensor[0, 0] > 250
+        rows = np.flatnonzero(white.any(axis=1))
+        cols = np.flatnonzero(white.any(axis=0))
+        self.assertEqual(int(rows.max() - rows.min() + 1), 50)
+        self.assertEqual(int(cols.max() - cols.min() + 1), 100)
+
+    def test_images_larger_than_the_input_are_unaffected(self):
+        _tensor, scale, _pad = letterbox(make_image(1280, 720), (640, 640), max_scale=1.0)
+        self.assertAlmostEqual(scale, 0.5)
+
+
+class NativeScalePassTest(TestCase):
+    """The second pass runs only for images the letterbox pass would upscale."""
+
+    def _stage(self, **kwargs):
+        stage = PlateDetectionStage(conf_threshold=0.3, **kwargs)
+        stage._session = FakeDetector()
+        return stage
+
+    def test_small_image_pays_two_inferences(self):
+        stage = self._stage()
+        stage.run({"image": make_image(300, 200)})
+        self.assertEqual(len(stage._session.calls), 2)
+
+    def test_image_fitting_the_input_pays_one_inference(self):
+        """max(image.size) >= input means the letterbox pass downscales, which
+        is the training regime; no second pass is needed."""
+        stage = self._stage()
+        stage.run({"image": make_image(640, 480)})
+        self.assertEqual(len(stage._session.calls), 1)
+
+    def test_pass_can_be_disabled(self):
+        stage = self._stage(native_scale_pass=False)
+        stage.run({"image": make_image(300, 200)})
+        self.assertEqual(len(stage._session.calls), 1)
+
+    def test_merged_duplicates_keep_the_more_confident_detection(self):
+        stage = self._stage()
+        with (
+            patch.object(stage, "_detect_at_letterbox_scale", return_value=[Detection(0, 0, 100, 40, 0.4)]),
+            patch.object(stage, "_detect_at_native_scale", return_value=[Detection(0, 0, 100, 40, 0.6)]),
+        ):
+            detections = stage.run({"image": make_image(300, 200)})["detections"]
+        self.assertEqual(len(detections), 1)
+        self.assertEqual(detections[0].confidence, 0.6)
+
+    def test_disjoint_detections_from_both_passes_are_kept(self):
+        stage = self._stage()
+        with (
+            patch.object(stage, "_detect_at_letterbox_scale", return_value=[Detection(0, 0, 100, 40, 0.4)]),
+            patch.object(stage, "_detect_at_native_scale", return_value=[Detection(0, 200, 100, 240, 0.5)]),
+        ):
+            detections = stage.run({"image": make_image(300, 200)})["detections"]
+        self.assertEqual(len(detections), 2)
+
+    def test_native_scale_detection_coordinates_map_back_unscaled(self):
+        """A box at input position (x, y) on a scale-1.0 pass sits at
+        (x - pad_x, y - pad_y) in the original image."""
+        stage = self._stage()
+        image = make_image(300, 200)
+        # One prediction centred at (300, 300) in input space, 80x30 px. The
+        # native pass pads a 300x200 image by (170, 220), so this box lands
+        # inside the image and is not clamped.
+        predictions = make_predictions([(300, 300, 80, 30, 0.9, 0.9)])
+        stage._session.predictions = predictions
+        detections = stage._detect_at_native_scale(image)
+        self.assertEqual(len(detections), 1)
+        box = detections[0]
+        self.assertAlmostEqual(box.x1, 300 - 40 - 170, places=1)
+        self.assertAlmostEqual(box.y1, 300 - 15 - 220, places=1)
+
+
+class FakeDetector:
+    """Session stand-in returning a fixed (optionally empty) prediction."""
+
+    def __init__(self, predictions=None):
+        self.predictions = predictions
+        self.calls: list[tuple[int, int]] = []
+        self.input_names = ("images",)
+        self.input_shapes = (("images", ("N", 3, 640, 640)),)
+        self.output_names = PlateDetectionStage.ONNX_OUTPUTS
+        self.session = self
+
+    def run(self, output_names, feed):
+        tensor = feed["images"]
+        self.calls.append(tuple(tensor.shape[2:]))
+        if self.predictions is None:
+            # The stride-8/16/32 level counts of a 640 prediction grid, all below
+            # any confidence threshold.
+            total = 80 * 80 + 40 * 40 + 20 * 20
+            return [np.zeros((1, total, 6), dtype=np.float32)]
+        return [self.predictions]

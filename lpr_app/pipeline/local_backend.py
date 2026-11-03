@@ -191,11 +191,12 @@ class LocalPlateBackend:
         detector_conf_threshold: float = 0.3,
         detector_nms_iou: float = 0.45,
         layout_threshold: float = 2.0,
+        detector_native_scale_pass: bool = True,
         ocr_model: str | None = None,
         ocr_dict: str | None = None,
         ocr_batch_size: int = 8,
         ocr_charset_profile: str = "alphanumeric",
-        ocr_split_stacked: bool = False,
+        ocr_split_stacked: bool = True,
         rectify_enabled: bool = True,
         rectify_output_size: tuple[int, int] = (320, 100),
         rectify_min_area: float = 64.0,
@@ -211,6 +212,7 @@ class LocalPlateBackend:
             conf_threshold=detector_conf_threshold,
             nms_iou=detector_nms_iou,
             layout_threshold=layout_threshold,
+            native_scale_pass=detector_native_scale_pass,
         )
         self.rectifier = RectifyPlateStage(
             output_size=rectify_output_size,
@@ -324,6 +326,7 @@ def build_local_backend_from_settings() -> LocalPlateBackend:
         detector_conf_threshold=settings.PIPELINE_DETECTOR_CONF_THRESHOLD,
         detector_nms_iou=settings.PIPELINE_DETECTOR_NMS_IOU,
         layout_threshold=settings.PIPELINE_LAYOUT_THRESHOLD,
+        detector_native_scale_pass=settings.PIPELINE_DETECTOR_NATIVE_SCALE_PASS,
         ocr_model=resolve(settings.PIPELINE_OCR_MODEL),
         ocr_dict=resolve(settings.PIPELINE_OCR_DICT),
         ocr_batch_size=settings.PIPELINE_OCR_BATCH_SIZE,
@@ -341,7 +344,7 @@ def build_local_backend_from_settings() -> LocalPlateBackend:
         validator=DetectionValidator(
             min_confidence=settings.PIPELINE_DETECTION_MIN_CONFIDENCE,
             min_box_area_fraction=settings.DETECTION_MIN_BOX_AREA_FRACTION,
-            max_box_area_fraction=settings.DETECTION_MAX_BOX_AREA_FRACTION,
+            max_box_area_fraction=settings.PIPELINE_DETECTION_MAX_BOX_AREA_FRACTION,
             min_plate_aspect=settings.PIPELINE_DETECTION_MIN_PLATE_ASPECT,
             max_plate_aspect=settings.DETECTION_MAX_PLATE_ASPECT,
         ),
