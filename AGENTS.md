@@ -226,6 +226,20 @@ python -m lpr_app.ml.compare_backends --data <dataset-root> --limit 60 --labels 
   (CER 0.68 / 0.53 / 0.04 across the 0.0–0.5 / 0.5–0.8 / 0.8–1.0 bands), so
   `PIPELINE_OCR_MIN_CONFIDENCE` is a real lever — but 20 non-randomly-ordered plates
   are not enough to set it on, so it stays 0.0.
+- **The larger recogniser was measured and is not the fix (2026-11).** The prod
+  complaints "333033" (GT `33-30333`), "22BH6517" (GT `22 BH 6517 A`), and
+  "UP82AT7Z249" (GT `UP82AT7449`) are trailing-glyph CTC collapses on small/skewed
+  crops — the rectified crops contain the full plate and are human-readable, so
+  cropping is exonerated. The official `PaddlePaddle/PP-OCRv5_server_rec_onnx`
+  (84MB, drop-in: same 48px input, same 18385-class v5 charset, 18–64ms/crop vs
+  4–15ms — inside budget) was A/B'd on 14 eye-verified plates: CER 0.224 / exact
+  0.43 **worse** than the deployed mobile model's CER 0.131 / exact 0.57. It fixes
+  `UP82AT7449` and `KA09MB7389` but breaks `BODH5921` (→`DH5921`), `812087`
+  (→`广312067`), and collapses `22BH6517A` to `221`. Server rec is tuned for
+  document text; our crops are 34–48px plates. White-margin padding, black padding,
+  right-side padding, and 2× upscale were also all measured: no variant recovers the
+  trailing glyph. The lever is plate-specific fine-tuning (the v5 annotation track),
+  not a generic bigger model.
 - **Per-layout accuracy is not reportable.** `layout_of()` classifies only aspect
   ratios outside 1.5–2.6 and records the rest as `unknown`, because geometry cannot
   tell a two-row plate from a one-row plate with a caption. On the pilot, 17 of 20
