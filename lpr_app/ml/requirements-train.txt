@@ -11,7 +11,7 @@
 #     pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.2
 #
 # See AGENTS.md for the containerised training workflow.
-torch==2.6.0
+torch==2.13.0
 torchvision==0.21.0
 # YOLOX is installed from source rather than PyPI, because its setup.py pins
 # onnx-simplifier==0.4.10 whose pinocchio build does not compile. Remove that
